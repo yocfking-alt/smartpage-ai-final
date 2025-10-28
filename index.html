@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head> 
+    <meta charset="UTF-8"/> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
+    <title>SmartPage AI - Instantly Build Stunning Product Pages with AI</title> 
+    <script src="https://cdn.tailwindcss.com"></script> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/typed.js/2.0.12/typed.min.js"></script> 
+    <script src="https://unpkg.com/splitting@1.0.6/dist/splitting.js"></script> 
+    <link rel="stylesheet" href="https://unpkg.com/splitting@1.0.6/dist/splitting.css"/> 
+    <script src="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/js/splide.min.js"></script> 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/css/splide.min.css"/> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script> 
+    <style> 
+        :root { 
+            --bg-primary: #0f1724; 
+            --bg-secondary: #1e293b; 
+            --text-primary: #F3F4F6; 
+            --accent: #3B82F6; 
+            --accent-glow: rgba(59,130,246,0.35); 
+        } 
+        body { 
+            background: var(--bg-primary); 
+            color: var(--text-primary); 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+        } 
+        .glow-button { 
+            background: var(--accent); 
+            box-shadow: 0 0 20px var(--accent-glow); 
+            transition: all 0.3s ease; 
+        } 
+        .glow-button:hover { 
+            box-shadow: 0 0 30px var(--accent-glow); 
+            transform: translateY(-2px); 
+        } 
+        .card-hover { 
+            transition: all 0.3s ease; 
+            background: var(--bg-secondary); 
+            border-radius: 12px; 
+        } 
+        .card-hover:hover { 
+            transform: translateY(-8px); 
+            box-shadow: 0 20px 40px rgba(59,130,246,0.2); 
+        } 
+        .hero-bg { 
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%); 
+            position: relative; 
+            overflow: hidden; 
+        } 
+        .particle-bg { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            z-index: 1; 
+        } 
+        .content-overlay { 
+            position: relative; 
+            z-index: 10; 
+        } 
+        .builder-panel { 
+            background: var(--bg-secondary); 
+            border: 1px solid rgba(59,130,246,0.2); 
+            border-radius: 16px; 
+            backdrop-filter: blur(10px); 
+        } 
+        .upload-zone { 
+            border: 2px dashed var(--accent); 
+            border-radius: 12px; 
+            transition: all 0.3s ease; 
+        } 
+        .upload-zone:hover { 
+            border-color: var(--text-primary); 
+            background: rgba(59,130,246,0.1); 
+        } 
+        .preview-frame { 
+            background: white; 
+            border-radius: 8px; 
+            min-height: 400px; 
+            position: relative; 
+            overflow: hidden; 
+        } 
+        .feature-icon { 
+            width: 64px; 
+            height: 64px; 
+            object-fit: contain; 
+        } 
+        .testimonial-avatar { 
+            width: 60px; 
+            height: 60px; 
+            border-radius: 50%; 
+            object-fit: cover; 
+        } 
+        .splide__arrow { 
+            background: var(--accent) !important; 
+            opacity: 0.8; 
+        } 
+        .splide__arrow:hover { 
+            opacity: 1; 
+        } 
+        .nav-link { 
+            transition: all 0.3s ease; 
+            position: relative; 
+        } 
+        .nav-link:hover { 
+            color: var(--accent); 
+        } 
+        .nav-link::after { 
+            content: ''; 
+            position: absolute; 
+            bottom: -4px; 
+            left: 0; 
+            width: 0; 
+            height: 2px; 
+            background: var(--accent); 
+            transition: width 0.3s ease; 
+        } 
+        .nav-link:hover::after { 
+            width: 100%; 
+        } 
+        .step-number { 
+            background: var(--accent); 
+            color: white; 
+            width: 40px; 
+            height: 40px; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-weight: bold; 
+            margin: 0 auto 16px; 
+        } 
+        @media (max-width: 768px) { 
+            .builder-grid { 
+                grid-template-columns: 1fr; 
+            } 
+        } 
+    </style> 
+    <script src="https://statics.moonshot.cn/sdk/preview-widgets.min.js" defer=""></script>
+</head> 
+<body> 
+    <nav class="fixed top-0 w-full z-50 bg-slate-900/90 backdrop-blur-md border-b border-blue-500/20"> 
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
+            <div class="flex justify-between items-center h-16"> 
+                <div class="flex items-center"> 
+                    <h1 class="text-2xl font-bold text-blue-400">SmartPage AI</h1> 
+                </div> 
+                <div class="hidden md:block"> 
+                    <div class="ml-10 flex items-baseline space-x-8"> 
+                        <a href="#features" class="nav-link text-gray-300 hover:text-white px-3 py-2 text-sm font-medium">Features</a> 
+                        <a href="about.html" class="nav-link text-gray-300 hover:text-white px-3 py-2 text-sm font-medium">About</a> 
+                        <a href="contact.html" class="nav-link text-gray-300 hover:text-white px-3 py-2 text-sm font-medium">Contact</a> 
+                        <button onclick="scrollToBuilder()" class="glow-button text-white px-6 py-2 rounded-lg text-sm font-medium"> Start Free Now </button> 
+                    </div> 
+                </div> 
+                <div class="md:hidden"> 
+                    <button id="mobile-menu-btn" class="text-gray-300 hover:text-white"> 
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path> 
+                        </svg> 
+                    </button> 
+                </div> 
+            </div> 
+        </div> 
+        <div id="mobile-menu" class="md:hidden hidden bg-slate-900/95 backdrop-blur-md"> 
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3"> 
+                <a href="#features" class="nav-link text-gray-300 hover:text-white block px-3 py-2 text-base font-medium">Features</a> 
+                <a href="about.html" class="nav-link text-gray-300 hover:text-white block px-3 py-2 text-base font-medium">About</a> 
+                <a href="contact.html" class="nav-link text-gray-300 hover:text-white block px-3 py-2 text-base font-medium">Contact</a> 
+                <button onclick="scrollToBuilder()" class="glow-button text-white px-6 py-2 rounded-lg text-base font-medium w-full mt-4"> Start Free Now </button> 
+            </div> 
+        </div> 
+    </nav> 
+    <section class="hero-bg min-h-screen flex items-center pt-16"> 
+        <div id="particle-container" class="particle-bg"></div> 
+        <div class="content-overlay max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
+            <div class="text-center"> 
+                <h1 class="text-5xl md:text-7xl font-bold mb-6"> 
+                    <span id="typed-text"></span> 
+                </h1> 
+                <p class="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto"> Upload your product image or let AI write the description for you. Instantly generate stunning landing pages with matching colors, layout, and offers. </p> 
+                <div class="flex flex-col sm:flex-row gap-4 justify-center items-center"> 
+                    <button onclick="scrollToBuilder()" class="glow-button text-white px-8 py-4 rounded-lg text-lg font-medium"> Start Free Now </button> 
+                    <button onclick="scrollToFeatures()" class="border border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-white px-8 py-4 rounded-lg text-lg font-medium transition-all duration-300"> Watch Demo </button> 
+                </div> 
+            </div> 
+        </div> 
+    </section> 
+    <section id="builder" class="py-20 bg-slate-900"> 
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
+            <div class="text-center mb-12"> 
+                <h2 class="text-4xl font-bold mb-4">Build Your Landing Page</h2> 
+                <p class="text-xl text-gray-300">Upload your product and watch AI create magic</p> 
+            </div> 
+            <div class="builder-grid grid grid-cols-1 lg:grid-cols-2 gap-8"> 
+                <div class="builder-panel p-6"> 
+                    <h3 class="text-xl font-semibold mb-6 text-blue-400">1. Upload Product</h3> 
+                    <div class="upload-zone p-8 mb-6 text-center cursor-pointer" id="upload-zone"> 
+                        <input type="file" id="productImageInput" class="hidden" accept="image/*" /> 
+                        <div id="upload-content"> 
+                            <svg class="mx-auto h-12 w-12 text-blue-400 mb-4" stroke="currentColor" fill="none" viewBox="0 0 48 48"> 
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> 
+                            </svg> 
+                            <p class="text-lg font-medium">Drop your product image here</p> 
+                            <p class="text-sm text-gray-400">or click to browse</p> 
+                        </div> 
+                        <img id="uploaded-image" class="hidden max-w-full h-auto rounded-lg mx-auto" src="" alt="Uploaded product"/> 
+                    </div> 
+                    <div class="mb-6"> 
+                        <label class="block text-sm font-medium mb-2">Product Description</label> 
+                        <textarea id="description-input" rows="4" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none resize-none" placeholder="Describe your product or let AI generate it..."></textarea> 
+                        <button id="generate-description" class="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"> ✨ Generate with AI </button> 
+                    </div> 
+                    <div class="mb-6"> 
+                        <label class="block text-sm font-medium mb-2">Extracted Colors</label> 
+                        <div id="color-palette" class="flex gap-2"> 
+                            <div class="w-8 h-8 rounded-full bg-blue-500 border-2 border-white"></div> 
+                            <div class="w-8 h-8 rounded-full bg-gray-700 border-2 border-white"></div> 
+                            <div class="w-8 h-8 rounded-full bg-white border-2 border-white"></div> 
+                            <div class="w-8 h-8 rounded-full bg-slate-900 border-2 border-white"></div> 
+                        </div> 
+                    </div> 
+                    <div class="mb-6"> 
+                        <label for="product-name" class="block text-sm font-medium mb-2">🛍️ Product Name:</label> 
+                        <input type="text" id="product-name" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none" placeholder="Enter your product name..."/> 
+                    </div> 
+                    <div class="mb-6"> 
+                        <label for="product-features" class="block text-sm font-medium mb-2">🧩 Product Features:</label> 
+                        <textarea id="product-features" rows="4" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none resize-none" placeholder="Write the key features or unique details about your product..."></textarea> 
+                    </div> 
+                    <div class="mb-6"> 
+                        <label for="product-price" class="block text-sm font-medium mb-2">💰 Product Price:</label> 
+                        <input type="text" id="product-price" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none" placeholder="Enter the product price (e.g. $29.99)"/> 
+                    </div> 
+                </div> 
+                <div class="builder-panel p-6"> 
+                    <h3 class="text-xl font-semibold mb-6 text-blue-400">2. Customize &amp; Download</h3> 
+                    <div class="mb-6"> 
+                        <label class="block text-sm font-medium mb-2">Layout Style</label> 
+                        <select id="layout-select" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white focus:border-blue-400 focus:outline-none"> 
+                            <option value="minimal">Minimal</option> 
+                            <option value="bold">Bold</option> 
+                            <option value="elegant" selected="">Elegant</option> 
+                        </select> 
+                    </div> 
+                    <div class="mb-6"> 
+                        <label class="block text-sm font-medium mb-2">Promotional Offer</label> 
+                        <select id="offer-select" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white focus:border-blue-400 focus:outline-none"> 
+                            <option value="bogo" selected="">Buy 2, Get 1 Free</option> 
+                            <option value="discount">20% Off</option> 
+                            <option value="shipping">Free Shipping</option> 
+                            <option value="bundle">Bundle Deal</option> 
+                        </select> 
+                    </div> 
+                    <div class="mb-6"> 
+                        <label class="block text-sm font-medium mb-2">Color Scheme</label> 
+                        <div class="grid grid-cols-2 gap-2"> 
+                            <button class="color-scheme p-3 border-2 border-blue-400 rounded-lg bg-blue-600 text-white"> Blue </button> 
+                            <button class="color-scheme p-3 border-2 border-gray-600 rounded-lg bg-gray-700 text-white"> Gray </button> 
+                            <button class="color-scheme p-3 border-2 border-green-600 rounded-lg bg-green-600 text-white"> Green </button> 
+                            <button class="color-scheme p-3 border-2 border-purple-600 rounded-lg bg-purple-600 text-white"> Purple </button> 
+                        </div> 
+                    </div> 
+                    <button id="generate-btn" class="w-full glow-button text-white py-4 rounded-lg text-lg font-medium mb-4"> ✨ Generate Landing Page </button> 
+                    <button id="download-btn" class="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-lg text-lg font-medium" disabled=""> 📥 Download Landing Page </button> 
+                    <div class="mt-4 text-center"> 
+                        <p class="text-sm text-gray-400">No signup required • Free forever</p> 
+                    </div> 
+                </div> 
+            </div> 
+        </div> 
+    </section> 
+    
+    <section id="preview-section" class="py-20 bg-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-4xl font-bold mb-8 text-center">Live Page Preview</h2>
+            <iframe id="preview" class="preview-frame w-full h-[800px] shadow-2xl" sandbox="allow-same-origin allow-scripts"></iframe>
+            
+            <div id="loading-indicator" class="hidden text-center mt-8 p-4 bg-blue-900/50 border border-blue-400/50 rounded-lg">
+                <svg class="animate-spin h-5 w-5 mr-3 inline-block text-blue-400" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="text-lg font-medium text-blue-400">AI is generating your page... Please wait.</span>
+            </div>
+            <div id="error-message" class="hidden text-center mt-4 p-4 bg-red-900/50 border border-red-400/50 rounded-lg text-red-300"></div>
+        </div>
+    </section>
+
+    <section id="how-it-works" class="py-20 bg-slate-800"> 
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
+            <div class="text-center mb-16"> 
+                <h2 class="text-4xl font-bold mb-4">How It Works</h2> 
+                <p class="text-xl text-gray-300">Create professional landing pages in 3 simple steps</p> 
+            </div> 
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8"> 
+                <div class="text-center"> 
+                    <div class="step-number">1</div> 
+                    <h3 class="text-xl font-semibold mb-4">Upload Product</h3> 
+                    <p class="text-gray-300">Drop your product image or let AI generate a description for you. Our AI analyzes colors, style, and product type.</p> 
+                </div> 
+                <div class="text-center"> 
+                    <div class="step-number">2</div> 
+                    <h3 class="text-xl font-semibold mb-4">AI Generates Page</h3> 
+                    <p class="text-gray-300">Watch as AI creates a stunning landing page with matching colors, professional layout, and compelling offers.</p> 
+                </div> 
+                <div class="text-center"> 
+                    <div class="step-number">3</div> 
+                    <h3 class="text-xl font-semibold mb-4">Download &amp; Connect</h3> 
+                    <p class="text-gray-300">Download your complete landing page and connect your payment links. No coding required!</p> 
+                </div> 
+            </div> 
+        </div> 
+    </section> 
+    <section id="features" class="py-20 bg-slate-900"> 
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
+            <div class="text-center mb-16"> 
+                <h2 class="text-4xl font-bold mb-4">Powerful Features</h2> 
+                <p class="text-xl text-gray-300">Everything you need for professional landing pages</p> 
+            </div> 
+            <div class="splide" id="features-carousel"> 
+                <div class="splide__track"> 
+                    <ul class="splide__list"> 
+                        <li class="splide__slide"> 
+                            <div class="card-hover p-8 text-center h-full"> 
+                                <img src="resources/feature-ai.png" alt="AI Text Generator" class="feature-icon mx-auto mb-6"/> 
+                                <h3 class="text-2xl font-semibold mb-4">AI Text Generator</h3> 
+                                <p class="text-gray-300">Let AI create compelling product descriptions, headlines, and promotional content that converts visitors into customers.</p> 
+                            </div> 
+                        </li> 
+                        <li class="splide__slide"> 
+                            <div class="card-hover p-8 text-center h-full"> 
+                                <img src="resources/feature-colors.png" alt="Auto Color Matching" class="feature-icon mx-auto mb-6"/> 
+                                <h3 class="text-2xl font-semibold mb-4">Auto Color Matching</h3> 
+                                <p class="text-gray-300">AI automatically extracts colors from your product images and creates perfectly matched color schemes for your landing page.</p> 
+                            </div> 
+                        </li> 
+                        <li class="splide__slide"> 
+                            <div class="card-hover p-8 text-center h-full"> 
+                                <img src="resources/feature-free.png" alt="Free Forever" class="feature-icon mx-auto mb-6"/> 
+                                <h3 class="text-2xl font-semibold mb-4">Free Forever</h3> 
+                                <p class="text-gray-300">No hidden costs, no subscriptions, no limits. Create as many landing pages as you want completely free of charge.</p> 
+                            </div> 
+                        </li> 
+                        <li class="splide__slide"> 
+                            <div class="card-hover p-8 text-center h-full"> 
+                                <img src="resources/feature-download.png" alt="Easy Download" class="feature-icon mx-auto mb-6"/> 
+                                <h3 class="text-2xl font-semibold mb-4">Easy Download</h3> 
+                                <p class="text-gray-300">Download complete HTML/CSS files ready to host anywhere. Connect your own payment links and start selling immediately.</p> 
+                            </div> 
+                        </li> 
+                    </ul> 
+                </div> 
+            </div> 
+        </div> 
+    </section> 
+    <section class="py-20 bg-slate-800"> 
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
+            <div class="text-center mb-16"> 
+                <h2 class="text-4xl font-bold mb-4">What Our Users Say</h2> 
+                <p class="text-xl text-gray-300">Join thousands of satisfied users</p> 
+            </div> 
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8"> 
+                <div class="card-hover p-6"> 
+                    <div class="flex items-center mb-4"> 
+                        <img src="resources/testimonial1.jpg" alt="Sarah Chen" class="testimonial-avatar mr-4"/> 
+                        <div> 
+                            <h4 class="font-semibold">Sarah Chen</h4> 
+                            <p class="text-sm text-gray-400">E-commerce Store Owner</p> 
+                        </div> 
+                    </div> 
+                    <p class="text-gray-300 mb-4">&#34;I built my first product page in seconds — amazing tool! The AI-generated descriptions are incredibly compelling and the color matching is perfect.&#34;</p> 
+                    <div class="flex text-yellow-400"> ⭐⭐⭐⭐⭐ </div> 
+                </div> 
+                <div class="card-hover p-6"> 
+                    <div class="flex items-center mb-4"> 
+                        <img src="resources/testimonial2.jpg" alt="Marcus Rodriguez" class="testimonial-avatar mr-4"/> 
+                        <div> 
+                            <h4 class="font-semibold">Marcus Rodriguez</h4> 
+                            <p class="text-sm text-gray-400">Digital Marketer</p> 
+                        </div> 
+                    </div> 
+                    <p class="text-gray-300 mb-4">&#34;SmartPage AI saved me hours of work. The landing pages look professional and convert really well. Plus it&#39;s completely free!&#34;</p> 
+                    <div class="flex text-yellow-400"> ⭐⭐⭐⭐⭐ </div> 
+                </div> 
+                <div class="card-hover p-6"> 
+                    <div class="flex items-center mb-4"> 
+                        <img src="resources/testimonial3.jpg" alt="Emily Watson" class="testimonial-avatar mr-4"/> 
+                        <div> 
+                            <h4 class="font-semibold">Emily Watson</h4> 
+                            <p class="text-sm text-gray-400">Small Business Owner</p> 
+                        </div> 
+                    </div> 
+                    <p class="text-gray-300 mb-4">&#34;Love the dark design and AI-generated layouts! It&#39;s like having a professional designer and copywriter working for you 24/7.&#34;</p> 
+                    <div class="flex text-yellow-400"> ⭐⭐⭐⭐⭐ </div> 
+                </div> 
+            </div> 
+        </div> 
+    </section> 
+    <footer class="bg-slate-900 border-t border-blue-500/20 py-12"> 
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
+            <div class="text-center"> 
+                <h3 class="text-2xl font-bold text-blue-400 mb-4">SmartPage AI</h3> 
+                <p class="text-gray-400 mb-6">Instantly build stunning product pages with AI</p> 
+                <div class="flex justify-center space-x-8 mb-6"> 
+                    <a href="about.html" class="text-gray-400 hover:text-white transition-colors">About</a> 
+                    <a href="contact.html" class="text-gray-400 hover:text-white transition-colors">Contact</a> 
+                    <a href="privacy.html" class="text-gray-400 hover:text-white transition-colors">Privacy Policy</a> 
+                </div> 
+                <p class="text-gray-500 text-sm">© 2025 SmartPage AI — All rights reserved.</p> 
+            </div> 
+        </div> 
+    </footer> 
+    
+    <script>
+        // ********* Core Variables *********
+        const generateBtn = document.getElementById("generate-btn");
+        const downloadBtn = document.getElementById("download-btn");
+        const loadingIndicator = document.getElementById("loading-indicator");
+        const errorMessageDiv = document.getElementById("error-message");
+        const previewIframe = document.getElementById("preview");
+        const uploadZone = document.getElementById("upload-zone");
+        const fileInput = document.getElementById("productImageInput"); 
+        
+        // ********* Input Handlers *********
+        // ربط النقر على منطقة الرفع بفتح نافذة اختيار الملفات
+        uploadZone.addEventListener('click', () => fileInput.click());
+        
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('uploaded-image').src = e.target.result;
+                    document.getElementById('uploaded-image').classList.remove('hidden');
+                    document.getElementById('upload-content').classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // ********* Base64 Conversion Function *********
+        // وظيفة تحويل الصورة المختارة إلى تنسيق Base64 لإرسالها عبر الـ API
+        function toBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+            });
+        }
+
+        // ********* Backend Connection Function (Fetch) *********
+        async function generateLandingPage() {
+            errorMessageDiv.classList.add('hidden');
+            downloadBtn.disabled = true;
+            
+            if (!fileInput.files[0]) {
+                errorMessageDiv.textContent = "Please upload a product image first!";
+                errorMessageDiv.classList.remove('hidden');
+                return;
+            }
+
+            loadingIndicator.classList.remove('hidden');
+            generateBtn.disabled = true;
+
+            const name = document.getElementById("product-name").value;
+            const features = document.getElementById("product-features").value;
+            const price = document.getElementById("product-price").value || "";
+            
+            try {
+                const base64Image = await toBase64(fileInput.files[0]);
+                
+                // !!! هام: يجب استبدال 'YOUR-RAILWAY-DOMAIN' بنطاق Railway الفعلي لمشروعك !!!
+                const BACKEND_URL = "https://YOUR-RAILWAY-DOMAIN.up.railway.app/generate"; 
+
+                const res = await fetch(BACKEND_URL, { 
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        // إرسال الجزء المشفر فقط (بعد الفاصلة)
+                        imageBase64: base64Image.split(",")[1], 
+                        productName: name,
+                        productFeatures: features,
+                        productPrice: price
+                    })
+                });
+
+                const data = await res.json();
+                
+                if (res.ok) {
+                    // إظهار النتيجة في إطار المعاينة
+                    previewIframe.srcdoc = data.html;
+                    downloadBtn.disabled = false;
+                } else {
+                    // معالجة أخطاء الخادم
+                    errorMessageDiv.textContent = `Server Error: ${data.error || 'Unknown error occurred.'}`;
+                    errorMessageDiv.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorMessageDiv.textContent = `Network Error: Could not connect to the server. Check Railway domain and status.`;
+                errorMessageDiv.classList.remove('hidden');
+                console.error("Fetch Error:", err);
+            } finally {
+                loadingIndicator.classList.add('hidden');
+                generateBtn.disabled = false;
+            }
+        }
+
+        // ********* HTML Download Function *********
+        function downloadHTML() {
+            const htmlContent = previewIframe.srcdoc;
+            if (!htmlContent) return;
+            
+            const blob = new Blob([htmlContent], { type: "text/html" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "ai-smart-page.html";
+            link.click();
+        }
+
+        // ********* Event Listeners *********
+        generateBtn.addEventListener('click', generateLandingPage);
+        downloadBtn.addEventListener('click', downloadHTML);
+
+        function scrollToBuilder() {
+            document.getElementById('builder').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // تنفيذ كود الـ Carousel والـ Typed.js (لتجنب الأخطاء)
+        document.addEventListener('DOMContentLoaded', function () {
+            // Splide (Carousel) setup
+            if (document.getElementById('features-carousel')) {
+                 new Splide( '#features-carousel', {
+                    type: 'loop',
+                    perPage: 3,
+                    breakpoints: {
+                        768: { perPage: 1, gap: '1rem' },
+                        1024: { perPage: 2 },
+                    }
+                }).mount();
+            }
+
+            // Typed.js setup
+            if (document.getElementById('typed-text')) {
+                 new Typed('#typed-text', {
+                    strings: ["Generate Landing Pages Instantly.", "Get Custom Pages with AI.", "Launch Your Product Faster."],
+                    typeSpeed: 50,
+                    backSpeed: 30,
+                    loop: true
+                });
+            }
+            
+            // Mobile Menu Toggle
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const mobileMenu = document.getElementById('mobile-menu');
+            if (mobileMenuBtn && mobileMenu) {
+                mobileMenuBtn.addEventListener('click', () => {
+                    mobileMenu.classList.toggle('hidden');
+                });
+            }
+        });
+
+    </script>
+</body>
+</html>
