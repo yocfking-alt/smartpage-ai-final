@@ -18,8 +18,8 @@ app.use(bodyParser.json({ limit: "20mb" }));
 // تهيئة OpenAI (يتم قراءة المفتاح تلقائيًا من متغير البيئة)
 const client = new OpenAI(); 
 
-// المسار الفعلي لـ API
-app.post("/generate", async (req, res) => {
+// 🛑 تم تعديل المسار هنا ليصبح "/api/generate"
+app.post("/api/generate", async (req, res) => {
   try {
     const { imageBase64, productName, productFeatures, productPrice } = req.body;
 
