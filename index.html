@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head> 
-    <!-- باقي الhead بدون تغيير -->
     <meta charset="UTF-8"/> 
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
     <title>SmartPage AI - Instantly Build Stunning Product Pages with AI</title> 
@@ -14,7 +13,6 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/css/splide.min.css"/> 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script> 
     <style> 
-        /* نفس الCSS بدون تغيير */
         :root { 
             --bg-primary: #0f1724; 
             --bg-secondary: #1e293b; 
@@ -140,11 +138,57 @@
             } 
         } 
     </style> 
-    <script src="https://statics.moonshot.cn/sdk/preview-widgets.min.js" defer=""></script>
 </head> 
 <body> 
-    <!-- باقي الHTML بدون تغيير حتى قسم البناء -->
-    
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 bg-slate-900/90 backdrop-blur-md border-b border-blue-500/20"> 
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
+            <div class="flex justify-between items-center h-16"> 
+                <div class="flex items-center"> 
+                    <h1 class="text-2xl font-bold text-blue-400">SmartPage AI</h1> 
+                </div> 
+                <div class="hidden md:block"> 
+                    <div class="ml-10 flex items-baseline space-x-8"> 
+                        <a href="#features" class="nav-link text-gray-300 hover:text-white px-3 py-2 text-sm font-medium">Features</a> 
+                        <a href="#how-it-works" class="nav-link text-gray-300 hover:text-white px-3 py-2 text-sm font-medium">How It Works</a> 
+                        <button onclick="scrollToBuilder()" class="glow-button text-white px-6 py-2 rounded-lg text-sm font-medium"> Start Free Now </button> 
+                    </div> 
+                </div> 
+                <div class="md:hidden"> 
+                    <button id="mobile-menu-btn" class="text-gray-300 hover:text-white"> 
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path> 
+                        </svg> 
+                    </button> 
+                </div> 
+            </div> 
+        </div> 
+        <div id="mobile-menu" class="md:hidden hidden bg-slate-900/95 backdrop-blur-md"> 
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3"> 
+                <a href="#features" class="nav-link text-gray-300 hover:text-white block px-3 py-2 text-base font-medium">Features</a> 
+                <a href="#how-it-works" class="nav-link text-gray-300 hover:text-white block px-3 py-2 text-base font-medium">How It Works</a> 
+                <button onclick="scrollToBuilder()" class="glow-button text-white px-6 py-2 rounded-lg text-base font-medium w-full mt-4"> Start Free Now </button> 
+            </div> 
+        </div> 
+    </nav> 
+
+    <!-- Hero Section -->
+    <section class="hero-bg min-h-screen flex items-center pt-16"> 
+        <div class="content-overlay max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
+            <div class="text-center"> 
+                <h1 class="text-5xl md:text-7xl font-bold mb-6"> 
+                    <span id="typed-text"></span> 
+                </h1> 
+                <p class="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto"> Describe your product and let AI create stunning landing pages with perfect layouts, colors, and compelling offers. </p> 
+                <div class="flex flex-col sm:flex-row gap-4 justify-center items-center"> 
+                    <button onclick="scrollToBuilder()" class="glow-button text-white px-8 py-4 rounded-lg text-lg font-medium"> Start Free Now </button> 
+                    <button onclick="scrollToFeatures()" class="border border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-white px-8 py-4 rounded-lg text-lg font-medium transition-all duration-300"> Watch Demo </button> 
+                </div> 
+            </div> 
+        </div> 
+    </section> 
+
+    <!-- Builder Section -->
     <section id="builder" class="py-20 bg-slate-900"> 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
             <div class="text-center mb-12"> 
@@ -155,7 +199,6 @@
                 <div class="builder-panel p-6"> 
                     <h3 class="text-xl font-semibold mb-6 text-blue-400">1. Product Details</h3> 
                     
-                    <!-- إضافة الحقول الجديدة -->
                     <div class="mb-6"> 
                         <label for="product-category" class="block text-sm font-medium mb-2">📦 Product Category:</label> 
                         <select id="product-category" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white focus:border-blue-400 focus:outline-none"> 
@@ -229,7 +272,97 @@
         </div> 
     </section> 
     
-    <!-- باقي الHTML بدون تغيير -->
+    <!-- Preview Section -->
+    <section id="preview-section" class="py-20 bg-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-4xl font-bold mb-8 text-center">Live Page Preview</h2>
+            <iframe id="preview" class="preview-frame w-full h-[800px] shadow-2xl" sandbox="allow-same-origin allow-scripts"></iframe>
+            
+            <div id="loading-indicator" class="hidden text-center mt-8 p-4 bg-blue-900/50 border border-blue-400/50 rounded-lg">
+                <svg class="animate-spin h-5 w-5 mr-3 inline-block text-blue-400" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="text-lg font-medium text-blue-400">AI is generating your page... Please wait.</span>
+            </div>
+            <div id="error-message" class="hidden text-center mt-4 p-4 bg-red-900/50 border border-red-400/50 rounded-lg text-red-300"></div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="py-20 bg-slate-800"> 
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
+            <div class="text-center mb-16"> 
+                <h2 class="text-4xl font-bold mb-4">How It Works</h2> 
+                <p class="text-xl text-gray-300">Create professional landing pages in 3 simple steps</p> 
+            </div> 
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8"> 
+                <div class="text-center"> 
+                    <div class="step-number">1</div> 
+                    <h3 class="text-xl font-semibold mb-4">Enter Product Details</h3> 
+                    <p class="text-gray-300">Describe your product, features, target audience, and design preferences. Our AI understands your requirements perfectly.</p> 
+                </div> 
+                <div class="text-center"> 
+                    <div class="step-number">2</div> 
+                    <h3 class="text-xl font-semibold mb-4">AI Generates Page</h3> 
+                    <p class="text-gray-300">Watch as DeepSeek AI creates a stunning landing page with matching colors, professional layout, and compelling offers.</p> 
+                </div> 
+                <div class="text-center"> 
+                    <div class="step-number">3</div> 
+                    <h3 class="text-xl font-semibold mb-4">Download & Use</h3> 
+                    <p class="text-gray-300">Download your complete landing page and connect your payment links. No coding required!</p> 
+                </div> 
+            </div> 
+        </div> 
+    </section> 
+
+    <!-- Features Section -->
+    <section id="features" class="py-20 bg-slate-900"> 
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
+            <div class="text-center mb-16"> 
+                <h2 class="text-4xl font-bold mb-4">Powerful Features</h2> 
+                <p class="text-xl text-gray-300">Everything you need for professional landing pages</p> 
+            </div> 
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"> 
+                <div class="card-hover p-6 text-center"> 
+                    <div class="text-3xl mb-4">🤖</div> 
+                    <h3 class="text-xl font-semibold mb-3">AI-Powered Design</h3> 
+                    <p class="text-gray-300">DeepSeek AI creates perfectly tailored landing pages based on your product details and preferences.</p> 
+                </div> 
+                <div class="card-hover p-6 text-center"> 
+                    <div class="text-3xl mb-4">🎨</div> 
+                    <h3 class="text-xl font-semibold mb-3">Smart Color Matching</h3> 
+                    <p class="text-gray-300">AI selects perfect color schemes that match your product category and target audience.</p> 
+                </div> 
+                <div class="card-hover p-6 text-center"> 
+                    <div class="text-3xl mb-4">💫</div> 
+                    <h3 class="text-xl font-semibold mb-3">Responsive Design</h3> 
+                    <p class="text-gray-300">All generated pages work perfectly on desktop, tablet, and mobile devices.</p> 
+                </div> 
+                <div class="card-hover p-6 text-center"> 
+                    <div class="text-3xl mb-4">🚀</div> 
+                    <h3 class="text-xl font-semibold mb-3">Instant Download</h3> 
+                    <p class="text-gray-300">Get your complete HTML/CSS files ready to host anywhere, completely free.</p> 
+                </div> 
+            </div> 
+        </div> 
+    </section> 
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 border-t border-blue-500/20 py-12"> 
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
+            <div class="text-center"> 
+                <h3 class="text-2xl font-bold text-blue-400 mb-4">SmartPage AI</h3> 
+                <p class="text-gray-400 mb-6">Instantly build stunning product pages with AI</p> 
+                <div class="flex justify-center space-x-8 mb-6"> 
+                    <a href="#privacy" class="text-gray-400 hover:text-white transition-colors">Privacy</a> 
+                    <a href="#terms" class="text-gray-400 hover:text-white transition-colors">Terms</a> 
+                    <a href="#contact" class="text-gray-400 hover:text-white transition-colors">Contact</a> 
+                </div> 
+                <p class="text-gray-500 text-sm">© 2025 SmartPage AI — All rights reserved.</p> 
+            </div> 
+        </div> 
+    </footer> 
     
     <script>
         // ********* Core Variables *********
@@ -259,7 +392,9 @@
             generateBtn.disabled = true;
 
             try {
-                const BACKEND_URL = "https://smartpage-ai-final.vercel.app/api/generate"; 
+                const BACKEND_URL = window.location.hostname === 'localhost' 
+                    ? "http://localhost:3000/api/generate"
+                    : "https://smartpage-ai-final.vercel.app/api/generate";
 
                 const res = await fetch(BACKEND_URL, { 
                     method: "POST",
@@ -277,16 +412,19 @@
                 const data = await res.json();
                 
                 if (res.ok) {
-                    // إظهار النتيجة في إطار المعاينة
                     previewIframe.srcdoc = data.html;
                     downloadBtn.disabled = false;
+                    
+                    // Scroll to preview section
+                    document.getElementById('preview-section').scrollIntoView({ 
+                        behavior: 'smooth' 
+                    });
                 } else {
-                    // معالجة أخطاء الخادم
                     errorMessageDiv.textContent = `Error: ${data.error || data.detail || 'Unknown error occurred.'}`;
                     errorMessageDiv.classList.remove('hidden');
                 }
             } catch (err) {
-                errorMessageDiv.textContent = `Network Error: Could not connect to the server.`;
+                errorMessageDiv.textContent = `Network Error: Could not connect to the server. Please try again.`;
                 errorMessageDiv.classList.remove('hidden');
                 console.error("Fetch Error:", err);
             } finally {
@@ -298,40 +436,37 @@
         // ********* HTML Download Function *********
         function downloadHTML() {
             const htmlContent = previewIframe.srcdoc;
-            if (!htmlContent) return;
+            if (!htmlContent) {
+                errorMessageDiv.textContent = "No page generated yet. Please generate a page first.";
+                errorMessageDiv.classList.remove('hidden');
+                return;
+            }
             
             const blob = new Blob([htmlContent], { type: "text/html" });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = "ai-smart-page.html";
+            link.download = "smartpage-ai-landing.html";
             link.click();
+        }
+
+        // ********* Navigation Functions *********
+        function scrollToBuilder() {
+            document.getElementById('builder').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function scrollToFeatures() {
+            document.getElementById('features').scrollIntoView({ behavior: 'smooth' });
         }
 
         // ********* Event Listeners *********
         generateBtn.addEventListener('click', generateLandingPage);
         downloadBtn.addEventListener('click', downloadHTML);
-
-        function scrollToBuilder() {
-            document.getElementById('builder').scrollIntoView({ behavior: 'smooth' });
-        }
         
-        // باقي الJavaScript بدون تغيير
+        // ********* Initialize Page *********
         document.addEventListener('DOMContentLoaded', function () {
-            // Splide (Carousel) setup
-            if (document.getElementById('features-carousel')) {
-                 new Splide( '#features-carousel', {
-                    type: 'loop',
-                    perPage: 3,
-                    breakpoints: {
-                        768: { perPage: 1, gap: '1rem' },
-                        1024: { perPage: 2 },
-                    }
-                }).mount();
-            }
-
             // Typed.js setup
             if (document.getElementById('typed-text')) {
-                 new Typed('#typed-text', {
+                new Typed('#typed-text', {
                     strings: ["Generate Landing Pages Instantly.", "Get Custom Pages with AI.", "Launch Your Product Faster."],
                     typeSpeed: 50,
                     backSpeed: 30,
@@ -347,7 +482,15 @@
                     mobileMenu.classList.toggle('hidden');
                 });
             }
+
+            // Close mobile menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#mobile-menu') && !e.target.closest('#mobile-menu-btn')) {
+                    mobileMenu.classList.add('hidden');
+                }
+            });
         });
+
     </script>
 </body>
 </html>
