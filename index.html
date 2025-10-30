@@ -372,18 +372,17 @@
         const errorMessageDiv = document.getElementById("error-message");
         const previewIframe = document.getElementById("preview");
         
-        // ********* Backend Connection Function (Fetch) *********
+        // ********* Backend Connection Function *********
         async function generateLandingPage() {
             errorMessageDiv.classList.add('hidden');
             downloadBtn.disabled = true;
             
-            // التحقق من البيانات المطلوبة
             const name = document.getElementById("product-name").value;
             const features = document.getElementById("product-features").value;
             const price = document.getElementById("product-price").value;
 
             if (!name || !features || !price) {
-                errorMessageDiv.textContent = "Please fill in all required fields: Product Name, Features, and Price!";
+                errorMessageDiv.textContent = "Please fill in all required fields!";
                 errorMessageDiv.classList.remove('hidden');
                 return;
             }
@@ -392,9 +391,7 @@
             generateBtn.disabled = true;
 
             try {
-                const BACKEND_URL = window.location.hostname === 'localhost' 
-                    ? "http://localhost:3000/api/generate"
-                    : "https://smartpage-ai-final.vercel.app/api/generate";
+                const BACKEND_URL = "https://final-youcefs-projects-a46c25a1.vercel.app/api/generate";
 
                 const res = await fetch(BACKEND_URL, { 
                     method: "POST",
@@ -414,19 +411,14 @@
                 if (res.ok) {
                     previewIframe.srcdoc = data.html;
                     downloadBtn.disabled = false;
-                    
-                    // Scroll to preview section
-                    document.getElementById('preview-section').scrollIntoView({ 
-                        behavior: 'smooth' 
-                    });
+                    document.getElementById('preview-section').scrollIntoView({ behavior: 'smooth' });
                 } else {
-                    errorMessageDiv.textContent = `Error: ${data.error || data.detail || 'Unknown error occurred.'}`;
+                    errorMessageDiv.textContent = `Error: ${data.error || 'Unknown error'}`;
                     errorMessageDiv.classList.remove('hidden');
                 }
             } catch (err) {
-                errorMessageDiv.textContent = `Network Error: Could not connect to the server. Please try again.`;
+                errorMessageDiv.textContent = "Network error. Please try again.";
                 errorMessageDiv.classList.remove('hidden');
-                console.error("Fetch Error:", err);
             } finally {
                 loadingIndicator.classList.add('hidden');
                 generateBtn.disabled = false;
@@ -490,7 +482,6 @@
                 }
             });
         });
-
     </script>
 </body>
 </html>
