@@ -140,7 +140,6 @@
     </style> 
 </head> 
 <body> 
-    <!-- Navigation -->
     <nav class="fixed top-0 w-full z-50 bg-slate-900/90 backdrop-blur-md border-b border-blue-500/20"> 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
             <div class="flex justify-between items-center h-16"> 
@@ -172,7 +171,6 @@
         </div> 
     </nav> 
 
-    <!-- Hero Section -->
     <section class="hero-bg min-h-screen flex items-center pt-16"> 
         <div class="content-overlay max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
             <div class="text-center"> 
@@ -188,7 +186,6 @@
         </div> 
     </section> 
 
-    <!-- Builder Section -->
     <section id="builder" class="py-20 bg-slate-900"> 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
             <div class="text-center mb-12"> 
@@ -272,7 +269,6 @@
         </div> 
     </section> 
     
-    <!-- Preview Section -->
     <section id="preview-section" class="py-20 bg-slate-800">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 class="text-4xl font-bold mb-8 text-center">Live Page Preview</h2>
@@ -289,7 +285,6 @@
         </div>
     </section>
 
-    <!-- How It Works Section -->
     <section id="how-it-works" class="py-20 bg-slate-800"> 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
             <div class="text-center mb-16"> 
@@ -310,13 +305,12 @@
                 <div class="text-center"> 
                     <div class="step-number">3</div> 
                     <h3 class="text-xl font-semibold mb-4">Download & Use</h3> 
-                    <p class="text-gray-300">Download your complete landing page and connect your payment links. No coding required!</p> 
+                    <p class="text-gray-300">Get your complete HTML/CSS files ready to host anywhere, completely free.</p> 
                 </div> 
             </div> 
         </div> 
     </section> 
 
-    <!-- Features Section -->
     <section id="features" class="py-20 bg-slate-900"> 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
             <div class="text-center mb-16"> 
@@ -348,7 +342,6 @@
         </div> 
     </section> 
 
-    <!-- Footer -->
     <footer class="bg-slate-900 border-t border-blue-500/20 py-12"> 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
             <div class="text-center"> 
@@ -391,7 +384,8 @@
             generateBtn.disabled = true;
 
             try {
-                const BACKEND_URL = "https://final-youcefs-projects-a46c25a1.vercel.app/api/generate";
+                // ****** تم تعديل هذا السطر ليُشير إلى رابط مشروعك الصحيح ******
+                const BACKEND_URL = "https://smartpage-ai-final.vercel.app/api/generate";
 
                 const res = await fetch(BACKEND_URL, { 
                     method: "POST",
