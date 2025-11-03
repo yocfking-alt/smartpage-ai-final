@@ -18,9 +18,9 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Missing product details' });
         }
 
-        // ✅ التصحيح: استخدام النموذج الأساسي المجاني
-        const GEMINI_MODEL = 'gemini-pro'; 
-        const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+        // ✅ التعديل النهائي لاسم النموذج المدعوم في الطبقة المجانية والـ API الحالي
+        const GEMINI_MODEL = 'gemini-2.5-flash'; 
+        const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
         
         // بناء أمر التوليد (Prompt)
         const prompt = `
@@ -44,7 +44,7 @@ export default async function handler(req, res) {
             5. Use an elegant and effective color scheme based on the product category.
         `;
 
-        // الهيكل الصحيح لـ Gemini API
+        // ✅ الهيكل الصحيح لـ Gemini API (تم تعديل 'config' إلى 'generationConfig')
         const geminiBody = {
             contents: [{
                 parts: [{ text: prompt }]
