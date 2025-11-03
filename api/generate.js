@@ -18,8 +18,8 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Missing product details' });
         }
 
-        // ✅ التصحيح: استخدام النموذج والإصدار الصحيحين
-        const GEMINI_MODEL = 'gemini-1.5-flash-latest'; 
+        // ✅ التصحيح: استخدام النموذج الأساسي المجاني
+        const GEMINI_MODEL = 'gemini-pro'; 
         const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
         
         // بناء أمر التوليد (Prompt)
