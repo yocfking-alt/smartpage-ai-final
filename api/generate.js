@@ -44,12 +44,12 @@ export default async function handler(req, res) {
             5. Use an elegant and effective color scheme based on the product category.
         `;
 
-        // بناء جسم الطلب لـ Gemini API - يجب أن يكون بهذا الهيكل EXACTLY
+        // ✅ الهيكل الصحيح لـ Gemini API
         const geminiBody = {
             contents: [{
                 parts: [{ text: prompt }]
             }],
-            config: {
+            generationConfig: {  // ✅ التصحيح هنا
                 temperature: 0.7,
             }
         };
