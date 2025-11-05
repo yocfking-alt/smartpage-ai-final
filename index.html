@@ -407,8 +407,8 @@
             generateBtn.disabled = true;
 
             try {
-                // ****** تم تحديث هذا الرابط ليطابق رابط النشر التجريبي الخاص بك ******
-                const BACKEND_URL = "https://smartpage-ai-final-git-test-new-form-youcefs-projects-a46c25a1.vercel.app/api/generate";
+                // ****** تم التعديل إلى المسار النسبي لحل مشكلة Network Error ******
+                const BACKEND_URL = "/api/generate";
 
                 const res = await fetch(BACKEND_URL, { 
                     method: "POST",
