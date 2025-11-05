@@ -199,11 +199,17 @@
                     <div class="mb-6"> 
                         <label for="product-category" class="block text-sm font-medium mb-2">📦 Product Category:</label> 
                         <select id="product-category" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white focus:border-blue-400 focus:outline-none"> 
-                            <option value="beauty">💄 Beauty & Cosmetics</option> 
-                            <option value="electronics">📱 Electronics</option> 
-                            <option value="fashion">👕 Fashion</option> 
-                            <option value="home">🏠 Home & Living</option> 
-                            <option value="other">📦 Other</option> 
+                            <option value="beauty">💄 جمال ومستحضرات تجميل</option> 
+                            <option value="electronics">📱 إلكترونيات وتقنية</option> 
+                            <option value="fashion">👕 أزياء وملابس</option> 
+                            <option value="home">🏠 منزل ومعيشة</option> 
+                            <option value="education">📚 تعليم ودورات</option> 
+                            <option value="finance">💸 خدمات مالية</option>
+                            <option value="software">💻 برمجيات وأدوات</option>
+                            <option value="health">💊 صحة ولياقة</option>
+                            <option value="food">🍕 طعام ومشروبات</option>
+                            <option value="travel">✈️ سفر وسياحة</option>
+                            <option value="other">📦 أخرى</option> 
                         </select> 
                     </div> 
 
@@ -230,33 +236,43 @@
                         <label for="product-price" class="block text-sm font-medium mb-2">💰 Product Price:</label> 
                         <input type="text" id="product-price" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none" placeholder="Enter the product price (e.g. $29.99)"/> 
                     </div> 
+                    
+                    <div class="mb-6"> 
+                        <label for="shipping-select" class="block text-sm font-medium mb-2">🚚 خيارات التوصيل:</label> 
+                        <select id="shipping-select" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white focus:border-blue-400 focus:outline-none"> 
+                            <option value="free" selected>توصيل مجاني (موصى به)</option> 
+                            <option value="custom">سعر توصيل محدد</option> 
+                        </select> 
+                    </div> 
+                    <div id="custom-shipping-container" class="mb-6 hidden">
+                        <label for="custom-shipping-price" class="block text-sm font-medium mb-2">💰 اكتب سعر التوصيل:</label>
+                        <input type="text" id="custom-shipping-price" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none" placeholder="مثال: $5.00 أو 50 ريال"/> 
+                    </div>
                     <div class="mb-6"> 
                         <label for="description-input" class="block text-sm font-medium mb-2">🎨 Design Description:</label> 
                         <textarea id="description-input" rows="3" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none resize-none" placeholder="Describe the design style you want (e.g., modern, elegant, bold)..."></textarea> 
                     </div>
                 </div> 
+
                 <div class="builder-panel p-6"> 
                     <h3 class="text-xl font-semibold mb-6 text-blue-400">2. Generate & Download</h3> 
-                    <div class="mb-6"> 
-                        <label class="block text-sm font-medium mb-2">Layout Style</label> 
-                        <select id="layout-select" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white focus:border-blue-400 focus:outline-none"> 
-                            <option value="minimal">Minimal</option> 
-                            <option value="bold">Bold</option> 
-                            <option value="elegant" selected="">Elegant</option> 
-                        </select> 
-                    </div> 
-                    <div class="mb-6"> 
-                        <label class="block text-sm font-medium mb-2">Promotional Offer</label> 
-                        <select id="offer-select" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white focus:border-blue-400 focus:outline-none"> 
-                            <option value="bogo" selected="">Buy 2, Get 1 Free</option> 
-                            <option value="discount">20% Off</option> 
-                            <option value="shipping">Free Shipping</option> 
-                            <option value="bundle">Bundle Deal</option> 
-                        </select> 
-                    </div> 
                     
+                    <div class="mb-6"> 
+                        <label for="use-offer-toggle" class="block text-sm font-medium mb-2">🎁 العرض الترويجي:</label>
+                        <div class="flex items-center justify-between p-3 bg-slate-800 border border-slate-600 rounded-lg">
+                            <span class="text-white">هل تريد تضمين عرض ترويجي؟</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="use-offer-toggle" value="" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                    <div id="offer-input-container" class="mb-6 hidden">
+                        <label for="custom-offer-input" class="block text-sm font-medium mb-2">✍️ أكتب عرضك التسويقي:</label>
+                        <textarea id="custom-offer-input" rows="2" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none resize-none" placeholder="مثال: خصم 50% لأول 100 عميل!"></textarea>
+                    </div>
                     <button id="generate-btn" class="w-full glow-button text-white py-4 rounded-lg text-lg font-medium mb-4"> 
-                        🚀 Generate with DeepSeek AI 
+                        🚀 Generate Page 
                     </button> 
                     <button id="download-btn" class="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-lg text-lg font-medium" disabled=""> 
                         📥 Download Landing Page 
@@ -373,6 +389,13 @@
             const name = document.getElementById("product-name").value;
             const features = document.getElementById("product-features").value;
             const price = document.getElementById("product-price").value;
+            
+            // استخراج القيم الجديدة
+            const shippingOption = document.getElementById("shipping-select").value;
+            const customShippingPrice = document.getElementById("custom-shipping-price").value;
+            const useOffer = document.getElementById("use-offer-toggle").checked;
+            const customOffer = document.getElementById("custom-offer-input").value;
+
 
             if (!name || !features || !price) {
                 errorMessageDiv.textContent = "Please fill in all required fields!";
@@ -384,8 +407,8 @@
             generateBtn.disabled = true;
 
             try {
-                // ****** تم التعديل إلى مسار نسبي لتشغيل الاختبار على Vercel Preview ******
-                const BACKEND_URL = "/api/generate";
+                // ****** تم تحديث هذا الرابط ليطابق رابط النشر التجريبي الخاص بك ******
+                const BACKEND_URL = "https://smartpage-ai-final-git-test-new-form-youcefs-projects-a46c25a1.vercel.app/api/generate";
 
                 const res = await fetch(BACKEND_URL, { 
                     method: "POST",
@@ -396,7 +419,12 @@
                         productPrice: price,
                         productCategory: document.getElementById("product-category").value,
                         targetAudience: document.getElementById("target-audience").value,
-                        designDescription: document.getElementById("description-input").value
+                        designDescription: document.getElementById("description-input").value,
+                        
+                        // إرسال البيانات الجديدة إلى generate.js
+                        shippingOption: shippingOption,
+                        customShippingPrice: shippingOption === 'custom' ? customShippingPrice : null,
+                        customOffer: useOffer ? customOffer : null
                     })
                 });
 
@@ -448,6 +476,33 @@
         generateBtn.addEventListener('click', generateLandingPage);
         downloadBtn.addEventListener('click', downloadHTML);
         
+        // أدوات التحكم في الإظهار والإخفاء (Toggles)
+        const shippingSelect = document.getElementById('shipping-select');
+        const customShippingContainer = document.getElementById('custom-shipping-container');
+        const useOfferToggle = document.getElementById('use-offer-toggle');
+        const offerInputContainer = document.getElementById('offer-input-container');
+
+        if (shippingSelect && customShippingContainer) {
+            shippingSelect.addEventListener('change', () => {
+                if (shippingSelect.value === 'custom') {
+                    customShippingContainer.classList.remove('hidden');
+                } else {
+                    customShippingContainer.classList.add('hidden');
+                }
+            });
+        }
+        
+        if (useOfferToggle && offerInputContainer) {
+            useOfferToggle.addEventListener('change', () => {
+                if (useOfferToggle.checked) {
+                    offerInputContainer.classList.remove('hidden');
+                } else {
+                    offerInputContainer.classList.add('hidden');
+                }
+            });
+        }
+
+
         // ********* Initialize Page *********
         document.addEventListener('DOMContentLoaded', function () {
             // Typed.js setup
