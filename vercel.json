@@ -16,6 +16,10 @@
       "destination": "/api/generate.js"
     },
     {
+      "source": "/builder",
+      "destination": "/builder.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
