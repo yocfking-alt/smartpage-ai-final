@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head> 
+    <meta charset="UTF-8"/> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
+    <title>SmartPage AI - Build Your Landing Page</title> 
+    <script src="https://cdn.tailwindcss.com"></script> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/typed.js/2.0.12/typed.min.js"></script> 
+    <script src="https://unpkg.com/splitting@1.0.6/dist/splitting.js"></script> 
+    <link rel="stylesheet" href="https://unpkg.com/splitting@1.0.6/dist/splitting.css"/> 
+    <script src="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/js/splide.min.js"></script> 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/css/splide.min.css"/> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script> 
+    <style> 
+        /* النسق الفاتح - نفس ألوان index.html */
+        :root { 
+            --bg-primary: #FFFFFF; /* خلفية بيضاء */
+            --bg-secondary: #F3F4F6; /* خلفية رمادية فاتحة للأقسام/البطاقات */
+            --text-primary: #1F2937; /* نص داكن (أسود/رمادي غامق) */
+            --logo-color: #1D4ED8; /* أزرق داكن للشعار */
+            --accent: #1D4ED8; /* لون الأزرار والتميز (الأزرق الداكن) */
+            --accent-glow: rgba(29, 78, 216, 0.35); /* ظل خفيف للأزرار الزرقاء */
+            --border-color: #D1D5DB; /* لون الحدود */
+        } 
+        body { 
+            background: var(--bg-primary); 
+            color: var(--text-primary); 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+        } 
+        .glow-button { 
+            background: var(--accent); 
+            color: #FFFFFF; 
+            box-shadow: 0 0 15px var(--accent-glow); 
+            transition: all 0.3s ease; 
+        } 
+        .glow-button:hover { 
+            background: #103FBD; 
+            box-shadow: 0 0 25px var(--accent-glow); 
+            transform: translateY(-2px); 
+        } 
+        .card-hover { 
+            transition: all 0.3s ease; 
+            background: var(--bg-secondary); 
+            border: 1px solid var(--border-color); 
+            border-radius: 12px; 
+        } 
+        .card-hover:hover { 
+            transform: translateY(-8px); 
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1); 
+        } 
+        .hero-bg { 
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%); 
+            position: relative; 
+            overflow: hidden; 
+        } 
+        .builder-panel { 
+            background: var(--bg-secondary); 
+            border: 1px solid var(--border-color); 
+            border-radius: 16px; 
+        } 
+        .preview-frame { 
+            background: white; 
+            border-radius: 8px; 
+            min-height: 400px; 
+            position: relative; 
+            overflow: hidden; 
+        } 
+        .nav-link { 
+            transition: all 0.3s ease; 
+            position: relative; 
+            color: var(--text-primary); 
+        } 
+        .nav-link:hover { 
+            color: var(--accent); 
+        } 
+        .nav-link::after { 
+            content: ''; 
+            position: absolute; 
+            bottom: -4px; 
+            left: 0; 
+            width: 0; 
+            height: 2px; 
+            background: var(--accent); 
+            transition: width 0.3s ease; 
+        } 
+        .nav-link:hover::after { 
+            width: 100%; 
+        } 
+        @media (max-width: 768px) { 
+            .builder-grid { 
+                grid-template-columns: 1fr; 
+            } 
+        } 
+    </style> 
+</head> 
+<body> 
+    <nav class="fixed top-0 w-full z-50 bg-white/95 backdrop-blur-md border-b border-gray-200"> 
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
+            <div class="flex justify-between items-center h-16"> 
+                <div class="flex items-center"> 
+                    <h1 class="text-2xl font-bold" style="color: var(--logo-color);">Smart Page AI</h1> 
+                </div> 
+                <div class="hidden md:block"> 
+                    <div class="ml-10 flex items-baseline space-x-8"> 
+                        <a href="index.html" class="nav-link px-3 py-2 text-sm font-medium">Home</a> 
+                        <a href="index.html#features" class="nav-link px-3 py-2 text-sm font-medium">Features</a> 
+                    </div> 
+                </div> 
+                <div class="md:hidden"> 
+                    <button id="mobile-menu-btn" class="text-gray-700 hover:text-black"> 
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path> 
+                        </svg> 
+                    </button> 
+                </div> 
+            </div> 
+        </div> 
+        <div id="mobile-menu" class="md:hidden hidden bg-white/95 backdrop-blur-md border-t border-gray-200"> 
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3"> 
+                <a href="index.html" class="nav-link block px-3 py-2 text-base font-medium">Home</a> 
+                <a href="index.html#features" class="nav-link block px-3 py-2 text-base font-medium">Features</a> 
+            </div> 
+        </div> 
+    </nav> 
+
+    <section class="py-20 bg-white mt-16"> 
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
+            <div class="text-center mb-12"> 
+                <h2 class="text-4xl font-bold mb-4 text-gray-900">Build Your Landing Page</h2> 
+                <p class="text-xl text-gray-600">Describe your product and watch AI create magic</p> 
+            </div> 
+            <div class="builder-grid grid grid-cols-1 lg:grid-cols-2 gap-8"> 
+                <div class="builder-panel p-6"> 
+                    <h3 class="text-xl font-semibold mb-6" style="color: var(--accent);">1. Product Details</h3> 
+                    
+                    <div class="mb-6"> 
+                        <label for="product-category" class="block text-sm font-medium mb-2 text-gray-700">📦 Product Category:</label> 
+                        <select id="product-category" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"> 
+                            <option value="beauty">💄 Beauty & Cosmetics</option> 
+                            <option value="electronics">📱 Electronics & Tech</option> 
+                            <option value="fashion">👕 Fashion & Clothing</option> 
+                            <option value="home">🏠 Home & Living</option> 
+                            <option value="education">📚 Education & Courses</option> 
+                            <option value="finance">💸 Financial Services</option>
+                            <option value="software">💻 Software & Tools</option>
+                            <option value="health">💊 Health & Fitness</option>
+                            <option value="food">🍕 Food & Beverages</option>
+                            <option value="travel">✈️ Travel & Tourism</option>
+                            <option value="other">📦 Other</option> 
+                        </select> 
+                    </div> 
+
+                    <div class="mb-6"> 
+                        <label for="target-audience" class="block text-sm font-medium mb-2 text-gray-700">🎯 Target Audience:</label> 
+                        <select id="target-audience" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"> 
+                            <option value="women">👩 Women</option> 
+                            <option value="men">👨 Men</option> 
+                            <option value="youth">🧒 Youth</option> 
+                            <option value="professionals">💼 Professionals</option> 
+                            <option value="general">🌍 General</option> 
+                        </select> 
+                    </div>
+
+                    <div class="mb-6"> 
+                        <label for="product-name" class="block text-sm font-medium mb-2 text-gray-700">🛍️ Product Name:</label> 
+                        <input type="text" id="product-name" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="Enter your product name..."/> 
+                    </div> 
+                    <div class="mb-6"> 
+                        <label for="product-features" class="block text-sm font-medium mb-2 text-gray-700">🧩 Product Features:</label> 
+                        <textarea id="product-features" rows="4" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none" placeholder="Write the key features or unique details about your product..."></textarea> 
+                    </div> 
+                    <div class="mb-6"> 
+                        <label for="product-price" class="block text-sm font-medium mb-2 text-gray-700">💰 Product Price:</label> 
+                        <input type="text" id="product-price" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="Enter the product price (e.g. $29.99)"/> 
+                    </div> 
+                    
+                    <div class="mb-6"> 
+                        <label for="shipping-select" class="block text-sm font-medium mb-2 text-gray-700">🚚 Shipping Options:</label> 
+                        <select id="shipping-select" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"> 
+                            <option value="free" selected>Free Shipping (Recommended)</option> 
+                            <option value="custom">Custom Shipping Price</option> 
+                        </select> 
+                    </div> 
+                    <div id="custom-shipping-container" class="mb-6 hidden">
+                        <label for="custom-shipping-price" class="block text-sm font-medium mb-2 text-gray-700">💰 Enter Shipping Price:</label>
+                        <input type="text" id="custom-shipping-price" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="Example: $5.00"/> 
+                    </div>
+                    <div class="mb-6"> 
+                        <label for="description-input" class="block text-sm font-medium mb-2 text-gray-700">🎨 Design Description:</label> 
+                        <textarea id="description-input" rows="3" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none" placeholder="Describe the design style you want (e.g., modern, elegant, bold)..."></textarea> 
+                    </div>
+                </div> 
+
+                <div class="builder-panel p-6"> 
+                    <h3 class="text-xl font-semibold mb-6" style="color: var(--accent);">2. Generate & Download</h3> 
+                    
+                    <div class="mb-6"> 
+                        <label for="use-offer-toggle" class="block text-sm font-medium mb-2 text-gray-700">🎁 Promotional Offer:</label>
+                        <div class="flex items-center justify-between p-3 bg-white border border-gray-300 rounded-lg">
+                            <span class="text-gray-700">Include promotional offer?</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="use-offer-toggle" value="" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-200 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                    <div id="offer-input-container" class="mb-6 hidden">
+                        <label for="custom-offer-input" class="block text-sm font-medium mb-2 text-gray-700">✍️ Write Your Marketing Offer:</label>
+                        <textarea id="custom-offer-input" rows="2" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none" placeholder="Example: 50% OFF for first 100 customers!"></textarea>
+                    </div>
+                    <button id="generate-btn" class="w-full glow-button py-4 rounded-lg text-lg font-medium mb-4"> 
+                        🚀 Generate Page 
+                    </button> 
+                    <button id="download-btn" class="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-lg text-lg font-medium transition-all duration-300" disabled> 
+                        📥 Download Landing Page 
+                    </button> 
+                    <div class="mt-4 text-center"> 
+                        <p class="text-sm text-gray-500">No signup required • Free forever</p> 
+                    </div> 
+                </div> 
+            </div> 
+        </div> 
+    </section> 
+    
+    <section id="preview-section" class="py-20 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-4xl font-bold mb-8 text-center text-gray-900">Live Page Preview</h2>
+            <iframe id="preview" class="preview-frame w-full h-[800px] shadow-2xl border border-gray-300" sandbox="allow-same-origin allow-scripts"></iframe>
+            
+            <div id="loading-indicator" class="hidden text-center mt-8 p-4 bg-blue-100 border border-blue-300 rounded-lg">
+                <svg class="animate-spin h-5 w-5 mr-3 inline-block text-blue-600" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="text-lg font-medium text-blue-600">AI is generating your page... Please wait.</span>
+            </div>
+            <div id="error-message" class="hidden text-center mt-4 p-4 bg-red-100 border border-red-300 rounded-lg text-red-700"></div>
+        </div>
+    </section>
+
+    <footer class="bg-gray-100 border-t border-gray-300 py-12"> 
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
+            <div class="text-center"> 
+                <h3 class="text-2xl font-bold" style="color: var(--logo-color);">Smart Page AI</h3> 
+                <p class="text-gray-600 mb-6">Instantly build stunning product pages with AI</p> 
+                <div class="flex justify-center space-x-8 mb-6"> 
+                    <a href="#privacy" class="text-gray-600 hover:text-black transition-colors">Privacy</a> 
+                    <a href="#terms" class="text-gray-600 hover:text-black transition-colors">Terms</a> 
+                    <a href="#contact" class="text-gray-600 hover:text-black transition-colors">Contact</a> 
+                </div> 
+                <p class="text-gray-500 text-sm">© 2025 Smart Page AI — All rights reserved.</p> 
+            </div> 
+        </div> 
+    </footer> 
+    
+    <script>
+        // ********* Core Variables *********
+        const generateBtn = document.getElementById("generate-btn");
+        const downloadBtn = document.getElementById("download-btn");
+        const loadingIndicator = document.getElementById("loading-indicator");
+        const errorMessageDiv = document.getElementById("error-message");
+        const previewIframe = document.getElementById("preview");
+        
+        // ********* Backend Connection Function *********
+        async function generateLandingPage() {
+            errorMessageDiv.classList.add('hidden');
+            downloadBtn.disabled = true;
+            
+            const name = document.getElementById("product-name").value;
+            const features = document.getElementById("product-features").value;
+            const price = document.getElementById("product-price").value;
+            
+            // استخراج القيم الجديدة
+            const shippingOption = document.getElementById("shipping-select").value;
+            const customShippingPrice = document.getElementById("custom-shipping-price").value;
+            const useOffer = document.getElementById("use-offer-toggle").checked;
+            const customOffer = document.getElementById("custom-offer-input").value;
+
+            if (!name || !features || !price) {
+                errorMessageDiv.textContent = "Please fill in all required fields!";
+                errorMessageDiv.classList.remove('hidden');
+                return;
+            }
+
+            loadingIndicator.classList.remove('hidden');
+            generateBtn.disabled = true;
+
+            try {
+                const BACKEND_URL = "/api/generate";
+
+                const res = await fetch(BACKEND_URL, { 
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        productName: name,
+                        productFeatures: features,
+                        productPrice: price,
+                        productCategory: document.getElementById("product-category").value,
+                        targetAudience: document.getElementById("target-audience").value,
+                        designDescription: document.getElementById("description-input").value,
+                        
+                        // إرسال البيانات الجديدة إلى generate.js
+                        shippingOption: shippingOption,
+                        customShippingPrice: shippingOption === 'custom' ? customShippingPrice : null,
+                        customOffer: useOffer ? customOffer : null
+                    })
+                });
+
+                const data = await res.json();
+                
+                if (res.ok) {
+                    previewIframe.srcdoc = data.html;
+                    downloadBtn.disabled = false;
+                    document.getElementById('preview-section').scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    errorMessageDiv.textContent = `Error: ${data.error || 'Unknown error'}`;
+                    errorMessageDiv.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorMessageDiv.textContent = "Network error. Please try again.";
+                errorMessageDiv.classList.remove('hidden');
+            } finally {
+                loadingIndicator.classList.add('hidden');
+                generateBtn.disabled = false;
+            }
+        }
+
+        // ********* HTML Download Function *********
+        function downloadHTML() {
+            const htmlContent = previewIframe.srcdoc;
+            if (!htmlContent) {
+                errorMessageDiv.textContent = "No page generated yet. Please generate a page first.";
+                errorMessageDiv.classList.remove('hidden');
+                return;
+            }
+            
+            const blob = new Blob([htmlContent], { type: "text/html" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "smartpage-ai-landing.html";
+            link.click();
+        }
+
+        // ********* Event Listeners *********
+        generateBtn.addEventListener('click', generateLandingPage);
+        downloadBtn.addEventListener('click', downloadHTML);
+        
+        // أدوات التحكم في الإظهار والإخفاء (Toggles)
+        const shippingSelect = document.getElementById('shipping-select');
+        const customShippingContainer = document.getElementById('custom-shipping-container');
+        const useOfferToggle = document.getElementById('use-offer-toggle');
+        const offerInputContainer = document.getElementById('offer-input-container');
+
+        if (shippingSelect && customShippingContainer) {
+            shippingSelect.addEventListener('change', () => {
+                if (shippingSelect.value === 'custom') {
+                    customShippingContainer.classList.remove('hidden');
+                } else {
+                    customShippingContainer.classList.add('hidden');
+                }
+            });
+        }
+        
+        if (useOfferToggle && offerInputContainer) {
+            useOfferToggle.addEventListener('change', () => {
+                if (useOfferToggle.checked) {
+                    offerInputContainer.classList.remove('hidden');
+                } else {
+                    offerInputContainer.classList.add('hidden');
+                }
+            });
+        }
+
+        // ********* Initialize Page *********
+        document.addEventListener('DOMContentLoaded', function () {
+            // Mobile Menu Toggle
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const mobileMenu = document.getElementById('mobile-menu');
+            if (mobileMenuBtn && mobileMenu) {
+                mobileMenuBtn.addEventListener('click', () => {
+                    mobileMenu.classList.toggle('hidden');
+                });
+            }
+
+            // Close mobile menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#mobile-menu') && !e.target.closest('#mobile-menu-btn')) {
+                    mobileMenu.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
