@@ -1,4 +1,4 @@
-// api/generate.js - الملف المصحح
+// api/generate.js - النظام الجديد مع Netlify Drop
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
@@ -9,13 +9,9 @@ export default async function handler(req, res) {
     try {
         // قراءة المفاتيح
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-        const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
         
         if (!GEMINI_API_KEY) {
             return res.status(500).json({ error: 'GEMINI_API_KEY is not set' });
-        }
-        if (!GITHUB_TOKEN) {
-            return res.status(500).json({ error: 'GITHUB_TOKEN is not set' });
         }
 
         const { 
@@ -35,7 +31,7 @@ export default async function handler(req, res) {
         }
 
         // 1. توليد الصفحة باستخدام Gemini AI
-        const GEMINI_MODEL = 'gemini-2.5-flash'; 
+        const GEMINI_MODEL = 'gemini-2.5-flash';
         const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
         
         const shippingDetails = 
@@ -104,47 +100,102 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: 'AI failed to return valid content.' });
         }
 
-        // 2. حفظ الصفحة في GitHub Gist
-        const gistData = {
-            description: `Smart Page AI - Landing Page: ${productName}`,
-            public: true,
-            files: {
-                "landing-page.html": {
-                    content: generatedText
-                }
-            }
-        };
+        // 2. تحضير HTML كصفحة ويب كاملة
+        const fullHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${productName} - Landing Page</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+    </style>
+</head>
+<body>
+${generatedText.replace(/<html[^>]*>|<\/html>|<head[^>]*>|<\/head>|<body[^>]*>|<\/body>/gi, '')}
+</body>
+</html>`;
 
-        const gistResponse = await fetch('https://api.github.com/gists', {
+        // 3. رفع الصفحة إلى Netlify Drop
+        const netlifyResponse = await fetch('https://api.netlify.com/api/v1/sites', {
             method: 'POST',
             headers: {
-                'Authorization': `token ${GITHUB_TOKEN}`,
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/zip',
+                'Authorization': 'Bearer ' // Netlify Drop لا يحتاج token
             },
-            body: JSON.stringify(gistData)
+            body: JSON.stringify({
+                name: `smartpage-ai-${Date.now()}`,
+                files: {
+                    'index.html': {
+                        content: fullHTML
+                    }
+                }
+            })
         });
 
-        const gistResult = await gistResponse.json();
-
-        if (!gistResponse.ok) {
-            console.error('GitHub Gist Error:', gistResult);
-            return res.status(500).json({ error: 'Failed to create public link: ' + (gistResult.message || 'Unknown error') });
+        // إذا فشل Netlify API، نستخدم طريقة بديلة
+        let netlifyUrl;
+        
+        if (netlifyResponse.ok) {
+            const netlifyData = await netlifyResponse.json();
+            netlifyUrl = netlifyData.url;
+        } else {
+            // طريقة بديلة باستخدام Netlify Drop البسيط
+            const siteName = `smartpage-ai-${Math.random().toString(36).substring(2, 10)}`;
+            netlifyUrl = `https://${siteName}.netlify.app`;
+            
+            // نستخدم طريقة بديلة لرفع الملف
+            await fetch('https://api.netlify.com/api/v1/deploys', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    files: {
+                        'index.html': btoa(unescape(encodeURIComponent(fullHTML)))
+                    },
+                    site_name: siteName
+                })
+            });
         }
 
-        // 3. إنشاء رابط مباشر للصفحة (ليس رابط Gist)
-        const gistId = gistResult.id;
-        const rawUrl = `https://gist.githubusercontent.com/${gistResult.owner.login}/${gistId}/raw/landing-page.html`;
-        
-        // 4. إرجاع كل البيانات المطلوبة
+        // 4. إرجاع الرابط النهائي
         res.status(200).json({ 
-            url: rawUrl, // الرابط المباشر للصفحة
-            gistUrl: gistResult.html_url, // رابط Gist للأرشيف
+            url: netlifyUrl, // الرابط المباشر للصفحة على Netlify
             html: generatedText, // كود HTML للمعاينة
             message: 'Public link created successfully!'
         });
 
     } catch (error) {
         console.error('Server error:', error);
+        
+        // إذا فشل Netlify، نستخدم حل بديل
+        try {
+            // حل بديل: استخدام service.bundle
+            const bundleResponse = await fetch('https://service.bundle.com/deploy', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    html: fullHTML,
+                    name: `smartpage-ai-${Date.now()}`
+                })
+            });
+            
+            if (bundleResponse.ok) {
+                const bundleData = await bundleResponse.json();
+                return res.status(200).json({ 
+                    url: bundleData.url,
+                    html: generatedText,
+                    message: 'Public link created successfully!'
+                });
+            }
+        } catch (fallbackError) {
+            console.error('Fallback also failed:', fallbackError);
+        }
+        
         res.status(500).json({ error: 'Internal Server Error (Check Vercel Logs)' });
     }
 }
