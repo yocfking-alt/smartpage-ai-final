@@ -195,7 +195,7 @@
                 </div> 
 
                 <div class="builder-panel p-6"> 
-                    <h3 class="text-xl font-semibold mb-6" style="color: var(--accent);">2. Generate & Download</h3> 
+                    <h3 class="text-xl font-semibold mb-6" style="color: var(--accent);">2. Generate & Share</h3> 
                     
                     <div class="mb-6"> 
                         <label for="use-offer-toggle" class="block text-sm font-medium mb-2 text-gray-700">🎁 Promotional Offer:</label>
@@ -211,14 +211,24 @@
                         <label for="custom-offer-input" class="block text-sm font-medium mb-2 text-gray-700">✍️ Write Your Marketing Offer:</label>
                         <textarea id="custom-offer-input" rows="2" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none" placeholder="Example: 50% OFF for first 100 customers!"></textarea>
                     </div>
+                    
                     <button id="generate-btn" class="w-full glow-button py-4 rounded-lg text-lg font-medium mb-4"> 
-                        🚀 Generate Page 
+                        🚀 Generate Public Link 
                     </button> 
-                    <button id="download-btn" class="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-lg text-lg font-medium transition-all duration-300" disabled> 
-                        📥 Download Landing Page 
-                    </button> 
+                    
+                    <div id="link-result" class="hidden mb-4 p-4 bg-green-100 border border-green-300 rounded-lg">
+                        <p class="text-green-700 font-medium mb-2">✅ Your landing page is ready!</p>
+                        <div class="flex items-center">
+                            <input type="text" id="generated-link" class="flex-1 bg-white border border-gray-300 rounded-l-lg px-3 py-2 text-sm" readonly>
+                            <button onclick="copyLink()" class="bg-blue-600 text-white px-4 py-2 rounded-r-lg hover:bg-blue-700 transition-colors">
+                                Copy
+                            </button>
+                        </div>
+                        <p class="text-green-600 text-sm mt-2">Share this link in your Facebook/TikTok ads!</p>
+                    </div>
+                    
                     <div class="mt-4 text-center"> 
-                        <p class="text-sm text-gray-500">No signup required • Free forever</p> 
+                        <p class="text-sm text-gray-500">No signup required • Free forever • Links work permanently</p> 
                     </div> 
                 </div> 
             </div> 
@@ -259,21 +269,27 @@
     <script>
         // ********* Core Variables *********
         const generateBtn = document.getElementById("generate-btn");
-        const downloadBtn = document.getElementById("download-btn");
         const loadingIndicator = document.getElementById("loading-indicator");
         const errorMessageDiv = document.getElementById("error-message");
         const previewIframe = document.getElementById("preview");
         
+        // ********* دالة نسخ الرابط *********
+        function copyLink() {
+            const linkInput = document.getElementById('generated-link');
+            linkInput.select();
+            document.execCommand('copy');
+            alert('Link copied to clipboard!');
+        }
+        
         // ********* Backend Connection Function *********
         async function generateLandingPage() {
             errorMessageDiv.classList.add('hidden');
-            downloadBtn.disabled = true;
+            document.getElementById('link-result').classList.add('hidden');
             
             const name = document.getElementById("product-name").value;
             const features = document.getElementById("product-features").value;
             const price = document.getElementById("product-price").value;
             
-            // استخراج القيم الجديدة
             const shippingOption = document.getElementById("shipping-select").value;
             const customShippingPrice = document.getElementById("custom-shipping-price").value;
             const useOffer = document.getElementById("use-offer-toggle").checked;
@@ -301,8 +317,6 @@
                         productCategory: document.getElementById("product-category").value,
                         targetAudience: document.getElementById("target-audience").value,
                         designDescription: document.getElementById("description-input").value,
-                        
-                        // إرسال البيانات الجديدة إلى generate.js
                         shippingOption: shippingOption,
                         customShippingPrice: shippingOption === 'custom' ? customShippingPrice : null,
                         customOffer: useOffer ? customOffer : null
@@ -312,8 +326,9 @@
                 const data = await res.json();
                 
                 if (res.ok) {
-                    previewIframe.srcdoc = data.html;
-                    downloadBtn.disabled = false;
+                    // عرض الرابط بدلاً من المعاينة
+                    document.getElementById('generated-link').value = data.url;
+                    document.getElementById('link-result').classList.remove('hidden');
                     document.getElementById('preview-section').scrollIntoView({ behavior: 'smooth' });
                 } else {
                     errorMessageDiv.textContent = `Error: ${data.error || 'Unknown error'}`;
@@ -328,25 +343,8 @@
             }
         }
 
-        // ********* HTML Download Function *********
-        function downloadHTML() {
-            const htmlContent = previewIframe.srcdoc;
-            if (!htmlContent) {
-                errorMessageDiv.textContent = "No page generated yet. Please generate a page first.";
-                errorMessageDiv.classList.remove('hidden');
-                return;
-            }
-            
-            const blob = new Blob([htmlContent], { type: "text/html" });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = "smartpage-ai-landing.html";
-            link.click();
-        }
-
         // ********* Event Listeners *********
         generateBtn.addEventListener('click', generateLandingPage);
-        downloadBtn.addEventListener('click', downloadHTML);
         
         // أدوات التحكم في الإظهار والإخفاء (Toggles)
         const shippingSelect = document.getElementById('shipping-select');
