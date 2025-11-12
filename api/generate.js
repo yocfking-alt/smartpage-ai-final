@@ -1,4 +1,4 @@
-// api/generate.js - الملف المحدث مع دعم الصور
+// api/generate.js - العودة للنظام الأصلي
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
@@ -21,8 +21,7 @@ export default async function handler(req, res) {
             designDescription,
             customOffer,
             shippingOption,
-            customShippingPrice,
-            productImage  // الصورة الجديدة
+            customShippingPrice
         } = req.body;
 
         if (!productName || !productFeatures) {
@@ -41,12 +40,6 @@ export default async function handler(req, res) {
             ? `Primary Promotional Offer: ${customOffer}. Use this prominent text as the main incentive on the hero section and CTA.` 
             : 'No special promotion is provided. Focus on product value, features, and price.';
 
-        // بناء الprompt مع تضمين معلومات الصورة
-        let imageInstruction = '';
-        if (productImage) {
-            imageInstruction = `IMPORTANT: The user has provided a product image. You MUST include this image in the landing page design. Place it prominently in the hero section and ensure it looks professional and appealing. Use the following base64 image data in an <img> tag: ${productImage}`;
-        }
-
         const prompt = `
             You are an expert AI web developer specializing in creating single-page product landing pages using modern HTML and Tailwind CSS.
             Your response MUST be ONLY the complete, fully styled HTML code for the landing page. DO NOT include any text, markdown, or explanation outside of the HTML structure.
@@ -60,19 +53,16 @@ export default async function handler(req, res) {
             Target Audience: ${targetAudience}
             Design Style: ${designDescription || 'modern and clean'}
             
-            ${imageInstruction}
-            
             --- Marketing and Logistics Details ---
             ${offerDetails}
             ${shippingDetails}
             
             The HTML must include:
             1. Full Tailwind CSS integration (via CDN link in the <head>).
-            2. A compelling headline section (Hero) ${productImage ? 'with the product image displayed professionally' : ''}.
+            2. A compelling headline section (Hero).
             3. A features section.
             4. A clear call-to-action (CTA) button that explicitly incorporates the price, offer, and shipping details provided.
             5. Use an elegant and effective color scheme based on the product category.
-            ${productImage ? '6. The product image must be integrated beautifully and professionally in the design.' : ''}
         `;
 
         const geminiBody = {
@@ -106,6 +96,7 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: 'AI failed to return valid content.' });
         }
         
+        // إرجاع كود HTML للتحميل فقط
         res.status(200).json({ html: generatedText });
 
     } catch (error) {
