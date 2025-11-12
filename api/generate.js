@@ -1,4 +1,4 @@
-// api/generate.js - الملف الكامل
+// api/generate.js - الملف المصحح
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
@@ -109,7 +109,7 @@ export default async function handler(req, res) {
             description: `Smart Page AI - Landing Page: ${productName}`,
             public: true,
             files: {
-                [`${productName.replace(/[^a-zA-Z0-9]/g, '-')}-landing.html`]: {
+                "landing-page.html": {
                     content: generatedText
                 }
             }
@@ -131,11 +131,15 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: 'Failed to create public link: ' + (gistResult.message || 'Unknown error') });
         }
 
-        // 3. إرجاع رابط Gist للمستخدم
-        const gistUrl = gistResult.html_url;
+        // 3. إنشاء رابط مباشر للصفحة (ليس رابط Gist)
+        const gistId = gistResult.id;
+        const rawUrl = `https://gist.githubusercontent.com/${gistResult.owner.login}/${gistId}/raw/landing-page.html`;
         
+        // 4. إرجاع كل البيانات المطلوبة
         res.status(200).json({ 
-            url: gistUrl,
+            url: rawUrl, // الرابط المباشر للصفحة
+            gistUrl: gistResult.html_url, // رابط Gist للأرشيف
+            html: generatedText, // كود HTML للمعاينة
             message: 'Public link created successfully!'
         });
 
