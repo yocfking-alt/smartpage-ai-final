@@ -1,4 +1,4 @@
-// api/generate.js - النظام الجديد مع Netlify Drop
+// api/generate.js - العودة للنظام الأصلي
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
@@ -7,9 +7,7 @@ export default async function handler(req, res) {
     }
 
     try {
-        // قراءة المفاتيح
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-        
         if (!GEMINI_API_KEY) {
             return res.status(500).json({ error: 'GEMINI_API_KEY is not set' });
         }
@@ -30,8 +28,7 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Missing product details' });
         }
 
-        // 1. توليد الصفحة باستخدام Gemini AI
-        const GEMINI_MODEL = 'gemini-2.5-flash';
+        const GEMINI_MODEL = 'gemini-2.5-flash'; 
         const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
         
         const shippingDetails = 
@@ -77,8 +74,7 @@ export default async function handler(req, res) {
             }
         };
 
-        // إرسال الطلب إلى Gemini API
-        const geminiResponse = await fetch(GEMINI_ENDPOINT, {
+        const response = await fetch(GEMINI_ENDPOINT, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -86,116 +82,25 @@ export default async function handler(req, res) {
             body: JSON.stringify(geminiBody),
         });
 
-        const geminiData = await geminiResponse.json();
+        const data = await response.json();
 
-        if (!geminiResponse.ok) {
-            const errorMessage = geminiData.error?.message || `Gemini API error: ${geminiResponse.status}`;
-            console.error('Gemini API Error:', geminiData);
+        if (!response.ok) {
+            const errorMessage = data.error?.message || `Gemini API error: ${response.status}`;
+            console.error('Gemini API Error:', data);
             return res.status(500).json({ error: 'Failed to generate page: ' + errorMessage });
         }
         
-        const generatedText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+        const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
         
         if (!generatedText) {
             return res.status(500).json({ error: 'AI failed to return valid content.' });
         }
-
-        // 2. تحضير HTML كصفحة ويب كاملة
-        const fullHTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${productName} - Landing Page</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
-    </style>
-</head>
-<body>
-${generatedText.replace(/<html[^>]*>|<\/html>|<head[^>]*>|<\/head>|<body[^>]*>|<\/body>/gi, '')}
-</body>
-</html>`;
-
-        // 3. رفع الصفحة إلى Netlify Drop
-        const netlifyResponse = await fetch('https://api.netlify.com/api/v1/sites', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/zip',
-                'Authorization': 'Bearer ' // Netlify Drop لا يحتاج token
-            },
-            body: JSON.stringify({
-                name: `smartpage-ai-${Date.now()}`,
-                files: {
-                    'index.html': {
-                        content: fullHTML
-                    }
-                }
-            })
-        });
-
-        // إذا فشل Netlify API، نستخدم طريقة بديلة
-        let netlifyUrl;
         
-        if (netlifyResponse.ok) {
-            const netlifyData = await netlifyResponse.json();
-            netlifyUrl = netlifyData.url;
-        } else {
-            // طريقة بديلة باستخدام Netlify Drop البسيط
-            const siteName = `smartpage-ai-${Math.random().toString(36).substring(2, 10)}`;
-            netlifyUrl = `https://${siteName}.netlify.app`;
-            
-            // نستخدم طريقة بديلة لرفع الملف
-            await fetch('https://api.netlify.com/api/v1/deploys', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    files: {
-                        'index.html': btoa(unescape(encodeURIComponent(fullHTML)))
-                    },
-                    site_name: siteName
-                })
-            });
-        }
-
-        // 4. إرجاع الرابط النهائي
-        res.status(200).json({ 
-            url: netlifyUrl, // الرابط المباشر للصفحة على Netlify
-            html: generatedText, // كود HTML للمعاينة
-            message: 'Public link created successfully!'
-        });
+        // إرجاع كود HTML للتحميل فقط
+        res.status(200).json({ html: generatedText });
 
     } catch (error) {
         console.error('Server error:', error);
-        
-        // إذا فشل Netlify، نستخدم حل بديل
-        try {
-            // حل بديل: استخدام service.bundle
-            const bundleResponse = await fetch('https://service.bundle.com/deploy', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    html: fullHTML,
-                    name: `smartpage-ai-${Date.now()}`
-                })
-            });
-            
-            if (bundleResponse.ok) {
-                const bundleData = await bundleResponse.json();
-                return res.status(200).json({ 
-                    url: bundleData.url,
-                    html: generatedText,
-                    message: 'Public link created successfully!'
-                });
-            }
-        } catch (fallbackError) {
-            console.error('Fallback also failed:', fallbackError);
-        }
-        
         res.status(500).json({ error: 'Internal Server Error (Check Vercel Logs)' });
     }
 }
