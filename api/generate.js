@@ -1,3 +1,4 @@
+// api/generate.js - العودة للنظام الأصلي
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
@@ -6,23 +7,39 @@ export default async function handler(req, res) {
     }
 
     try {
-        // قراءة مفتاح Gemini
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
         if (!GEMINI_API_KEY) {
             return res.status(500).json({ error: 'GEMINI_API_KEY is not set' });
         }
 
-        const { productName, productFeatures, productPrice, productCategory, targetAudience, designDescription } = req.body;
+        const { 
+            productName, 
+            productFeatures, 
+            productPrice, 
+            productCategory, 
+            targetAudience, 
+            designDescription,
+            customOffer,
+            shippingOption,
+            customShippingPrice
+        } = req.body;
 
         if (!productName || !productFeatures) {
             return res.status(400).json({ error: 'Missing product details' });
         }
 
-        // ✅ التعديل النهائي لاسم النموذج المدعوم في الطبقة المجانية والـ API الحالي
         const GEMINI_MODEL = 'gemini-2.5-flash'; 
         const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
         
-        // بناء أمر التوليد (Prompt)
+        const shippingDetails = 
+            shippingOption === 'free' 
+            ? 'The landing page MUST emphasize Free Shipping in the Call-to-Action section.' 
+            : `Shipping Cost: ${customShippingPrice || 'to be determined. Mention the cost clearly.'}`;
+
+        const offerDetails = customOffer 
+            ? `Primary Promotional Offer: ${customOffer}. Use this prominent text as the main incentive on the hero section and CTA.` 
+            : 'No special promotion is provided. Focus on product value, features, and price.';
+
         const prompt = `
             You are an expert AI web developer specializing in creating single-page product landing pages using modern HTML and Tailwind CSS.
             Your response MUST be ONLY the complete, fully styled HTML code for the landing page. DO NOT include any text, markdown, or explanation outside of the HTML structure.
@@ -36,15 +53,18 @@ export default async function handler(req, res) {
             Target Audience: ${targetAudience}
             Design Style: ${designDescription || 'modern and clean'}
             
+            --- Marketing and Logistics Details ---
+            ${offerDetails}
+            ${shippingDetails}
+            
             The HTML must include:
             1. Full Tailwind CSS integration (via CDN link in the <head>).
             2. A compelling headline section (Hero).
             3. A features section.
-            4. A clear call-to-action (CTA) button with an attractive offer.
+            4. A clear call-to-action (CTA) button that explicitly incorporates the price, offer, and shipping details provided.
             5. Use an elegant and effective color scheme based on the product category.
         `;
 
-        // ✅ الهيكل الصحيح لـ Gemini API (تم تعديل 'config' إلى 'generationConfig')
         const geminiBody = {
             contents: [{
                 parts: [{ text: prompt }]
@@ -54,7 +74,6 @@ export default async function handler(req, res) {
             }
         };
 
-        // إرسال الطلب إلى Gemini API
         const response = await fetch(GEMINI_ENDPOINT, {
             method: 'POST',
             headers: {
@@ -71,14 +90,13 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: 'Failed to generate page: ' + errorMessage });
         }
         
-        // استخلاص كود HTML من استجابة Gemini
         const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
         
         if (!generatedText) {
             return res.status(500).json({ error: 'AI failed to return valid content.' });
         }
         
-        // إرجاع كود HTML للواجهة الأمامية
+        // إرجاع كود HTML للتحميل فقط
         res.status(200).json({ html: generatedText });
 
     } catch (error) {

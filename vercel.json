@@ -6,7 +6,11 @@
       "use": "@vercel/node"
     },
     {
-      "src": "*.html",
+      "src": "*.html", 
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.jpg",
       "use": "@vercel/static"
     }
   ],
@@ -14,6 +18,10 @@
     {
       "source": "/api/generate",
       "destination": "/api/generate.js"
+    },
+    {
+      "source": "/builder", 
+      "destination": "/builder.html"
     },
     {
       "source": "/(.*)",
