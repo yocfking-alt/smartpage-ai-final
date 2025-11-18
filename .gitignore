@@ -1,0 +1,21 @@
+# Dependencies
+/node_modules
+/.pnpm-store
+
+# Development
+/.env
+/.vscode
+
+# Production
+/build
+/dist
+/out
+
+# Logs
+/npm-debug.log*
+/yarn-debug.log*
+/yarn-error.log*
+
+# OS and temporary files
+.DS_Store
+Thumbs.db
