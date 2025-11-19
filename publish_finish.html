@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>إتمام عملية النشر على Shopify</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center">
+
+    <div class="max-w-xl w-full bg-white p-8 rounded-xl shadow-2xl border border-gray-200 text-center">
+        <h1 class="text-3xl font-bold mb-4 text-gray-900">🚀 مرحلة النشر النهائية</h1>
+        <p class="text-gray-600 mb-6">جارٍ الآن تجميع الكود ونشره كـ 'Section' جديد في متجر Shopify الخاص بك. <br>هذه العملية قد تستغرق بضع ثوانٍ...</p>
+        
+        <div id="progress-area" class="mt-8">
+            <div id="loading-indicator" class="flex justify-center items-center space-x-3 text-blue-600 font-semibold">
+                <svg class="animate-spin h-6 w-6" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>جاري إرسال الكود إلى Shopify...</span>
+            </div>
+            
+            <p id="message-area" class="mt-4 text-lg font-medium"></p>
+        </div>
+        
+        <div id="success-actions" class="mt-8 hidden">
+            <a id="shopify-link" href="#" target="_blank" class="w-full inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300">
+                فتح المتجر (لوحة التحكم)
+            </a>
+            <p class="text-sm text-gray-500 mt-3">انتقل إلى محرر الثيمات لإضافة القسم (Section) الذي تم نشره.</p>
+        </div>
+        
+        <div id="error-details" class="mt-4 p-4 bg-red-100 border border-red-300 rounded-lg text-red-700 hidden text-sm text-right">
+            <strong>تفاصيل الخطأ:</strong> <span id="error-text"></span>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', publishSection);
+
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+
+        async function publishSection() {
+            // يتم تمرير اسم المتجر عبر URL من shopify_callback.js
+            const shop = getQueryParam('shop'); 
+            // يتم استرجاع الكود المحفوظ من builder.html
+            const liquidCode = sessionStorage.getItem('liquid_code');
+            const schema = sessionStorage.getItem('schema');
+            
+            const messageArea = document.getElementById('message-area');
+            const loadingIndicator = document.getElementById('loading-indicator');
+            const successActions = document.getElementById('success-actions');
+            const errorDetails = document.getElementById('error-details');
+            const errorText = document.getElementById('error-text');
+
+            if (!shop || !liquidCode || !schema) {
+                messageArea.textContent = '❌ فشل النشر: بيانات المتجر أو كود الصفحة غير موجودة. الرجاء العودة لـ builder.html والمحاولة مجدداً.';
+                messageArea.style.color = 'red';
+                loadingIndicator.classList.add('hidden');
+                return;
+            }
+
+            const data = {
+                shop: shop,
+                liquid_code: liquidCode,
+                schema: JSON.parse(schema)
+            };
+
+            try {
+                // إرسال طلب نشر الكود إلى ملف api/shopify_publish.js
+                const response = await fetch('/api/shopify_publish.js', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                loadingIndicator.classList.add('hidden');
+
+                if (response.ok && result.success) {
+                    messageArea.textContent = `✅ تم النشر بنجاح! اسم ملف القسم: ${result.filename}.liquid`;
+                    messageArea.style.color = 'green';
+                    
+                    // رابط التوجيه إلى محرر الثيمات
+                    const themeEditorLink = `https://${shop}/admin/themes/current/editor?context=apps`;
+                    document.getElementById('shopify-link').href = themeEditorLink;
+                    successActions.classList.remove('hidden');
+
+                    // تنظيف التخزين المؤقت بعد النشر الناجح
+                    sessionStorage.removeItem('liquid_code');
+                    sessionStorage.removeItem('schema');
+
+                } else {
+                    messageArea.textContent = '❌ فشل النشر. حدث خطأ في Shopify.';
+                    messageArea.style.color = 'red';
+                    errorText.textContent = result.error || 'خطأ غير معروف في الخادم.';
+                    errorDetails.classList.remove('hidden');
+                }
+            } catch (error) {
+                loadingIndicator.classList.add('hidden');
+                messageArea.textContent = '❌ فشل الاتصال بالخادم. الرجاء التأكد من عمل ملفات API.';
+                messageArea.style.color = 'red';
+                errorText.textContent = error.message;
+                errorDetails.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
