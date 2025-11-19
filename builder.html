@@ -94,7 +94,7 @@
     </style> 
 </head> 
 <body> 
-    <nav class="fixed top-0 w-full z-50 bg-/95 backdrop-blur-md border-b border-gray-200"> 
+    <nav class="fixed top-0 w-full z-50 bg-white/95 backdrop-blur-md border-b border-gray-200"> 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
             <div class="flex justify-between items-center h-16"> 
                 <div class="flex items-center"> 
@@ -249,7 +249,7 @@
     <footer class="bg-gray-100 border-t border-gray-300 py-12"> 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
             <div class="text-center"> 
-                <h3 class="text-2xl font-bold" style="color: #ffffff(--logo-color);">Smart Page AI</h3> 
+                <h3 class="text-2xl font-bold" style="color: var(--logo-color);">Smart Page AI</h3> 
                 <p class="text-gray-600 mb-6">Instantly build stunning product pages with AI</p> 
                 <div class="flex justify-center space-x-8 mb-6"> 
                     <a href="#privacy" class="text-gray-600 hover:text-black transition-colors">Privacy</a> 
@@ -270,7 +270,7 @@
         const errorMessageDiv = document.getElementById("error-message");
         const previewIframe = document.getElementById("preview");
         
-        // **متغيرات جديدة لتخزين كود Liquid و Schema**
+        // متغيرات لتخزين كود Liquid و Schema
         let generatedLiquidCode = null;
         let generatedSchema = null;
         
@@ -299,8 +299,7 @@
             generateBtn.disabled = true;
 
             try {
-                // تأكد من أن generate.js سيرجع JSON يحتوي على: { html: '...', liquid_code: '...', schema: {...} }
-                const BACKEND_URL = "/api/generate.js"; 
+                const BACKEND_URL = "/api/generate"; 
 
                 const res = await fetch(BACKEND_URL, { 
                     method: "POST",
@@ -321,11 +320,11 @@
                 const data = await res.json();
                 
                 if (res.ok) {
-                    // **تخزين الكود والـ Schema هنا**
                     generatedLiquidCode = data.liquid_code;
                     generatedSchema = data.schema;
                     
-                    previewIframe.srcdoc = data.html; // لعرض المعاينة
+                    // ✅ عرض صفحة الهبوط الكاملة
+                    previewIframe.srcdoc = data.html;
                     
                     downloadBtn.disabled = false;
                     shopifyBtn.disabled = false; 
@@ -359,7 +358,7 @@
             link.click();
         }
 
-        // ********* Shopify Publish Function (المعدَّل) *********
+        // ********* Shopify Publish Function *********
         function publishToShopify() {
             if (!generatedLiquidCode || !generatedSchema) {
                 errorMessageDiv.textContent = "الرجاء توليد الصفحة أولاً قبل محاولة النشر على Shopify.";
@@ -367,29 +366,24 @@
                 return;
             }
 
-            // 1. طلب اسم المتجر من المستخدم (باستخدام عنوان المتجر)
             const shopDomain = prompt("الرجاء إدخال اسم متجرك على Shopify (مثال: my-store.myshopify.com):");
             
             if (!shopDomain) {
-                return; // المستخدم ألغى
+                return;
             }
             
-            // 2. تخزين البيانات اللازمة في Session Storage للوصول إليها بعد تثبيت التطبيق
             sessionStorage.setItem('liquid_code', generatedLiquidCode);
             sessionStorage.setItem('schema', JSON.stringify(generatedSchema));
             
-            // 3. توجيه المستخدم لبدء عملية تثبيت التطبيق (OAuth)
-            // هذا سيوجه إلى ملف api/shopify_install.js
-            window.location.href = `/api/shopify_install.js?shop=${shopDomain}`; 
+            window.location.href = `/api/shopify_install?shop=${shopDomain}`; 
         }
 
         // ********* Event Listeners *********
         generateBtn.addEventListener('click', generateLandingPage);
         downloadBtn.addEventListener('click', downloadHTML);
-        shopifyBtn.addEventListener('click', publishToShopify); 
+        shopifyBtn.addEventListener('click', publishToShopify);
         
-        // ... (بقية كود أدوات التحكم في الإظهار والإخفاء والإعداد) ...
-
+        // التحكم في إظهار/إخفاء الحقول
         const shippingSelect = document.getElementById('shipping-select');
         const customShippingContainer = document.getElementById('custom-shipping-container');
         const useOfferToggle = document.getElementById('use-offer-toggle');
