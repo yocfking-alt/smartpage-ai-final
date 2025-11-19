@@ -16,7 +16,7 @@ export default async function handler(req, res) {
             productName, 
             productFeatures, 
             designDescription,
-            shopUrl // تمت إضافته ليكون متاحًا في Prompt
+            shopUrl
         } = req.body;
 
         if (!productName || !productFeatures) {
@@ -50,8 +50,7 @@ export default async function handler(req, res) {
             contents: [{
                 parts: [{ text: prompt }]
             }],
-            generationConfig: { // <--- تم التصحيح هنا: استخدام generationConfig بدلاً من config
-                // تفعيل وضع الـ JSON Schema Output إذا كانت متاحة للموديل، أو الاعتماد على التوجيه
+            generationConfig: { // <-- تم التأكد من استخدام generationConfig
                 responseMimeType: "application/json"
             }
         };
@@ -81,15 +80,20 @@ export default async function handler(req, res) {
         }
         
         const generatedContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        
-        if (!generatedContent) {
-            return res.status(500).json({ error: 'AI failed to return valid content.' });
+
+        if (!generatedContent || typeof generatedContent !== 'string') { // <-- فحص قوي لخطأ undefined
+            // هذا الخطأ يشير عادةً إلى فشل في المصادقة (Gemini API Key خاطئ)
+            console.error('AI returned no valid text content. Full response:', JSON.stringify(data, null, 2));
+            return res.status(500).json({ 
+                error: 'AI failed to return valid content (undefined). Check your GEMINI_API_KEY in Vercel.'
+            });
         }
 
         let parsedSection;
         try {
-            // محاولة تحليل الكود الناتج من Gemini مباشرة
-            parsedSection = JSON.parse(generatedContent);
+            // استخدام RegExp لإزالة أي علامات Markdown أو مسافات بيضاء قبل التحليل
+            const cleanContent = generatedContent.replace(/```json\s*|```/g, '').trim();
+            parsedSection = JSON.parse(cleanContent);
         } catch (e) {
             console.error('Failed to parse final section JSON:', generatedContent);
             return res.status(500).json({ error: 'AI output format error. Could not parse liquid_code and schema.' });
