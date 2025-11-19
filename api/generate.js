@@ -50,7 +50,7 @@ export default async function handler(req, res) {
             contents: [{
                 parts: [{ text: prompt }]
             }],
-            config: {
+            generationConfig: { // <--- تم التصحيح هنا: استخدام generationConfig بدلاً من config
                 // تفعيل وضع الـ JSON Schema Output إذا كانت متاحة للموديل، أو الاعتماد على التوجيه
                 responseMimeType: "application/json"
             }
