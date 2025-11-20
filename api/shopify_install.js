@@ -1,21 +1,15 @@
-// api/shopify_install.js
-
+// api/shopify_install.js - نسخة معدلة لـ Custom App
 export default function handler(req, res) {
-  // قراءة المتغيرات من Vercel:
-  const { SHOPIFY_API_KEY, SCOPES, HOST } = process.env;
-  const SHOP = req.query.shop; // يتم إرسال اسم المتجر كـ query parameter
+  const { HOST } = process.env;
+  const SHOP = req.query.shop;
 
-  if (!SHOPIFY_API_KEY || !SCOPES || !HOST || !SHOP) {
-    // خطأ: لا يمكن إتمام العملية لعدم وجود مفاتيح (تحقق من Vercel)
-    return res.status(500).send("Missing required environment variables or shop query parameter.");
+  if (!SHOP) {
+    return res.status(400).send("Missing shop parameter");
   }
 
-  // يجب أن يكون رابط إعادة التوجيه هو الرابط الحي على Vercel
-  const redirectUri = `${HOST}/api/shopify_callback`;
+  // توجيه مباشر إلى صفحة النجاح مع تخزين بيانات المتجر
+  const successUrl = `${HOST}/publish_finish.html?shop=${SHOP}`;
   
-  // بناء رابط المصادقة الذي يرسل المستخدم إلى Shopify
-  const installUrl = `https://${SHOP}/admin/oauth/authorize?client_id=${SHOPIFY_API_KEY}&scope=${SCOPES}&redirect_uri=${redirectUri}`;
-
-  // توجيه العميل لبدء المصادقة
-  res.redirect(installUrl);
+  console.log('Custom App Install - Redirecting to:', successUrl);
+  res.redirect(successUrl);
 }
