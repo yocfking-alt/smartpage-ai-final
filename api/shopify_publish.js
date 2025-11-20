@@ -1,80 +1,73 @@
-// api/shopify_publish.js
+// api/shopify_publish.js - نسخة معدلة لـ Custom App
 import fetch from 'node-fetch'; 
-import { connectToDatabase } from './db';
 
-// الوظيفة الأساسية لنشر Section جديد في ثيم المتجر
-async function createShopifySection(shop, accessToken, filename, finalSectionLiquid) {
-    // API لملفات الثيم (Assets)
+// استخدام الـ Access Token مباشرة (ضع التوكن الحقيقي هنا)
+const SHOPIFY_ACCESS_TOKEN = "shpat_2a489cbbf8420&c6a37394bafde645b";
+
+async function createShopifySection(shop, liquid_code, schema) {
+    const sectionFilename = `smartpage-section-${Date.now()}`;
+    const finalSectionLiquid = liquid_code + `\n\n{% schema %}\n${JSON.stringify(schema, null, 2)}\n{% endschema %}`;
+
     const assetUrl = `https://${shop}/admin/api/2023-10/themes/current/assets.json`;
-
     const assetBody = {
         "asset": {
-            // مسار ملف Section داخل الثيم
-            "key": `sections/${filename}.liquid`, 
+            "key": `sections/${sectionFilename}.liquid`,
             "value": finalSectionLiquid
         }
     };
 
+    console.log('Publishing section to:', assetUrl);
+    
     const response = await fetch(assetUrl, {
-        method: 'PUT', // نستخدم PUT لإنشاء أو تحديث الملف
+        method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
-            'X-Shopify-Access-Token': accessToken, // استخدام المفتاح المحفوظ
+            'X-Shopify-Access-Token': SHOPIFY_ACCESS_TOKEN,
         },
         body: JSON.stringify(assetBody),
     });
 
     const data = await response.json();
+    
     if (!response.ok) {
-        console.error("Shopify Asset Creation Error:", data);
-        throw new Error(data.errors || "Failed to create Shopify Section asset.");
+        console.error("Shopify API Error:", data);
+        throw new Error(data.errors || `Shopify API error: ${response.status}`);
     }
-    return data.asset;
+    
+    return { filename: sectionFilename, asset: data.asset };
 }
-
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    // البيانات القادمة من builder.html
     const { shop, liquid_code, schema } = req.body;
     
     if (!shop || !liquid_code || !schema) {
         return res.status(400).json({ error: 'Missing shop, liquid_code, or schema.' });
     }
-    
-    // اسم فريد للمقطع لمنع التكرار
-    const sectionFilename = `gemini-section-${Date.now()}`;
-    
-    // دمج Liquid و Schema في تنسيق Section النهائي الذي تفهمه Shopify
-    const finalSectionLiquid = liquid_code + `\n\n{% schema %}\n${JSON.stringify(schema, null, 2)}\n{% endschema %}`;
 
     try {
-        // 1. الحصول على Access Token من قاعدة البيانات
-        const { db } = await connectToDatabase();
-        const tokenRecord = await db.collection('tokens').findOne({ shop: shop });
-
-        if (!tokenRecord || !tokenRecord.accessToken) {
-            return res.status(403).json({ error: 'Access token not found. Please install the app first.' });
-        }
-        const accessToken = tokenRecord.accessToken;
-
-
-        // 2. نشر ملف Section في ثيم العميل
-        await createShopifySection(shop, accessToken, sectionFilename, finalSectionLiquid);
-
+        console.log('Starting publish process for shop:', shop);
         
-        // 3. النجاح
+        // النشر المباشر باستخدام الـ Access Token
+        const result = await createShopifySection(shop, liquid_code, schema);
+        
+        console.log('Section published successfully:', result.filename);
+        
         res.status(200).json({ 
             success: true, 
-            message: `Section '${sectionFilename}' published successfully.`,
-            filename: sectionFilename
+            message: `Section '${result.filename}' published successfully!`,
+            filename: result.filename,
+            shop: shop
         });
 
     } catch (error) {
         console.error("Publishing error:", error);
-        res.status(500).json({ error: error.message || 'Failed to publish section to Shopify.' });
+        res.status(500).json({ 
+            error: error.message || 'Failed to publish section to Shopify.',
+            details: 'Check if Access Token has write_themes permission'
+        });
     }
 }
