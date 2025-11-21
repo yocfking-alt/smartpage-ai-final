@@ -41,44 +41,42 @@
     </div>
     
     <script>
-        // دالة جديدة لنقل البيانات من sessionStorage إلى localStorage
-        function migrateAndGetData() {
-            // حاول أولاً الحصول من localStorage
+        // دالة لاستخراج البيانات من جميع المصادر الممكنة
+        function getAllData() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const shop = urlParams.get('shop');
+            
+            // المصدر 1: localStorage
             let liquidCode = localStorage.getItem('liquid_code');
             let schema = localStorage.getItem('schema');
             
-            // إذا لم توجد في localStorage، جرب sessionStorage
+            // المصدر 2: cookies (إذا فشل localStorage)
             if (!liquidCode || !schema) {
-                const liquidFromSession = sessionStorage.getItem('liquid_code');
-                const schemaFromSession = sessionStorage.getItem('schema');
+                const cookies = document.cookie.split(';');
+                const cookieData = {};
+                cookies.forEach(cookie => {
+                    const [key, value] = cookie.trim().split('=');
+                    cookieData[key] = decodeURIComponent(value);
+                });
                 
-                if (liquidFromSession && schemaFromSession) {
-                    // انقل البيانات من sessionStorage إلى localStorage
-                    localStorage.setItem('liquid_code', liquidFromSession);
-                    localStorage.setItem('schema', schemaFromSession);
-                    liquidCode = liquidFromSession;
-                    schema = schemaFromSession;
-                    console.log('✅ تم نقل البيانات إلى localStorage');
+                if (cookieData.liquid_code && cookieData.schema) {
+                    liquidCode = cookieData.liquid_code;
+                    schema = cookieData.schema;
+                    // تنظيف الكوكيز بعد الاستخدام
+                    document.cookie = "liquid_code=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+                    document.cookie = "schema=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
                 }
             }
             
-            return { liquidCode, schema };
+            return { shop, liquidCode, schema };
         }
 
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('publish-btn').addEventListener('click', publishSection);
         });
 
-        function getQueryParam(param) {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get(param);
-        }
-
         async function publishSection() {
-            const shop = getQueryParam('shop');
-            
-            // استخدم الدالة الجديدة للحصول على البيانات
-            const { liquidCode, schema } = migrateAndGetData();
+            const { shop, liquidCode, schema } = getAllData();
             
             const messageArea = document.getElementById('message-area');
             const loadingIndicator = document.getElementById('loading-indicator');
@@ -120,11 +118,9 @@
                     document.getElementById('shopify-link').href = themeEditorLink;
                     successActions.classList.remove('hidden');
 
-                    // تنظيف البيانات بعد النجاح
+                    // تنظيف جميع البيانات
                     localStorage.removeItem('liquid_code');
                     localStorage.removeItem('schema');
-                    sessionStorage.removeItem('liquid_code');
-                    sessionStorage.removeItem('schema');
 
                 } else {
                     messageArea.textContent = '❌ فشل النشر.';
