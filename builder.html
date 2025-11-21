@@ -358,7 +358,7 @@
             link.click();
         }
 
-        // ********* Shopify Publish Function *********
+        // ********* Shopify Publish Function - النسخة المعدلة *********
         function publishToShopify() {
             if (!generatedLiquidCode || !generatedSchema) {
                 errorMessageDiv.textContent = "الرجاء توليد الصفحة أولاً قبل محاولة النشر على Shopify.";
@@ -372,10 +372,32 @@
                 return;
             }
             
-            sessionStorage.setItem('liquid_code', generatedLiquidCode);
-            sessionStorage.setItem('schema', JSON.stringify(generatedSchema));
+            // تخزين البيانات في localStorage كنسخة احتياطية
+            localStorage.setItem('liquid_code', generatedLiquidCode);
+            localStorage.setItem('schema', JSON.stringify(generatedSchema));
             
-            window.location.href = `/api/shopify_install?shop=${shopDomain}`; 
+            // إرسال البيانات عبر POST بدلاً من GET
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/api/shopify_install';
+            
+            const shopInput = document.createElement('input');
+            shopInput.name = 'shop';
+            shopInput.value = shopDomain;
+            
+            const liquidInput = document.createElement('input');
+            liquidInput.name = 'liquid_code';
+            liquidInput.value = generatedLiquidCode;
+            
+            const schemaInput = document.createElement('input');
+            schemaInput.name = 'schema';
+            schemaInput.value = JSON.stringify(generatedSchema);
+            
+            form.appendChild(shopInput);
+            form.appendChild(liquidInput);
+            form.appendChild(schemaInput);
+            document.body.appendChild(form);
+            form.submit();
         }
 
         // ********* Event Listeners *********
