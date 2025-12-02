@@ -4,15 +4,19 @@
     <meta charset="UTF-8">
     <title>إتمام النشر على Shopify</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .animate-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
 </head>
 <body class="bg-gray-50 min-h-screen flex items-center justify-center">
     <div class="max-w-xl w-full bg-white p-8 rounded-xl shadow-2xl border border-gray-200 text-center">
-        <h1 class="text-3xl font-bold mb-4 text-gray-900">🚀 جاهز للنشر!</h1>
-        <p class="text-gray-600 mb-6">أنت تستخدم Custom App - اضغط على الزر لنشر الصفحة مباشرة إلى متجرك.</p>
+        <h1 class="text-3xl font-bold mb-4 text-gray-900">✅ مرحباً بعودتك!</h1>
+        <p class="text-gray-600 mb-6">لقد أكملت المصادقة بنجاح. سنقوم الآن بنشر صفحتك على متجرك.</p>
         
         <div id="progress-area" class="mt-8">
             <button id="publish-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300">
-                نشر الصفحة الآن
+                إكمال النشر الآن
             </button>
             
             <div id="loading-indicator" class="hidden mt-4">
@@ -21,123 +25,143 @@
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span>جاري النشر إلى Shopify...</span>
+                    <span>جارٍ النشر باستخدام Access Token...</span>
                 </div>
             </div>
-            
+
             <p id="message-area" class="mt-4 text-lg font-medium"></p>
+            
+            <div id="error-details" class="hidden mt-4 bg-red-100 border border-red-300 p-4 rounded-lg text-left">
+                <p class="font-semibold text-red-700">❌ خطأ في عملية النشر:</p>
+                <p id="error-text" class="text-sm text-red-600 mt-1 break-words"></p>
+            </div>
+            
         </div>
-        
-        <div id="success-actions" class="mt-8 hidden">
-            <a id="shopify-link" href="#" target="_blank" class="w-full inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300">
-                فتح المتجر (لوحة التحكم)
+
+        <div id="success-actions" class="hidden mt-6 pt-4 border-t border-gray-200">
+            <h2 class="text-2xl font-bold text-green-600 mb-4">تم بنجاح!</h2>
+            <p class="text-gray-700 mb-4">يمكنك الآن تعديل القسم في محرر الثيم (Theme Editor) في متجرك.</p>
+            <a id="shopify-link" href="#" target="_blank" class="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300">
+                فتح محرر الثيم 🚀
             </a>
-            <p class="text-sm text-gray-500 mt-3">انتقل إلى محرر الثيمات لإضافة القسم الذي تم نشره.</p>
-        </div>
-        
-        <div id="error-details" class="mt-4 p-4 bg-red-100 border border-red-300 rounded-lg text-red-700 hidden text-sm text-right">
-            <strong>تفاصيل الخطأ:</strong> <span id="error-text"></span>
         </div>
     </div>
-    
+
     <script>
-        // دالة لاستخراج البيانات من جميع المصادر الممكنة
-        function getAllData() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const shop = urlParams.get('shop');
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const shop = params.get('shop'); // اسم المتجر الذي جاء من shopify_callback.js
             
-            // المصدر 1: localStorage
-            let liquidCode = localStorage.getItem('liquid_code');
-            let schema = localStorage.getItem('schema');
-            
-            // المصدر 2: cookies (إذا فشل localStorage)
-            if (!liquidCode || !schema) {
-                const cookies = document.cookie.split(';');
-                const cookieData = {};
-                cookies.forEach(cookie => {
-                    const [key, value] = cookie.trim().split('=');
-                    cookieData[key] = decodeURIComponent(value);
-                });
-                
-                if (cookieData.liquid_code && cookieData.schema) {
-                    liquidCode = cookieData.liquid_code;
-                    schema = cookieData.schema;
-                    // تنظيف الكوكيز بعد الاستخدام
-                    document.cookie = "liquid_code=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
-                    document.cookie = "schema=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
-                }
-            }
-            
-            return { shop, liquidCode, schema };
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('publish-btn').addEventListener('click', publishSection);
-        });
-
-        async function publishSection() {
-            const { shop, liquidCode, schema } = getAllData();
-            
-            const messageArea = document.getElementById('message-area');
+            const publishBtn = document.getElementById('publish-btn');
             const loadingIndicator = document.getElementById('loading-indicator');
+            const messageArea = document.getElementById('message-area');
             const successActions = document.getElementById('success-actions');
             const errorDetails = document.getElementById('error-details');
             const errorText = document.getElementById('error-text');
-            const publishBtn = document.getElementById('publish-btn');
-
-            if (!shop || !liquidCode || !schema) {
-                messageArea.textContent = '❌ بيانات غير كافية. الرجاء العودة لـ builder.html والمحاولة مجدداً.';
+            
+            // ⚠️ التحقق من المتجر (مهم جداً للسلامة)
+            if (!shop) {
+                messageArea.textContent = '❌ خطأ: اسم المتجر مفقود في الرابط.';
                 messageArea.style.color = 'red';
+                publishBtn.disabled = true;
                 return;
             }
 
-            publishBtn.disabled = true;
-            loadingIndicator.classList.remove('hidden');
+            // يتم تشغيل النشر تلقائيًا عند التحميل (لتوفير خطوة على المستخدم)
+            if (publishBtn) {
+                 publishBtn.click();
+            }
 
-            const data = {
-                shop: shop,
-                liquid_code: liquidCode,
-                schema: JSON.parse(schema)
-            };
+            // ********* دالة النشر الرئيسية *********
+            async function publishShopifySection() {
+                publishBtn.disabled = true;
+                loadingIndicator.classList.remove('hidden');
+                messageArea.textContent = '';
+                errorDetails.classList.add('hidden');
+                successActions.classList.add('hidden');
 
-            try {
-                const response = await fetch('/api/shopify_publish', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-
-                const result = await response.json();
-                loadingIndicator.classList.add('hidden');
-
-                if (response.ok && result.success) {
-                    messageArea.textContent = `✅ تم النشر بنجاح! اسم الملف: ${result.filename}.liquid`;
-                    messageArea.style.color = 'green';
-                    
-                    const themeEditorLink = `https://${shop}/admin/themes/current/editor`;
-                    document.getElementById('shopify-link').href = themeEditorLink;
-                    successActions.classList.remove('hidden');
-
-                    // تنظيف جميع البيانات
-                    localStorage.removeItem('liquid_code');
-                    localStorage.removeItem('schema');
-
-                } else {
-                    messageArea.textContent = '❌ فشل النشر.';
+                // 1. جلب البيانات من localStorage
+                // يتم حفظ هذه البيانات في builder.html قبل التوجيه لعملية OAuth
+                const liquid_code = localStorage.getItem('liquid_code');
+                const schemaJson = localStorage.getItem('schema');
+                const pendingShop = localStorage.getItem('pending_shop');
+                
+                // ⚠️ التحقق من وجود البيانات
+                if (!liquid_code || !schemaJson) {
+                    messageArea.textContent = '❌ فشل النشر: بيانات الصفحة مفقودة في المتصفح. الرجاء العودة لصفحة البناء وإعادة توليد الصفحة.';
                     messageArea.style.color = 'red';
-                    errorText.textContent = result.error || 'خطأ غير معروف';
+                    publishBtn.disabled = true;
+                    loadingIndicator.classList.add('hidden');
+                    return;
+                }
+                
+                // ⚠️ التحقق من تطابق المتجر (إذا كان المستخدم حاول النشر مرتين لمتجرين مختلفين)
+                if (pendingShop && pendingShop !== shop) {
+                    messageArea.textContent = `❌ فشل النشر: اسم المتجر ( ${shop} ) لا يتطابق مع المتجر الذي بدأت منه العملية ( ${pendingShop} ).`;
+                    messageArea.style.color = 'red';
+                    publishBtn.disabled = true;
+                    loadingIndicator.classList.add('hidden');
+                    return;
+                }
+
+                // 2. إرسال طلب النشر إلى API
+                try {
+                    const response = await fetch('/api/shopify_publish', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            shop: shop,
+                            liquid_code: liquid_code,
+                            schema: JSON.parse(schemaJson)
+                        })
+                    });
+
+                    const result = await response.json();
+                    loadingIndicator.classList.add('hidden');
+
+                    if (response.ok && result.success) {
+                        messageArea.textContent = `✅ تم النشر بنجاح! اسم الملف: ${result.filename}`;
+                        messageArea.style.color = 'green';
+                        
+                        // بناء رابط محرر الثيم
+                        const themeEditorLink = `https://${shop}/admin/themes/current/editor?context=apps&template=index&activateAppSection=${result.filename.replace('.liquid', '')}`;
+                        
+                        document.getElementById('shopify-link').href = themeEditorLink;
+                        successActions.classList.remove('hidden');
+
+                        // تنظيف جميع البيانات بعد النشر الناجح
+                        localStorage.removeItem('liquid_code');
+                        localStorage.removeItem('schema');
+                        localStorage.removeItem('pending_shop'); 
+
+                    } else if (result.action_required) {
+                         // إذا فشل النشر بعد الـ Callback، هذا يعني خطأ في Token.
+                         messageArea.textContent = '❌ فشل النشر: رمز الوصول غير صالح. الرجاء العودة لصفحة البناء والبدء من جديد.';
+                         messageArea.style.color = 'red';
+                         errorText.textContent = 'سبب الخطأ: ' + result.error;
+                         errorDetails.classList.remove('hidden');
+                    } else {
+                        messageArea.textContent = '❌ فشل النشر.';
+                        messageArea.style.color = 'red';
+                        errorText.textContent = result.error || 'خطأ غير معروف';
+                        errorDetails.classList.remove('hidden');
+                        publishBtn.disabled = false;
+                    }
+                } catch (error) {
+                    loadingIndicator.classList.add('hidden');
+                    messageArea.textContent = '❌ فشل الاتصال بالخادم.';
+                    messageArea.style.color = 'red';
+                    errorText.textContent = error.message;
                     errorDetails.classList.remove('hidden');
                     publishBtn.disabled = false;
                 }
-            } catch (error) {
-                loadingIndicator.classList.add('hidden');
-                messageArea.textContent = '❌ فشل الاتصال بالخادم.';
-                messageArea.style.color = 'red';
-                errorText.textContent = error.message;
-                errorDetails.classList.remove('hidden');
-                publishBtn.disabled = false;
             }
-        }
+
+            publishBtn.addEventListener('click', publishShopifySection);
+            
+            // تشغيل دالة النشر عند تحميل الصفحة لتوفير خطوة على المستخدم
+            // if (publishBtn) { publishBtn.click(); }
+        });
     </script>
 </body>
 </html>
