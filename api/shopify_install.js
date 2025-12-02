@@ -1,22 +1,21 @@
-// api/shopify_install.js - نسخة معدلة
+// api/shopify_install.js - نسخة معدلة بحذف كود Cookies
+
 export default function handler(req, res) {
     const { HOST } = process.env;
     
     if (req.method === 'POST') {
+        // نستخدم req.body لتحليل البيانات المرسلة في طلب POST
         const { shop, liquid_code, schema } = req.body;
         
         if (!shop) {
             return res.status(400).send("Missing shop parameter");
         }
 
-        // تخزين البيانات في كookies مؤقتة
-        res.setHeader('Set-Cookie', [
-            `liquid_code=${encodeURIComponent(liquid_code)}; Path=/; Max-Age=300`,
-            `schema=${encodeURIComponent(schema)}; Path=/; Max-Age=300`
-        ]);
-
+        // ❌ تم حذف الكود الذي كان يضبط الـ Cookies هنا.
+        // الآن نعتمد على أن builder.html قام بتخزين البيانات في localStorage
+        
         const successUrl = `${HOST}/publish_finish.html?shop=${shop}`;
-        console.log('Custom App Install - Redirecting with data via cookies');
+        console.log('Custom App Install - Redirecting without cookies (using localStorage now)');
         return res.redirect(successUrl);
     }
     
