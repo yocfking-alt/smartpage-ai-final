@@ -6,7 +6,7 @@
     <title>SmartPage AI - Build Your Landing Page</title> 
     <script src="https://cdn.tailwindcss.com"></script> 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script> 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/typed.js/2.0.12/typed.min.js"></script> 
+    <script src="https://cdnjs.com/ajax/libs/typed.js/2.0.12/typed.min.js"></script> 
     <script src="https://unpkg.com/splitting@1.0.6/dist/splitting.js"></script> 
     <link rel="stylesheet" href="https://unpkg.com/splitting@1.0.6/dist/splitting.css"/> 
     <script src="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/js/splide.min.js"></script> 
@@ -348,9 +348,9 @@
                 if (res.ok) {
                     generatedLiquidCode = data.liquid_code;
                     generatedSchema = data.schema;
-
+                    
                     // ***************************************************************
-                    // * التعديل الحاسم: حفظ البيانات في localStorage هنا *
+                    // * التعديل الحاسم (localStorage): حفظ البيانات في localStorage *
                     // ***************************************************************
                     localStorage.setItem('liquid_code', generatedLiquidCode);
                     localStorage.setItem('schema', JSON.stringify(generatedSchema));
@@ -389,14 +389,24 @@
             showSuccess("✅ Page downloaded successfully!");
         }
 
-        // ********* Shopify Publish Function *********
+        // ********* Shopify Publish Function - النسخة الجديدة (لتحول Public App) *********
         async function publishToShopify() {
-            if (!generatedLiquidCode || !generatedSchema) {
+            // يتم جلب البيانات من localStorage إذا كان المستخدم عاد بعد التوليد
+            const liquid_code = generatedLiquidCode || localStorage.getItem('liquid_code');
+            const schemaJson = generatedSchema || localStorage.getItem('schema');
+            
+            if (!liquid_code || !schemaJson) {
                 showError("الرجاء توليد الصفحة أولاً قبل محاولة النشر على Shopify.");
                 return;
             }
+            
+            let shopDomain = localStorage.getItem('pending_shop');
 
-            const shopDomain = prompt("أدخل اسم متجرك على Shopify (مثال: my-store.myshopify.com):");
+            // إذا لم يكن هناك متجر معلق، نطلب من المستخدم إدخال المتجر
+            if (!shopDomain) {
+                 shopDomain = prompt("أدخل اسم متجرك على Shopify (مثال: my-store.myshopify.com):");
+            }
+            
             if (!shopDomain) return;
 
             // إظهار تحميل
@@ -404,14 +414,14 @@
             shopifyBtn.disabled = true;
 
             try {
-                // محاولة النشر المباشر أولاً (إذا كان التطبيق مثبتاً)
+                // محاولة النشر المباشر (هذه الخطوة ستحتاج إلى الـ Token المخزن في MongoDB)
                 const response = await fetch('/api/shopify_publish', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         shop: shopDomain,
-                        liquid_code: generatedLiquidCode,
-                        schema: generatedSchema
+                        liquid_code: liquid_code,
+                        schema: JSON.parse(schemaJson)
                     })
                 });
 
@@ -420,6 +430,10 @@
                 if (response.ok && result.success) {
                     // النجاح - تم النشر مباشرة
                     showSuccess(`✅ تم النشر بنجاح! اسم الملف: ${result.filename}`);
+                    // مسح المتجر المعلق بعد نجاح النشر
+                    localStorage.removeItem('pending_shop');
+                    localStorage.removeItem('pending_liquid_code');
+                    localStorage.removeItem('pending_schema');
                 } else if (result.action_required) {
                     // يحتاج تثبيت التطبيق
                     startOAuthInstall(shopDomain);
@@ -437,12 +451,12 @@
 
         // ********* دالة جديدة لبدء عملية OAuth *********
         function startOAuthInstall(shopDomain) {
-            // تخزين البيانات مؤقتاً
-            // ملاحظة: بما أننا قمنا بحفظ liquid_code و schema في localStorage
-            // عند التوليد، فإننا لا نحتاج لإعادة حفظها هنا.
+            // تخزين البيانات مؤقتاً (لضمان وجودها عند العودة)
+            // نستخدم البيانات المخزنة من generateLandingPage()
             localStorage.setItem('pending_shop', shopDomain);
             
             // توجيه لـ OAuth
+            // نستخدم window.open لفتح نافذة التثبيت ليعود المستخدم لصفحة البناء
             const authWindow = window.open(`/api/shopify_install?shop=${shopDomain}`, 'shopify_auth', 'width=600,height=700');
             
             // مراقبة إكمال المصادقة
@@ -450,7 +464,7 @@
                 if (authWindow.closed) {
                     clearInterval(checkCompletion);
                     setTimeout(() => {
-                        alert('✅ تم إكمال عملية المصادقة! يمكنك الآن محاولة النشر مرة أخرى.');
+                        alert('✅ تم إكمال عملية المصادقة! انقر "إضافة صفحتي على Shopify" لإكمال النشر.');
                     }, 1000);
                 }
             }, 1000);
