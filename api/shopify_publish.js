@@ -1,22 +1,32 @@
-// api/shopify_publish.js - نسخة معدلة وآمنة لتطبيق Custom App
-import fetch from 'node-fetch'; 
+// api/shopify_publish.js - الآن يستخدم Access Token الخاص بالمتجر من MongoDB
+import fetch from 'node-fetch';
+import { connectToDatabase } from './db.js'; // استيراد دالة الاتصال بقاعدة البيانات
 
-// ✅ قراءة الـ Access Token من متغيرات البيئة (هذا هو التعديل الرئيسي)
-const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
+// تم إزالة قراءة SHOPIFY_ACCESS_TOKEN من متغيرات البيئة (انتقال لـ Public App)
+
+/**
+ * دالة تقوم بجلب Access Token الخاص بالمتجر من MongoDB.
+ * @param {string} shop - اسم المتجر.
+ * @returns {string} - Access Token.
+ */
+async function getShopAccessToken(shop) {
+    const { db } = await connectToDatabase();
+    const shopRecord = await db.collection('shops').findOne({ shop: shop });
+
+    if (!shopRecord || !shopRecord.accessToken) {
+        // إذا لم يكن رمز الوصول موجوداً، هذا يعني أن التطبيق لم يثبت بعد
+        throw new Error("APP_NOT_INSTALLED"); 
+    }
+    return shopRecord.accessToken;
+}
 
 /**
  * دالة تقوم بنشر Section جديد كملف asset في متجر Shopify.
- * @param {string} shop - اسم المتجر (مثال: my-store.myshopify.com)
- * @param {string} liquid_code - كود Liquid الخاص بالقسم (Section)
- * @param {object} schema - كائن Schema JSON الخاص بالقسم
- * @returns {object} - كائن يحتوي على اسم الملف ونتائج النشر.
  */
 async function createShopifySection(shop, liquid_code, schema) {
     
-    // التحقق من وجود رمز الوصول قبل بدء الاتصال
-    if (!SHOPIFY_ACCESS_TOKEN) {
-        throw new Error("SHOPIFY_ACCESS_TOKEN is missing. Please set it in Vercel Environment Variables.");
-    }
+    // 1. جلب Access Token الخاص بهذا المتجر من قاعدة البيانات
+    const accessToken = await getShopAccessToken(shop);
     
     // إنشاء اسم ملف فريد للقسم
     const sectionFilename = `smartpage-section-${Date.now()}`;
@@ -27,36 +37,32 @@ async function createShopifySection(shop, liquid_code, schema) {
     // نقطة نهاية API لنشر الأصول (Assets)
     const assetUrl = `https://${shop}/admin/api/2023-10/themes/current/assets.json`;
     
-    // جسم الطلب (Body)
-    const assetBody = {
-        "asset": {
-            "key": `sections/${sectionFilename}.liquid`, // المسار في مجلد sections
-            "value": finalSectionLiquid
-        }
+    const headers = {
+        'X-Shopify-Access-Token': accessToken, // نستخدم الرمز الخاص بالمتجر من MongoDB
+        'Content-Type': 'application/json'
     };
-
-    console.log('Publishing section to:', assetUrl);
     
-    const response = await fetch(assetUrl, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            // استخدام الـ Access Token كصلاحية الوصول
-            'X-Shopify-Access-Token': SHOPIFY_ACCESS_TOKEN, 
-        },
-        body: JSON.stringify(assetBody),
+    const body = JSON.stringify({
+        asset: {
+            key: `sections/${sectionFilename}.liquid`,
+            value: finalSectionLiquid
+        }
     });
 
+    const response = await fetch(assetUrl, {
+        method: 'PUT',
+        headers: headers,
+        body: body,
+    });
+    
     const data = await response.json();
     
-    // التحقق من استجابة API (إذا لم تكن 2xx)
     if (!response.ok) {
-        // تسجيل الخطأ لتظهر رسالة API في سجلات Vercel
         console.error("Shopify API Error:", data); 
-        throw new Error(data.errors || `Shopify API error: ${response.status}`);
+        throw new Error(data.errors || `Shopify API error: ${response.status} - Could not publish section.`);
     }
     
-    return { filename: sectionFilename, asset: data.asset };
+    return { filename: `${sectionFilename}.liquid`, asset: data.asset };
 }
 
 /**
@@ -91,10 +97,19 @@ export default async function handler(req, res) {
 
     } catch (error) {
         console.error("Publishing error:", error);
+        
+        // ⚠️ التعامل مع حالة "التطبيق غير مثبت" (Public App Flow)
+        if (error.message.includes("APP_NOT_INSTALLED")) {
+            return res.status(403).json({
+                error: "يرجى تثبيت التطبيق أولاً للمتجر الحالي. انقر على 'إضافة صفحتي على Shopify' لبدء التثبيت.",
+                action_required: true // إرسال علامة للواجهة الأمامية لبدء OAuth
+            });
+        }
+
         // إرجاع خطأ 500 للمستخدم مع رسالة الخطأ
         res.status(500).json({ 
-            error: error.message || 'Failed to publish section to Shopify.',
-            details: error.message
+            success: false, 
+            error: `فشل النشر: ${error.message}` 
         });
     }
 }
