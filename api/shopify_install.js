@@ -1,31 +1,43 @@
-// api/shopify_install.js - نسخة معدلة بحذف كود Cookies
+// api/shopify_install.js - التطبيق العام (Public App) - بدء عملية المصادقة (OAuth)
+
+import { URLSearchParams } from 'url';
+
+// يجب إضافة هذه المتغيرات الجديدة في Vercel
+const { 
+    HOST, // مثال: https://smartpage-ai.vercel.app
+    SHOPIFY_API_KEY, // Client ID من Partner Dashboard
+    SCOPES // مثال: write_themes,read_themes
+} = process.env;
 
 export default function handler(req, res) {
-    const { HOST } = process.env;
     
-    if (req.method === 'POST') {
-        // نستخدم req.body لتحليل البيانات المرسلة في طلب POST
-        const { shop, liquid_code, schema } = req.body;
-        
-        if (!shop) {
-            return res.status(400).send("Missing shop parameter");
-        }
+    // هذا المسار يجب أن يتم الوصول إليه فقط عن طريق طلب GET من المتصفح لبدء التثبيت
+    if (req.method !== 'GET') {
+        return res.status(405).send("Method not allowed. Use GET to start installation.");
+    }
+    
+    const shop = req.query.shop; // اسم المتجر (مثال: test-store.myshopify.com)
+    
+    // التحقق من المتغيرات الأساسية
+    if (!shop || !SHOPIFY_API_KEY || !SCOPES || !HOST) {
+        console.error("Missing required environment variables or query parameter.");
+        return res.status(500).send("Missing required parameters (shop query) or environment variables (SHOPIFY_API_KEY, SCOPES, HOST).");
+    }
 
-        // ❌ تم حذف الكود الذي كان يضبط الـ Cookies هنا.
-        // الآن نعتمد على أن builder.html قام بتخزين البيانات في localStorage
-        
-        const successUrl = `${HOST}/publish_finish.html?shop=${shop}`;
-        console.log('Custom App Install - Redirecting without cookies (using localStorage now)');
-        return res.redirect(successUrl);
-    }
+    // 1. بناء رابط المصادقة (OAuth URL) لمتجر Shopify
+    const params = new URLSearchParams({
+        client_id: SHOPIFY_API_KEY,
+        scope: SCOPES,
+        // مسار العودة بعد التثبيت، يجب أن يكون مطابقاً لما تم تعيينه في Partner Dashboard
+        redirect_uri: `${HOST}/api/shopify_callback`, 
+        // رمز عشوائي للحماية من هجمات CSRF (مهم جداً!)
+        state: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) 
+    });
+
+    const installUrl = `https://${shop}/admin/oauth/authorize?${params.toString()}`;
     
-    // إذا كان GET، استخدم الطريقة القديمة كنسخة احتياطية
-    const { shop } = req.query;
-    if (!shop) {
-        return res.status(400).send("Missing shop parameter");
-    }
-    
-    const successUrl = `${HOST}/publish_finish.html?shop=${shop}`;
-    console.log('Custom App Install - Redirecting (fallback)');
-    res.redirect(successUrl);
+    console.log('Starting OAuth Install:', installUrl);
+
+    // 2. توجيه المستخدم إلى صفحة تثبيت Shopify الرسمية
+    res.redirect(installUrl);
 }
