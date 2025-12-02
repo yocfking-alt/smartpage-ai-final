@@ -218,7 +218,7 @@
                         📥 Download Landing Page 
                     </button> 
                     
-                    <button id="shopify-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-lg text-lg font-medium transition-all duration-300 mt-2" disabled> 
+                    <button id="shopify-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-lg text-lg font-medium transition-all duration-300 mt-2"> 
                         إضافة صفحتي على Shopify
                     </button>
                     
@@ -274,6 +274,33 @@
         let generatedLiquidCode = null;
         let generatedSchema = null;
         
+        // ********* دوال مساعدة جديدة *********
+        function showLoading() {
+            loadingIndicator.classList.remove('hidden');
+            errorMessageDiv.classList.add('hidden');
+        }
+        
+        function hideLoading() {
+            loadingIndicator.classList.add('hidden');
+        }
+        
+        function showError(message) {
+            errorMessageDiv.textContent = message;
+            errorMessageDiv.classList.remove('hidden');
+            errorMessageDiv.style.color = 'red';
+            errorMessageDiv.style.backgroundColor = '#FEE2E2';
+        }
+        
+        function showSuccess(message) {
+            errorMessageDiv.textContent = message;
+            errorMessageDiv.style.color = 'green';
+            errorMessageDiv.style.backgroundColor = '#D1FAE5';
+            errorMessageDiv.classList.remove('hidden');
+            setTimeout(() => {
+                errorMessageDiv.classList.add('hidden');
+            }, 5000);
+        }
+        
         // ********* Backend Connection Function *********
         async function generateLandingPage() {
             errorMessageDiv.classList.add('hidden');
@@ -290,12 +317,11 @@
             const customOffer = document.getElementById("custom-offer-input").value;
 
             if (!name || !features || !price) {
-                errorMessageDiv.textContent = "Please fill in all required fields!";
-                errorMessageDiv.classList.remove('hidden');
+                showError("Please fill in all required fields!");
                 return;
             }
 
-            loadingIndicator.classList.remove('hidden');
+            showLoading();
             generateBtn.disabled = true;
 
             try {
@@ -322,6 +348,12 @@
                 if (res.ok) {
                     generatedLiquidCode = data.liquid_code;
                     generatedSchema = data.schema;
+
+                    // ***************************************************************
+                    // * التعديل الحاسم: حفظ البيانات في localStorage هنا *
+                    // ***************************************************************
+                    localStorage.setItem('liquid_code', generatedLiquidCode);
+                    localStorage.setItem('schema', JSON.stringify(generatedSchema));
                     
                     // ✅ عرض صفحة الهبوط الكاملة
                     previewIframe.srcdoc = data.html;
@@ -329,15 +361,14 @@
                     downloadBtn.disabled = false;
                     shopifyBtn.disabled = false; 
                     document.getElementById('preview-section').scrollIntoView({ behavior: 'smooth' });
+                    showSuccess("✅ Page generated successfully!");
                 } else {
-                    errorMessageDiv.textContent = `Error: ${data.error || 'Unknown error'}`;
-                    errorMessageDiv.classList.remove('hidden');
+                    showError(`Error: ${data.error || 'Unknown error'}`);
                 }
             } catch (err) {
-                errorMessageDiv.textContent = "Network error. Please try again.";
-                errorMessageDiv.classList.remove('hidden');
+                showError("Network error. Please try again.");
             } finally {
-                loadingIndicator.classList.add('hidden');
+                hideLoading();
                 generateBtn.disabled = false;
             }
         }
@@ -346,8 +377,7 @@
         function downloadHTML() {
             const htmlContent = previewIframe.srcdoc;
             if (!htmlContent) {
-                errorMessageDiv.textContent = "No page generated yet. Please generate a page first.";
-                errorMessageDiv.classList.remove('hidden');
+                showError("No page generated yet. Please generate a page first.");
                 return;
             }
             
@@ -356,48 +386,74 @@
             link.href = URL.createObjectURL(blob);
             link.download = "smartpage-ai-landing.html";
             link.click();
+            showSuccess("✅ Page downloaded successfully!");
         }
 
-        // ********* Shopify Publish Function - النسخة المعدلة *********
-        function publishToShopify() {
+        // ********* Shopify Publish Function *********
+        async function publishToShopify() {
             if (!generatedLiquidCode || !generatedSchema) {
-                errorMessageDiv.textContent = "الرجاء توليد الصفحة أولاً قبل محاولة النشر على Shopify.";
-                errorMessageDiv.classList.remove('hidden');
+                showError("الرجاء توليد الصفحة أولاً قبل محاولة النشر على Shopify.");
                 return;
             }
 
-            const shopDomain = prompt("الرجاء إدخال اسم متجرك على Shopify (مثال: my-store.myshopify.com):");
-            
-            if (!shopDomain) {
-                return;
+            const shopDomain = prompt("أدخل اسم متجرك على Shopify (مثال: my-store.myshopify.com):");
+            if (!shopDomain) return;
+
+            // إظهار تحميل
+            showLoading();
+            shopifyBtn.disabled = true;
+
+            try {
+                // محاولة النشر المباشر أولاً (إذا كان التطبيق مثبتاً)
+                const response = await fetch('/api/shopify_publish', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        shop: shopDomain,
+                        liquid_code: generatedLiquidCode,
+                        schema: generatedSchema
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // النجاح - تم النشر مباشرة
+                    showSuccess(`✅ تم النشر بنجاح! اسم الملف: ${result.filename}`);
+                } else if (result.action_required) {
+                    // يحتاج تثبيت التطبيق
+                    startOAuthInstall(shopDomain);
+                } else {
+                    throw new Error(result.error || 'Unknown error');
+                }
+
+            } catch (error) {
+                showError(`❌ خطأ في النشر: ${error.message}`);
+            } finally {
+                hideLoading();
+                shopifyBtn.disabled = false;
             }
+        }
+
+        // ********* دالة جديدة لبدء عملية OAuth *********
+        function startOAuthInstall(shopDomain) {
+            // تخزين البيانات مؤقتاً
+            // ملاحظة: بما أننا قمنا بحفظ liquid_code و schema في localStorage
+            // عند التوليد، فإننا لا نحتاج لإعادة حفظها هنا.
+            localStorage.setItem('pending_shop', shopDomain);
             
-            // تخزين البيانات في localStorage كنسخة احتياطية
-            localStorage.setItem('liquid_code', generatedLiquidCode);
-            localStorage.setItem('schema', JSON.stringify(generatedSchema));
+            // توجيه لـ OAuth
+            const authWindow = window.open(`/api/shopify_install?shop=${shopDomain}`, 'shopify_auth', 'width=600,height=700');
             
-            // إرسال البيانات عبر POST بدلاً من GET
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '/api/shopify_install';
-            
-            const shopInput = document.createElement('input');
-            shopInput.name = 'shop';
-            shopInput.value = shopDomain;
-            
-            const liquidInput = document.createElement('input');
-            liquidInput.name = 'liquid_code';
-            liquidInput.value = generatedLiquidCode;
-            
-            const schemaInput = document.createElement('input');
-            schemaInput.name = 'schema';
-            schemaInput.value = JSON.stringify(generatedSchema);
-            
-            form.appendChild(shopInput);
-            form.appendChild(liquidInput);
-            form.appendChild(schemaInput);
-            document.body.appendChild(form);
-            form.submit();
+            // مراقبة إكمال المصادقة
+            const checkCompletion = setInterval(() => {
+                if (authWindow.closed) {
+                    clearInterval(checkCompletion);
+                    setTimeout(() => {
+                        alert('✅ تم إكمال عملية المصادقة! يمكنك الآن محاولة النشر مرة أخرى.');
+                    }, 1000);
+                }
+            }, 1000);
         }
 
         // ********* Event Listeners *********
