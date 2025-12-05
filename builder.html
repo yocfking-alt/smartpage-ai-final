@@ -409,65 +409,15 @@
             
             if (!shopDomain) return;
 
-            // إظهار تحميل
-            showLoading();
-            shopifyBtn.disabled = true;
-
-            try {
-                // محاولة النشر المباشر (هذه الخطوة ستحتاج إلى الـ Token المخزن في MongoDB)
-                const response = await fetch('/api/shopify_publish', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        shop: shopDomain,
-                        liquid_code: liquid_code,
-                        schema: JSON.parse(schemaJson)
-                    })
-                });
-
-                const result = await response.json();
-
-                if (response.ok && result.success) {
-                    // النجاح - تم النشر مباشرة
-                    showSuccess(`✅ تم النشر بنجاح! اسم الملف: ${result.filename}`);
-                    // مسح المتجر المعلق بعد نجاح النشر
-                    localStorage.removeItem('pending_shop');
-                    localStorage.removeItem('pending_liquid_code');
-                    localStorage.removeItem('pending_schema');
-                } else if (result.action_required) {
-                    // يحتاج تثبيت التطبيق
-                    startOAuthInstall(shopDomain);
-                } else {
-                    throw new Error(result.error || 'Unknown error');
-                }
-
-            } catch (error) {
-                showError(`❌ خطأ في النشر: ${error.message}`);
-            } finally {
-                hideLoading();
-                shopifyBtn.disabled = false;
-            }
-        }
-
-        // ********* دالة جديدة لبدء عملية OAuth *********
-        function startOAuthInstall(shopDomain) {
-            // تخزين البيانات مؤقتاً (لضمان وجودها عند العودة)
-            // نستخدم البيانات المخزنة من generateLandingPage()
+            // ✅ **الحل: حفظ البيانات ثم التوجيه المباشر**
+            // 1. حفظ بيانات المتجر في localStorage
             localStorage.setItem('pending_shop', shopDomain);
             
-            // توجيه لـ OAuth
-            // نستخدم window.open لفتح نافذة التثبيت ليعود المستخدم لصفحة البناء
-            const authWindow = window.open(`/api/shopify_install?shop=${shopDomain}`, 'shopify_auth', 'width=600,height=700');
+            // ✅ **2. توجيه المستخدم مباشرة إلى صفحة التثبيت (بدلاً من popup)**
+            window.location.href = `/api/shopify_install?shop=${shopDomain}`;
             
-            // مراقبة إكمال المصادقة
-            const checkCompletion = setInterval(() => {
-                if (authWindow.closed) {
-                    clearInterval(checkCompletion);
-                    setTimeout(() => {
-                        alert('✅ تم إكمال عملية المصادقة! انقر "إضافة صفحتي على Shopify" لإكمال النشر.');
-                    }, 1000);
-                }
-            }, 1000);
+            // ⚠️ **إيقاف الكود هنا - لن ينفذ الكود التالي بسبب التوجيه**
+            return;
         }
 
         // ********* Event Listeners *********
