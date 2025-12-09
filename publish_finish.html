@@ -25,7 +25,7 @@
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span>جارٍ النشر باستخدام Access Token...</span>
+                    <span>جارٍ النشر...</span>
                 </div>
             </div>
 
@@ -36,6 +36,14 @@
                 <p id="error-text" class="text-sm text-red-600 mt-1 break-words"></p>
             </div>
             
+            <div id="retry-section" class="hidden mt-4">
+                <button id="retry-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded">
+                    إعادة المحاولة
+                </button>
+                <button id="back-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded mr-2">
+                    العودة للبناء
+                </button>
+            </div>
         </div>
 
         <div id="success-actions" class="hidden mt-6 pt-4 border-t border-gray-200">
@@ -44,13 +52,17 @@
             <a id="shopify-link" href="#" target="_blank" class="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300">
                 فتح محرر الثيم 🚀
             </a>
+            <button id="clear-data-btn" class="mt-4 text-sm text-gray-500 hover:text-gray-700">
+                تنظيف البيانات المحفوظة
+            </button>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const params = new URLSearchParams(window.location.search);
-            const shop = params.get('shop'); // اسم المتجر الذي جاء من shopify_callback.js
+            const shop = params.get('shop');
+            const data_key = params.get('data_key');
             
             const publishBtn = document.getElementById('publish-btn');
             const loadingIndicator = document.getElementById('loading-indicator');
@@ -58,109 +70,201 @@
             const successActions = document.getElementById('success-actions');
             const errorDetails = document.getElementById('error-details');
             const errorText = document.getElementById('error-text');
+            const retrySection = document.getElementById('retry-section');
+            const retryBtn = document.getElementById('retry-btn');
+            const backBtn = document.getElementById('back-btn');
+            const clearDataBtn = document.getElementById('clear-data-btn');
             
-            // ⚠️ التحقق من المتجر (مهم جداً للسلامة)
+            // التحقق من المتجر
             if (!shop) {
                 messageArea.textContent = '❌ خطأ: اسم المتجر مفقود في الرابط.';
                 messageArea.style.color = 'red';
                 publishBtn.disabled = true;
                 return;
             }
-
-            // يتم تشغيل النشر تلقائيًا عند التحميل (لتوفير خطوة على المستخدم)
-            if (publishBtn) {
-                 publishBtn.click();
+            
+            // دوال مساعدة
+            function showMessage(text, color = 'gray') {
+                messageArea.textContent = text;
+                messageArea.style.color = color;
             }
-
-            // ********* دالة النشر الرئيسية *********
+            
+            function showError(text) {
+                messageArea.textContent = text;
+                messageArea.style.color = 'red';
+            }
+            
+            function showSuccess(text) {
+                messageArea.textContent = text;
+                messageArea.style.color = 'green';
+            }
+            
+            // استرجاع البيانات من مصادر متعددة
+            async function retrieveSectionData() {
+                // 1. محاولة من data_key (النظام الجديد)
+                if (data_key) {
+                    try {
+                        const response = await fetch(`/api/shopify_get_data?data_key=${data_key}&shop=${shop}`);
+                        const result = await response.json();
+                        
+                        if (response.ok && result.success) {
+                            return {
+                                liquid_code: result.liquid_code,
+                                schema: result.schema,
+                                source: 'database'
+                            };
+                        } else {
+                            console.warn('Failed to get data from database:', result.error);
+                        }
+                    } catch (error) {
+                        console.warn('Database retrieval failed:', error.message);
+                    }
+                }
+                
+                // 2. محاولة من localStorage
+                const localLiquid = localStorage.getItem('liquid_code');
+                const localSchema = localStorage.getItem('schema');
+                const pendingShop = localStorage.getItem('pending_shop');
+                
+                if (localLiquid && localSchema && pendingShop === shop) {
+                    try {
+                        return {
+                            liquid_code: localLiquid,
+                            schema: JSON.parse(localSchema),
+                            source: 'localStorage'
+                        };
+                    } catch (e) {
+                        console.warn('LocalStorage parse error:', e);
+                    }
+                }
+                
+                // 3. محاولة من sessionStorage
+                const sessionLiquid = sessionStorage.getItem('liquid_code');
+                const sessionSchema = sessionStorage.getItem('schema');
+                
+                if (sessionLiquid && sessionSchema) {
+                    try {
+                        return {
+                            liquid_code: sessionLiquid,
+                            schema: JSON.parse(sessionSchema),
+                            source: 'sessionStorage'
+                        };
+                    } catch (e) {
+                        console.warn('SessionStorage parse error:', e);
+                    }
+                }
+                
+                return null;
+            }
+            
+            // دالة النشر الرئيسية
             async function publishShopifySection() {
                 publishBtn.disabled = true;
                 loadingIndicator.classList.remove('hidden');
                 messageArea.textContent = '';
                 errorDetails.classList.add('hidden');
+                retrySection.classList.add('hidden');
                 successActions.classList.add('hidden');
-
-                // 1. جلب البيانات من sessionStorage
-                // يتم حفظ هذه البيانات في builder.html قبل التوجيه لعملية OAuth
-                const liquid_code = sessionStorage.getItem('liquid_code');
-                const schemaJson = sessionStorage.getItem('schema');
-                const pendingShop = sessionStorage.getItem('pending_shop');
                 
-                // ⚠️ التحقق من وجود البيانات
-                if (!liquid_code || !schemaJson) {
-                    messageArea.textContent = '❌ فشل النشر: بيانات الصفحة مفقودة في المتصفح. الرجاء العودة لصفحة البناء وإعادة توليد الصفحة.';
-                    messageArea.style.color = 'red';
-                    publishBtn.disabled = true;
-                    loadingIndicator.classList.add('hidden');
-                    return;
-                }
-                
-                // ⚠️ التحقق من تطابق المتجر (إذا كان المستخدم حاول النشر مرتين لمتجرين مختلفين)
-                if (pendingShop && pendingShop !== shop) {
-                    messageArea.textContent = `❌ فشل النشر: اسم المتجر ( ${shop} ) لا يتطابق مع المتجر الذي بدأت منه العملية ( ${pendingShop} ).`;
-                    messageArea.style.color = 'red';
-                    publishBtn.disabled = true;
-                    loadingIndicator.classList.add('hidden');
-                    return;
-                }
-
-                // 2. إرسال طلب النشر إلى API
                 try {
+                    // استرجاع البيانات
+                    const sectionData = await retrieveSectionData();
+                    
+                    if (!sectionData) {
+                        showError('❌ فشل النشر: بيانات الصفحة مفقودة.');
+                        errorText.textContent = 'البيانات غير متوفرة في أي مصدر (قاعدة بيانات، localStorage، sessionStorage).';
+                        errorDetails.classList.remove('hidden');
+                        retrySection.classList.remove('hidden');
+                        return;
+                    }
+                    
+                    console.log('Using data from:', sectionData.source);
+                    
+                    // التحقق من تطابق المتجر
+                    const pendingShop = localStorage.getItem('pending_shop') || sessionStorage.getItem('pending_shop');
+                    if (pendingShop && pendingShop !== shop) {
+                        showError(`❌ فشل النشر: المتجر الحالي (${shop}) لا يتطابق مع المتجر المسجل (${pendingShop}).`);
+                        retrySection.classList.remove('hidden');
+                        return;
+                    }
+                    
+                    // إرسال طلب النشر
                     const response = await fetch('/api/shopify_publish', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             shop: shop,
-                            liquid_code: liquid_code,
-                            schema: JSON.parse(schemaJson)
+                            liquid_code: sectionData.liquid_code,
+                            schema: sectionData.schema
                         })
                     });
-
+                    
                     const result = await response.json();
                     loadingIndicator.classList.add('hidden');
-
+                    
                     if (response.ok && result.success) {
-                        messageArea.textContent = `✅ تم النشر بنجاح! اسم الملف: ${result.filename}`;
-                        messageArea.style.color = 'green';
+                        showSuccess(`✅ تم النشر بنجاح! اسم الملف: ${result.filename}`);
                         
                         // بناء رابط محرر الثيم
                         const themeEditorLink = `https://${shop}/admin/themes/current/editor?context=apps&template=index&activateAppSection=${result.filename.replace('.liquid', '')}`;
                         
                         document.getElementById('shopify-link').href = themeEditorLink;
                         successActions.classList.remove('hidden');
-
-                        // تنظيف جميع البيانات بعد النشر الناجح
-                        sessionStorage.removeItem('liquid_code');
-                        sessionStorage.removeItem('schema');
-                        sessionStorage.removeItem('pending_shop'); 
-
+                        
+                        // تنظيف البيانات بعد النجاح
+                        cleanupStoredData();
+                        
                     } else if (result.action_required) {
-                         // إذا فشل النشر بعد الـ Callback، هذا يعني خطأ في Token.
-                         messageArea.textContent = '❌ فشل النشر: رمز الوصول غير صالح. الرجاء العودة لصفحة البناء والبدء من جديد.';
-                         messageArea.style.color = 'red';
-                         errorText.textContent = 'سبب الخطأ: ' + result.error;
-                         errorDetails.classList.remove('hidden');
+                        showError('❌ فشل النشر: رمز الوصول غير صالح.');
+                        errorText.textContent = result.error;
+                        errorDetails.classList.remove('hidden');
+                        retrySection.classList.remove('hidden');
                     } else {
-                        messageArea.textContent = '❌ فشل النشر.';
-                        messageArea.style.color = 'red';
+                        showError('❌ فشل النشر.');
                         errorText.textContent = result.error || 'خطأ غير معروف';
                         errorDetails.classList.remove('hidden');
-                        publishBtn.disabled = false;
+                        retrySection.classList.remove('hidden');
                     }
+                    
                 } catch (error) {
                     loadingIndicator.classList.add('hidden');
-                    messageArea.textContent = '❌ فشل الاتصال بالخادم.';
-                    messageArea.style.color = 'red';
+                    showError('❌ فشل الاتصال بالخادم.');
                     errorText.textContent = error.message;
                     errorDetails.classList.remove('hidden');
-                    publishBtn.disabled = false;
+                    retrySection.classList.remove('hidden');
                 }
             }
-
+            
+            // تنظيف البيانات المخزنة
+            function cleanupStoredData() {
+                localStorage.removeItem('liquid_code');
+                localStorage.removeItem('schema');
+                localStorage.removeItem('pending_shop');
+                sessionStorage.removeItem('liquid_code');
+                sessionStorage.removeItem('schema');
+                sessionStorage.removeItem('pending_shop');
+            }
+            
+            // تشغيل النشر تلقائياً
+            setTimeout(() => {
+                publishBtn.click();
+            }, 500);
+            
+            // إضافة Event Listeners
             publishBtn.addEventListener('click', publishShopifySection);
             
-            // تشغيل دالة النشر عند تحميل الصفحة لتوفير خطوة على المستخدم
-            // if (publishBtn) { publishBtn.click(); }
+            retryBtn?.addEventListener('click', () => {
+                publishShopifySection();
+            });
+            
+            backBtn?.addEventListener('click', () => {
+                window.location.href = '/builder.html';
+            });
+            
+            clearDataBtn?.addEventListener('click', () => {
+                cleanupStoredData();
+                alert('تم تنظيف البيانات المحفوظة بنجاح.');
+            });
         });
     </script>
 </body>
