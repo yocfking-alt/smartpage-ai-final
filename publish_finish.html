@@ -80,11 +80,11 @@
                 errorDetails.classList.add('hidden');
                 successActions.classList.add('hidden');
 
-                // 1. جلب البيانات من localStorage
+                // 1. جلب البيانات من sessionStorage
                 // يتم حفظ هذه البيانات في builder.html قبل التوجيه لعملية OAuth
-                const liquid_code = localStorage.getItem('liquid_code');
-                const schemaJson = localStorage.getItem('schema');
-                const pendingShop = localStorage.getItem('pending_shop');
+                const liquid_code = sessionStorage.getItem('liquid_code');
+                const schemaJson = sessionStorage.getItem('schema');
+                const pendingShop = sessionStorage.getItem('pending_shop');
                 
                 // ⚠️ التحقق من وجود البيانات
                 if (!liquid_code || !schemaJson) {
@@ -130,9 +130,9 @@
                         successActions.classList.remove('hidden');
 
                         // تنظيف جميع البيانات بعد النشر الناجح
-                        localStorage.removeItem('liquid_code');
-                        localStorage.removeItem('schema');
-                        localStorage.removeItem('pending_shop'); 
+                        sessionStorage.removeItem('liquid_code');
+                        sessionStorage.removeItem('schema');
+                        sessionStorage.removeItem('pending_shop'); 
 
                     } else if (result.action_required) {
                          // إذا فشل النشر بعد الـ Callback، هذا يعني خطأ في Token.
