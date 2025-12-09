@@ -389,35 +389,54 @@
             showSuccess("✅ Page downloaded successfully!");
         }
 
-        // ********* Shopify Publish Function - النسخة الجديدة (لتحول Public App) *********
+        // ********* Shopify Publish Function - النسخة الجديدة (باستخدام قاعدة البيانات) *********
         async function publishToShopify() {
-            // يتم جلب البيانات من sessionStorage إذا كان المستخدم عاد بعد التوليد
-            const liquid_code = generatedLiquidCode || sessionStorage.getItem('liquid_code');
-            const schemaJson = generatedSchema || sessionStorage.getItem('schema');
+            // يتم جلب البيانات من localStorage إذا كان المستخدم عاد بعد التوليد
+            const liquid_code = generatedLiquidCode || localStorage.getItem('liquid_code');
+            const schema = generatedSchema || localStorage.getItem('schema');
             
-            if (!liquid_code || !schemaJson) {
+            if (!liquid_code || !schema) {
                 showError("الرجاء توليد الصفحة أولاً قبل محاولة النشر على Shopify.");
                 return;
             }
             
-            let shopDomain = sessionStorage.getItem('pending_shop');
+            let shopDomain = localStorage.getItem('pending_shop');
 
             // إذا لم يكن هناك متجر معلق، نطلب من المستخدم إدخال المتجر
             if (!shopDomain) {
-                 shopDomain = prompt("أدخل اسم متجرك على Shopify (مثال: my-store.myshopify.com):");
+                shopDomain = prompt("أدخل اسم متجرك على Shopify (مثال: my-store.myshopify.com):");
+                if (!shopDomain) return;
+                localStorage.setItem('pending_shop', shopDomain);
             }
             
-            if (!shopDomain) return;
-
-            // ✅ **الحل: حفظ البيانات ثم التوجيه المباشر**
-            // 1. حفظ بيانات المتجر في sessionStorage
-            sessionStorage.setItem('pending_shop', shopDomain);
+            showLoading();
             
-            // ✅ **2. توجيه المستخدم مباشرة إلى صفحة التثبيت (بدلاً من popup)**
-            window.location.href = `/api/shopify_install?shop=${shopDomain}`;
-            
-            // ⚠️ **إيقاف الكود هنا - لن ينفذ الكود التالي بسبب التوجيه**
-            return;
+            try {
+                // 1. تخزين البيانات في قاعدة البيانات
+                const storeResponse = await fetch('/api/shopify_store_data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        shop: shopDomain,
+                        liquid_code: liquid_code,
+                        schema: schema
+                    })
+                });
+                
+                const storeData = await storeResponse.json();
+                
+                if (storeData.success) {
+                    // 2. توجيه إلى OAuth مع data_key
+                    window.location.href = storeData.redirect_url;
+                } else {
+                    showError("فشل في تحضير البيانات: " + (storeData.error || 'خطأ غير معروف'));
+                }
+                
+            } catch (error) {
+                showError("خطأ في الاتصال بالخادم: " + error.message);
+            } finally {
+                hideLoading();
+            }
         }
 
         // ********* Event Listeners *********
