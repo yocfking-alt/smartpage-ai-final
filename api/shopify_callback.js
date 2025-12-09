@@ -1,83 +1,92 @@
-// api/shopify_callback.js - تطبيق Public App (OAuth)
 import fetch from 'node-fetch';
-import { connectToDatabase } from './db.js'; // لربط قاعدة البيانات وتخزين Access Token
+import { connectToDatabase } from './db.js';
 
-// يجب إضافة هذه المتغيرات في Vercel (SHOPIFY_API_KEY و SHOPIFY_API_SECRET)
-const { 
-    HOST, 
-    SHOPIFY_API_KEY, 
-    SHOPIFY_API_SECRET 
-} = process.env;
+const { HOST, SHOPIFY_API_KEY, SHOPIFY_API_SECRET } = process.env;
 
 export default async function handler(req, res) {
-    // نستقبل shop (اسم المتجر) و code (كود المصادقة) من Shopify
-    const { shop, code } = req.query; 
-
-    // التحقق من وجود البيانات الأساسية
+    const { shop, code, state } = req.query;
+    
     if (!shop || !code) {
-        return res.status(400).send("Installation failed. Missing shop or authorization code.");
+        return res.status(400).send("Missing shop or authorization code.");
     }
     
-    // التحقق من المتغيرات السرية
     if (!SHOPIFY_API_KEY || !SHOPIFY_API_SECRET || !HOST) {
-        console.error("Missing required environment variables.");
-        return res.status(500).send("Missing required environment variables (SHOPIFY_API_KEY, SHOPIFY_API_SECRET, HOST).");
+        return res.status(500).send("Missing environment variables.");
     }
-
-    // 1. بناء طلب مبادلة الكود بـ Access Token
-    const accessTokenUrl = `https://${shop}/admin/oauth/access_token`;
-    
-    const body = JSON.stringify({
-        client_id: SHOPIFY_API_KEY,
-        client_secret: SHOPIFY_API_SECRET,
-        code, // كود المصادقة الذي أرسله Shopify
-    });
 
     try {
-        console.log(`Exchanging code for access token for shop: ${shop}`);
+        // فك تشفير state
+        let data_key = null;
+        if (state) {
+            try {
+                const stateDecoded = Buffer.from(state, 'base64').toString();
+                const stateObj = JSON.parse(stateDecoded);
+                data_key = stateObj.data_key;
+                console.log('Decoded data_key:', data_key);
+            } catch (e) {
+                console.warn('Could not decode state:', e.message);
+            }
+        }
         
-        // إرسال الطلب إلى Shopify
+        // استبدال الكود بـ Access Token
+        const accessTokenUrl = `https://${shop}/admin/oauth/access_token`;
+        
         const response = await fetch(accessTokenUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body,
+            body: JSON.stringify({
+                client_id: SHOPIFY_API_KEY,
+                client_secret: SHOPIFY_API_SECRET,
+                code
+            }),
         });
 
         const tokenData = await response.json();
-
+        
         if (!response.ok || tokenData.error) {
-            console.error("Token exchange failed:", tokenData.error_description || tokenData.error);
-            // إرجاع خطأ إلى المستخدم
+            console.error("Token exchange failed:", tokenData);
             return res.status(500).send(`Failed to get access token: ${tokenData.error_description || 'Unknown error'}`);
         }
         
-        // 2. الحصول على رمز الوصول (Access Token)
         const accessToken = tokenData.access_token;
-        const scopes = tokenData.scope; 
+        const scopes = tokenData.scope;
 
         if (!accessToken) {
-            throw new Error("Access token not received in response from Shopify.");
+            throw new Error("Access token not received.");
         }
 
-        // 3. تخزين رمز الوصول في قاعدة البيانات
-        const { db } = await connectToDatabase(); 
-        const collection = db.collection('shops'); 
-
-        // تحديث أو إدخال رمز الوصول للمتجر
-        await collection.updateOne(
+        // حفظ Access Token في قاعدة البيانات
+        const { db } = await connectToDatabase();
+        await db.collection('shops').updateOne(
             { shop: shop },
-            { $set: { accessToken, scopes, installedAt: new Date() } },
-            { upsert: true } 
+            { $set: { 
+                accessToken, 
+                scopes, 
+                installedAt: new Date(),
+                lastAuth: new Date()
+            }},
+            { upsert: true }
         );
         
-        console.log(`Access token stored successfully for shop: ${shop}`);
-
-        // 4. التوجيه إلى صفحة الإكمال حيث سيتم النشر
-        const successUrl = `${HOST}/publish_finish.html?shop=${shop}`;
-        res.redirect(successUrl);
+        console.log(`Access token stored for shop: ${shop}`);
+        
+        // تحديث حالة البيانات إذا كان هناك data_key
+        if (data_key) {
+            await db.collection('temp_sections').updateOne(
+                { data_key, shop },
+                { $set: { 
+                    status: 'oauth_complete',
+                    oauth_completed_at: new Date()
+                }}
+            );
+        }
+        
+        // التوجيه إلى صفحة النشر
+        const redirectUrl = `${HOST}/publish_finish.html?shop=${encodeURIComponent(shop)}${data_key ? `&data_key=${data_key}` : ''}`;
+        res.redirect(redirectUrl);
 
     } catch (error) {
         console.error("Callback handler error:", error);
-        res.status(500).send(`Server error during OAuth process: ${error.message}`);
+        res.status(500).send(`Server error: ${error.message}`);
     }
 }
