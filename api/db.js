@@ -30,3 +30,20 @@ export async function connectToDatabase() {
 
   return { client, db };
 }
+
+// أضف هذه الدالة في نهاية db.js
+export async function initDatabase() {
+    const { db } = await connectToDatabase();
+    
+    try {
+        // إنشاء collection للبيانات المؤقتة مع TTL
+        await db.collection('temp_sections').createIndex(
+            { created_at: 1 },
+            { expireAfterSeconds: 1800 } // 30 دقيقة
+        );
+        
+        console.log('Database collections initialized');
+    } catch (error) {
+        console.warn('Could not create indexes:', error.message);
+    }
+}
