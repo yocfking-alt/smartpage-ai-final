@@ -16,6 +16,14 @@
   ],
   "rewrites": [
     {
+      "source": "/api/shopify_store_data",
+      "destination": "/api/shopify_store_data.js"
+    },
+    {
+      "source": "/api/shopify_get_data",
+      "destination": "/api/shopify_get_data.js"
+    },
+    {
       "source": "/api/generate",
       "destination": "/api/generate.js"
     },
