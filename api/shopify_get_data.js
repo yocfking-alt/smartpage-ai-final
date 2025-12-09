@@ -15,13 +15,15 @@ export default async function handler(req, res) {
         const { db } = await connectToDatabase();
         
         // البحث عن البيانات
+        // التعديل: نسمح بجلب البيانات سواء كانت 'pending' أو 'oauth_complete'
         const data = await db.collection('temp_sections').findOne({
             data_key,
             shop,
-            status: 'pending'
+            status: { $in: ['pending', 'oauth_complete'] } 
         });
         
         if (!data) {
+            console.error(`Data not found for key: ${data_key} and shop: ${shop}`);
             return res.status(404).json({ 
                 success: false, 
                 error: 'Data not found or expired',
@@ -29,7 +31,7 @@ export default async function handler(req, res) {
             });
         }
         
-        // تحديث الحالة
+        // تحديث الحالة إلى "تم الاسترجاع" لمنع استخدامها مرة أخرى
         await db.collection('temp_sections').updateOne(
             { data_key },
             { $set: { 
