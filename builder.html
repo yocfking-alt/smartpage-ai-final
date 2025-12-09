@@ -350,10 +350,10 @@
                     generatedSchema = data.schema;
                     
                     // ***************************************************************
-                    // * التعديل الحاسم (localStorage): حفظ البيانات في localStorage *
+                    // * التعديل الحاسم: حفظ البيانات في sessionStorage *
                     // ***************************************************************
-                    localStorage.setItem('liquid_code', generatedLiquidCode);
-                    localStorage.setItem('schema', JSON.stringify(generatedSchema));
+                    sessionStorage.setItem('liquid_code', generatedLiquidCode);
+                    sessionStorage.setItem('schema', JSON.stringify(generatedSchema));
                     
                     // ✅ عرض صفحة الهبوط الكاملة
                     previewIframe.srcdoc = data.html;
@@ -391,16 +391,16 @@
 
         // ********* Shopify Publish Function - النسخة الجديدة (لتحول Public App) *********
         async function publishToShopify() {
-            // يتم جلب البيانات من localStorage إذا كان المستخدم عاد بعد التوليد
-            const liquid_code = generatedLiquidCode || localStorage.getItem('liquid_code');
-            const schemaJson = generatedSchema || localStorage.getItem('schema');
+            // يتم جلب البيانات من sessionStorage إذا كان المستخدم عاد بعد التوليد
+            const liquid_code = generatedLiquidCode || sessionStorage.getItem('liquid_code');
+            const schemaJson = generatedSchema || sessionStorage.getItem('schema');
             
             if (!liquid_code || !schemaJson) {
                 showError("الرجاء توليد الصفحة أولاً قبل محاولة النشر على Shopify.");
                 return;
             }
             
-            let shopDomain = localStorage.getItem('pending_shop');
+            let shopDomain = sessionStorage.getItem('pending_shop');
 
             // إذا لم يكن هناك متجر معلق، نطلب من المستخدم إدخال المتجر
             if (!shopDomain) {
@@ -410,8 +410,8 @@
             if (!shopDomain) return;
 
             // ✅ **الحل: حفظ البيانات ثم التوجيه المباشر**
-            // 1. حفظ بيانات المتجر في localStorage
-            localStorage.setItem('pending_shop', shopDomain);
+            // 1. حفظ بيانات المتجر في sessionStorage
+            sessionStorage.setItem('pending_shop', shopDomain);
             
             // ✅ **2. توجيه المستخدم مباشرة إلى صفحة التثبيت (بدلاً من popup)**
             window.location.href = `/api/shopify_install?shop=${shopDomain}`;
