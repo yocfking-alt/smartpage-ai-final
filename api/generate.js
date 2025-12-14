@@ -1,5 +1,5 @@
-// api/generate.js
-import fetch from 'node-fetch'; 
+// api/generate.js - النسخة النهائية المتوافقة مع Kimi K2 المجاني (k2-latest)
+import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -7,9 +7,9 @@ export default async function handler(req, res) {
     }
 
     try {
-        const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-        if (!GEMINI_API_KEY) {
-            return res.status(500).json({ error: 'GEMINI_API_KEY is not set in Vercel Environment Variables' });
+        const KIMI_API_KEY = process.env.KIMI_API_KEY;
+        if (!KIMI_API_KEY) {
+            return res.status(500).json({ error: 'KIMI_API_KEY is not set in Environment Variables' });
         }
 
         const { 
@@ -28,80 +28,84 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Missing productName or productFeatures' });
         }
 
-        const GEMINI_MODEL = 'gemini-2.5-flash'; 
-        const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+        // **********************************************
+        // * الاتصال بـ Kimi K2 API (النسخة المجانية) *
+        // **********************************************
+        const KIMI_ENDPOINT = 'https://api.moonshot.cn/v1/chat/completions';
         
-        // **********************************************
-        // * التوجيه الحاسم لإنشاء كود Shopify Section *
-        // **********************************************
         const prompt = `
-            You are an expert Shopify developer specializing in creating high-converting, responsive Liquid Sections.
-            Your task is to generate the full code for a Shopify Section based on the user's input.
-            
-            Product Name: ${productName}
-            Key Features/Selling Points: ${productFeatures}
-            Design Style: ${designDescription}
-            Product Price: ${productPrice}
-            Product Category: ${productCategory}
-            Target Audience: ${targetAudience}
-            
-            The output MUST strictly be a single JSON object (nothing before or after the JSON) with two main keys:
-            1. "liquid_code": A string containing the entire Shopify Liquid code for the Section (the HTML structure and Liquid logic).
-            2. "schema": A valid JSON object representing the Shopify Section Schema, defining the settings and presets.
-            
-            The Liquid code must use the settings defined in the "schema". The Section must be modern, responsive (using CSS, not Tailwind utility classes), and follow Shopify best practices. Do not use external libraries.
-            
-            Return the result ONLY as a raw JSON object. Do not include any explanation or markdown formatting like \`\`\`json.
-        `;
+You are an expert Shopify developer specializing in creating high-converting, responsive Liquid Sections.
+Your task is to generate the full code for a Shopify Section based on the user's input.
 
-        const geminiBody = {
-            contents: [{
-                parts: [{ text: prompt }]
-            }],
-            generationConfig: {
-                responseMimeType: "application/json"
-            }
+Product Name: ${productName}
+Key Features/Selling Points: ${productFeatures}
+Design Style: ${designDescription}
+Product Price: ${productPrice}
+Product Category: ${productCategory}
+Target Audience: ${targetAudience}
+
+The output MUST strictly be a single JSON object (nothing before or after the JSON) with two main keys:
+1. "liquid_code": A string containing the entire Shopify Liquid code for the Section (the HTML structure and Liquid logic).
+2. "schema": A valid JSON object representing the Shopify Section Schema, defining the settings and presets.
+
+The Liquid code must use the settings defined in the "schema". The Section must be modern, responsive (using CSS, not Tailwind utility classes), and follow Shopify best practices. Do not use external libraries.
+
+Return the result ONLY as a raw JSON object. Do not include any explanation or markdown formatting like \`\`\`json.
+`;
+
+        const kimiBody = {
+            model: "k2-latest", // ← النسخة المجانية الرسمية
+            messages: [
+                {
+                    role: "system",
+                    content: "You are an expert Shopify developer. Always respond with valid JSON only, no markdown, no explanation."
+                },
+                {
+                    role: "user",
+                    content: prompt
+                }
+            ],
+            temperature: 0.3
         };
 
-        const response = await fetch(GEMINI_ENDPOINT, {
+        const response = await fetch(KIMI_ENDPOINT, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${KIMI_API_KEY}`
             },
-            body: JSON.stringify(geminiBody),
+            body: JSON.stringify(kimiBody),
         });
 
-        const rawData = await response.text();
-        let data;
+        const data = await response.json();
         
-        try {
-            data = JSON.parse(rawData);
-        } catch (e) {
-            console.error('Failed parsing AI response:', rawData);
-            return res.status(500).json({ error: 'AI returned non-JSON data. Please try again.' });
-        }
-
         if (!response.ok) {
-            const errorMessage = data.error?.message || `Gemini API error: ${response.status}`;
-            console.error('Gemini API Error:', data);
+            const errorMessage = data.error?.message || `Kimi API error: ${response.status}`;
+            console.error('Kimi API Error:', data);
             return res.status(500).json({ error: 'Failed to generate page: ' + errorMessage });
         }
         
-        const generatedContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        // تنظيف الاستجابة واستخراج المحتوى
+        let generatedContent = data.choices?.[0]?.message?.content;
 
         if (!generatedContent || typeof generatedContent !== 'string') {
-            console.error('AI returned no valid text content. Full response:', JSON.stringify(data, null, 2));
+            console.error('AI returned no valid content. Full response:', JSON.stringify(data, null, 2));
             return res.status(500).json({ 
-                error: 'AI failed to return valid content (undefined). Check your GEMINI_API_KEY in Vercel.'
+                error: 'AI failed to return valid content. Check your KIMI_API_KEY.'
             });
         }
 
+        // تنظيف أي أكواد markdown أو زيادة المسافات
+        const cleanContent = generatedContent
+            .replace(/```json\s*/g, '')
+            .replace(/```/g, '')
+            .trim();
+
         let parsedSection;
         try {
-            const cleanContent = generatedContent.replace(/```json\s*|```/g, '').trim();
             parsedSection = JSON.parse(cleanContent);
         } catch (e) {
-            console.error('Failed to parse final section JSON:', generatedContent);
+            console.error('Failed to parse final section JSON:', cleanContent);
             return res.status(500).json({ error: 'AI output format error. Could not parse liquid_code and schema.' });
         }
 
