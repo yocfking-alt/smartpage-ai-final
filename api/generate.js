@@ -1,5 +1,5 @@
-// api/generate.js - النسخة النهائية المتوافقة مع Kimi K2 المجاني (k2-latest)
-import fetch from 'node-fetch';
+// api/generate.js
+import fetch from 'node-fetch'; 
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -7,9 +7,9 @@ export default async function handler(req, res) {
     }
 
     try {
-        const KIMI_API_KEY = process.env.KIMI_API_KEY;
-        if (!KIMI_API_KEY) {
-            return res.status(500).json({ error: 'KIMI_API_KEY is not set in Environment Variables' });
+        const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+        if (!GEMINI_API_KEY) {
+            return res.status(500).json({ error: 'GEMINI_API_KEY is not set in Vercel Environment Variables' });
         }
 
         const { 
@@ -28,277 +28,173 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Missing productName or productFeatures' });
         }
 
-        // **********************************************
-        // * الاتصال بـ Kimi K2 API (النسخة المجانية) *
-        // **********************************************
-        const KIMI_ENDPOINT = 'https://api.moonshot.cn/v1/chat/completions';
+        const GEMINI_MODEL = 'gemini-2.5-flash'; 
+        const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
         
+        // ***************************************************************
+        // * التوجيه الحاسم: نموذج خبير تسويق وتوليد كود (CRO & Coding) *
+        // ***************************************************************
         const prompt = `
-You are an expert Shopify developer specializing in creating high-converting, responsive Liquid Sections.
-Your task is to generate the full code for a Shopify Section based on the user's input.
+            أنت مطور Shopify خبير ومتخصص في إنشاء أكواد Liquid Sections ذات تحويل عالٍ جدًا وتصميم جذاب واحترافي. 
+            يجب أن تتصرف كخبير في زيادة معدلات التحويل (CRO Expert) لتعويض ضعف وصف المستخدم البسيط.
 
-Product Name: ${productName}
-Key Features/Selling Points: ${productFeatures}
-Design Style: ${designDescription}
-Product Price: ${productPrice}
-Product Category: ${productCategory}
-Target Audience: ${targetAudience}
+            **مهمتك:** إنشاء كود Shopify Section كامل (باستخدام HTML و CSS فقط، وبعض أكواد JavaScript البسيطة للمؤقت إذا لزم الأمر).
 
-The output MUST strictly be a single JSON object (nothing before or after the JSON) with two main keys:
-1. "liquid_code": A string containing the entire Shopify Liquid code for the Section (the HTML structure and Liquid logic).
-2. "schema": A valid JSON object representing the Shopify Section Schema, defining the settings and presets.
+            **1. تحليل وتضخيم الوصف (Expansion & Marketing Strategy):**
+            * **اسم المنتج:** ${productName}
+            * **الميزات الأساسية:** ${productFeatures} (استخدمها لتوليد فوائد قوية ومقنعة).
+            * **الوصف البسيط للتصميم:** ${designDescription} (تجاهل بساطته وركز على الجودة).
+            * **الفئة:** ${productCategory}
+            * **السعر الأساسي:** ${productPrice}
+            * **الجمهور المستهدف:** ${targetAudience}
 
-The Liquid code must use the settings defined in the "schema". The Section must be modern, responsive (using CSS, not Tailwind utility classes), and follow Shopify best practices. Do not use external libraries.
+            **2. العناصر الإلزامية لزيادة التحويل:**
+            يجب أن تحتوي الصفحة على الأقسام التالية مع التركيز على التجاوبية (Responsive Design) والتصميم الحديث:
+            * **[Hero Section]:** عنوان رئيسي قوي، ونص فرعي، وزر دعوة لاتخاذ إجراء (CTA) بارز يرسل الزائر إلى سلة التسوق.
+            * **[Scarcity Bar]:** شريط علوي جذاب للإشعار بخصم أو عرض محدود المدة.
+            * **[Countdown Timer]:** مؤقت عد تنازلي وهمي (يُعاد تعيينه كل 60 دقيقة مثلاً) لإنشاء إحساس بالندرة. يجب أن يكون المؤقت بتنسيق ساعة/دقيقة/ثانية.
+            * **[Benefits Cards]:** بطاقات تعرض 4 إلى 6 فوائد (وليست مجرد ميزات) باستخدام أيقونات جذابة ومحتوى مصاغ بأسلوب إقناعي.
+            * **[Social Proof]:** قسم مخصص لـ 3 آراء عملاء وهمية لكنها واقعية ومقنعة.
+            * **[Final CTA]:** زر دعوة لاتخاذ إجراء (CTA) كبير ونابض في أسفل الصفحة.
 
-Return the result ONLY as a raw JSON object. Do not include any explanation or markdown formatting like \`\`\`json.
-`;
+            **3. توجيهات التصميم والكود (Design & Code Directives):**
+            * **النمط:** تصميم متجاوب وعصري، يعكس جودة الأسلوب المرفق سابقاً (صفحة مجفف الشعر).
+            * **الخط:** استخدم خط **Tajawal** عبر رابط Google Fonts في الكود.
+            * **اللغة:** يجب أن يكون الكود والعناصر والمحتوى كله **باللغة العربية (dir="rtl")**.
+            * **الألوان:** استخدم ألواناً حديثة تتناسب مع المنتج (مثل ألوان الإثارة والاحترافية).
+            * **التأثيرات:** استخدم CSS Animations و Transitions لتأثيرات حركة خفيفة على الأقسام والـ CTA عند الظهور أو التفاعل لزيادة الجاذبية.
 
-        const kimiBody = {
-            model: "k2-latest", // ← النسخة المجانية الرسمية
-            messages: [
-                {
-                    role: "system",
-                    content: "You are an expert Shopify developer. Always respond with valid JSON only, no markdown, no explanation."
-                },
-                {
-                    role: "user",
-                    content: prompt
-                }
-            ],
-            temperature: 0.3
-        };
+            **الناتج المطلوب:**
+            * **يجب أن يكون الإخراج كود Liquid Section الكامل والمحسن فقط.**
+            * **لا تقم بكتابة أي مقدمة أو شرح أو تعليقات قبل أو بعد الكود.**
+            * **تأكد من أن الكود يحتوي على الإعدادات (Schema Settings) الأساسية ليكون قابلاً للتعديل في Shopify Customizer.**
+            
+            **أبدأ الآن بتوليد كود Shopify Section المحسن والجاهز للتحويل.**
+            `;
 
-        const response = await fetch(KIMI_ENDPOINT, {
+        const response = await fetch(GEMINI_ENDPOINT, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${KIMI_API_KEY}`
             },
-            body: JSON.stringify(kimiBody),
+            body: JSON.stringify({
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                config: {
+                    // زيادة درجة الحرارة لتعزيز الإبداع والتصميم
+                    temperature: 0.8,
+                },
+            }),
         });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Gemini API Error:', errorText);
+            return res.status(response.status).json({ error: 'Failed to generate content from Gemini API', details: errorText });
+        }
 
         const data = await response.json();
         
-        if (!response.ok) {
-            const errorMessage = data.error?.message || `Kimi API error: ${response.status}`;
-            console.error('Kimi API Error:', data);
-            return res.status(500).json({ error: 'Failed to generate page: ' + errorMessage });
-        }
-        
-        // تنظيف الاستجابة واستخراج المحتوى
-        let generatedContent = data.choices?.[0]?.message?.content;
+        // استخراج النص النظيف الذي يمثل كود الـ Liquid Section
+        let generatedCode = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-        if (!generatedContent || typeof generatedContent !== 'string') {
-            console.error('AI returned no valid content. Full response:', JSON.stringify(data, null, 2));
-            return res.status(500).json({ 
-                error: 'AI failed to return valid content. Check your KIMI_API_KEY.'
-            });
-        }
+        // تنظيف الكود من أي علامات Markdown قديمة (مثل ```liquid)
+        generatedCode = generatedCode.replace(/```(liquid|html|javascript|css)?\s*|```/gs, '').trim();
 
-        // تنظيف أي أكواد markdown أو زيادة المسافات
-        const cleanContent = generatedContent
-            .replace(/```json\s*/g, '')
-            .replace(/```/g, '')
-            .trim();
+        // يجب أن نرسل الكود النظيف فقط للـ API الذي يليه
+        const parsedSection = {
+            section_code: generatedCode
+        };
 
-        let parsedSection;
-        try {
-            parsedSection = JSON.parse(cleanContent);
-        } catch (e) {
-            console.error('Failed to parse final section JSON:', cleanContent);
-            return res.status(500).json({ error: 'AI output format error. Could not parse liquid_code and schema.' });
-        }
-
-        // **********************************************
-        // * إنشاء صفحة HTML كاملة للمعاينة *
-        // **********************************************
+        // *************************************************************
+        // * بناء كود HTML للمعاينة (استخدم البيانات الأساسية للعرض) *
+        // *************************************************************
+        // ملاحظة: هذا الكود للمعاينة فقط، ولا يمثل بالضرورة جودة الكود المُنشأ بواسطة Gemini
         const previewHTML = `
-<!DOCTYPE html>
-<html lang="ar">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${productName}</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        .landing-page {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
-            max-width: 1200px;
-            width: 100%;
-        }
-        .hero-section {
-            background: linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%);
-            color: white;
-            padding: 60px 40px;
-            text-align: center;
-        }
-        .hero-section h1 {
-            font-size: 3rem;
-            margin-bottom: 20px;
-            font-weight: 700;
-        }
-        .hero-section p {
-            font-size: 1.2rem;
-            margin-bottom: 30px;
-            opacity: 0.9;
-        }
-        .price-tag {
-            background: #10B981;
-            color: white;
-            padding: 15px 30px;
-            border-radius: 50px;
-            font-size: 1.5rem;
-            font-weight: bold;
-            display: inline-block;
-            margin-bottom: 30px;
-        }
-        .cta-button {
-            background: #F59E0B;
-            color: white;
-            padding: 15px 40px;
-            border-radius: 50px;
-            text-decoration: none;
-            font-size: 1.1rem;
-            font-weight: bold;
-            display: inline-block;
-            transition: transform 0.3s ease;
-        }
-        .cta-button:hover {
-            transform: translateY(-3px);
-        }
-        .features-section {
-            padding: 60px 40px;
-            background: #F8FAFC;
-        }
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 30px;
-            margin-top: 40px;
-        }
-        .feature-card {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-        .feature-card i {
-            font-size: 2.5rem;
-            color: #1D4ED8;
-            margin-bottom: 20px;
-        }
-        .feature-card h3 {
-            color: #1F2937;
-            margin-bottom: 15px;
-            font-size: 1.3rem;
-        }
-        .feature-card p {
-            color: #6B7280;
-            line-height: 1.6;
-        }
-        .guarantee-section {
-            background: #1D4ED8;
-            color: white;
-            padding: 40px;
-            text-align: center;
-        }
-        .offer-banner {
-            background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
-            color: white;
-            padding: 20px;
-            text-align: center;
-            font-size: 1.2rem;
-            font-weight: bold;
-        }
-        .shipping-info {
-            background: #ECFDF5;
-            color: #065F46;
-            padding: 15px;
-            text-align: center;
-            margin: 20px 0;
-            border-radius: 10px;
-        }
-        @media (max-width: 768px) {
-            .hero-section h1 {
-                font-size: 2rem;
-            }
-            .hero-section {
-                padding: 40px 20px;
-            }
-        }
-    </style>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-</head>
-<body>
-    <div class="landing-page">
-        ${customOffer ? `
-        <div class="offer-banner">
-            🎁 ${customOffer}
-        </div>
-        ` : ''}
-
-        <section class="hero-section">
-            <h1>${productName}</h1>
-            <p>${productFeatures.split('.')[0] || 'منتج مبتكر ومميز'}</p>
-            <div class="price-tag">${productPrice || '$29.99'}</div>
-            
-            ${shippingOption === 'free' ? `
-            <div class="shipping-info">
-                🚚 شحن مجاني على جميع الطلبات
-            </div>
-            ` : customShippingPrice ? `
-            <div class="shipping-info">
-                🚚 رسوم الشحن: ${customShippingPrice}
-            </div>
-            ` : ''}
-            
-            <br>
-            <a href="#order" class="cta-button">
-                <i class="fas fa-shopping-cart"></i> احصل عليه الآن
-            </a>
-        </section>
-
-        <section class="features-section">
-            <h2 style="text-align: center; color: #1F2937; font-size: 2.5rem; margin-bottom: 20px;">لماذا تختار ${productName}؟</h2>
-            <div class="features-grid">
-                ${productFeatures.split('.').filter(f => f.trim()).slice(0, 6).map(feature => `
-                    <div class="feature-card">
-                        <i class="fas fa-check-circle"></i>
-                        <h3>ميزة فريدة</h3>
-                        <p>${feature.trim()}</p>
+            <!DOCTYPE html>
+            <html lang="ar" dir="rtl">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>معاينة صفحة الهبوط | ${productName}</title>
+                <link href="[https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap](https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap)" rel="stylesheet">
+                <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css)">
+                <style>
+                    body { 
+                        font-family: 'Tajawal', sans-serif; 
+                        background-color: #f5f7fa; 
+                        color: #333;
+                        direction: rtl; 
+                        line-height: 1.6;
+                        margin: 0;
+                        padding: 0;
+                    }
+                    .preview-container {
+                        max-width: 800px;
+                        margin: 20px auto;
+                        padding: 20px;
+                        border-radius: 12px;
+                        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                        background-color: white;
+                    }
+                    .header-title {
+                        color: #1a73e8; /* لون جذاب */
+                        border-bottom: 3px solid #ffcc00;
+                        padding-bottom: 10px;
+                        margin-bottom: 20px;
+                        text-align: center;
+                    }
+                    .section-block {
+                        background-color: #fff;
+                        padding: 25px;
+                        margin-bottom: 20px;
+                        border-radius: 8px;
+                        border: 1px solid #eee;
+                    }
+                    .cta-button {
+                        display: block;
+                        width: 90%;
+                        margin: 20px auto;
+                        padding: 15px;
+                        background-color: #e53e3e; /* أحمر للتحفيز */
+                        color: white;
+                        text-align: center;
+                        font-size: 1.2rem;
+                        font-weight: 700;
+                        border-radius: 30px;
+                        text-decoration: none;
+                        transition: background-color 0.3s;
+                        box-shadow: 0 4px 10px rgba(229, 62, 62, 0.4);
+                        animation: pulse 1.5s infinite; /* تأثير النبض */
+                    }
+                    @keyframes pulse {
+                        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(229, 62, 62, 0.7); }
+                        70% { transform: scale(1.03); box-shadow: 0 0 0 10px rgba(229, 62, 62, 0); }
+                        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(229, 62, 62, 0); }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="preview-container">
+                    <h1 class="header-title">معاينة: ${productName} (التحويل العالي)</h1>
+                    <div class="section-block">
+                        <h2>تم توليد كود الـ Liquid بنجاح</h2>
+                        <p>قام نموذج Gemini 2.5 Flash بتحليل مدخلاتك البسيطة وبتطبيق استراتيجيات التسويق (CRO) لإنشاء كود صفحة هبوط شاملة تتضمن: مؤقت عد تنازلي، بطاقات فوائد محسّنة، وآراء عملاء، وزر CTA نابض.</p>
+                        <p><strong>الرجاء نسخ الكود الكامل أدناه والتحقق منه قبل النشر.</strong></p>
                     </div>
-                `).join('')}
-            </div>
-        </section>
-
-        <section class="guarantee-section">
-            <h2><i class="fas fa-shield-alt"></i> ضمان 100% للرضا</h2>
-            <p style="margin-top: 15px; opacity: 0.9;">${productCategory === 'electronics' ? 'ضمان 30 يوم للإرجاع' : 
-              productCategory === 'beauty' ? 'ضمان الجودة والكفاءة' : 
-              productCategory === 'fashion' ? 'ضمان المقاس والجودة' : 
-              'نضمن لك الجودة والكفاءة في كل منتج'}</p>
-        </section>
-    </div>
-</body>
-</html>
-`;
+                    
+                    <a href="#" class="cta-button">
+                        <i class="fas fa-shopping-cart"></i> اطلب الآن (تم تفعيل تأثير النبض)
+                    </a>
+                    
+                    <div class="section-block" style="background-color: #f0f4f8;">
+                        <h3 style="color: #1a73e8;">الكود الذي تم توليده (ملف Liquid Section):</h3>
+                        <pre style="white-space: pre-wrap; word-wrap: break-word; background: #eee; padding: 10px; border-radius: 5px; font-size: 0.8rem; direction: ltr; text-align: left;">${parsedSection.section_code.substring(0, 500)}...</pre>
+                        <p style="font-size: 0.9rem; margin-top: 10px;">(تم عرض جزء بسيط من الكود هنا، الكود الكامل موجود في الرد)</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
 
         // إرجاع البيانات مع HTML للمعاينة
         res.status(200).json({
@@ -307,7 +203,7 @@ Return the result ONLY as a raw JSON object. Do not include any explanation or m
         });
 
     } catch (error) {
-        console.error('Server error:', error);
-        res.status(500).json({ error: 'Internal Server Error (Check Vercel Logs)' });
+        console.error('Error in generate handler:', error);
+        res.status(500).json({ error: 'Internal Server Error', details: error.message });
     }
 }
