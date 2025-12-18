@@ -28,7 +28,7 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Missing productName or productFeatures' });
         }
 
-        const GEMINI_MODEL = 'gemini-2.5-flach'; 
+        const GEMINI_MODEL = 'gemini-2.5-flash'; 
         const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
         
         // **********************************************
