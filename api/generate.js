@@ -24,7 +24,6 @@ export default async function handler(req, res) {
         const GEMINI_MODEL = 'gemini-2.5-flash'; 
         const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
         
-        // برومبت مكثف وعميق (عقلية جوجل استوديو)
         const prompt = `
             Act as a Senior Creative Director and Conversion Expert. 
             Analyze this product: ${productName}. 
@@ -55,17 +54,19 @@ export default async function handler(req, res) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { responseMimeType: "application/json", temperature: 0.9 }
+                generationConfig: { 
+                    responseMimeType: "application/json", 
+                    temperature: 0.7 // تم خفضها من 0.9 إلى 0.7 كما طلبت
+                }
             })
         });
 
         const data = await response.json();
         const aiResponse = JSON.parse(data.candidates[0].content.parts[0].text);
 
-        // إرسال النتيجة بنفس الهيكل الذي يتوقعه تطبيقك
         res.status(200).json({
             liquid: aiResponse.liquid,
-            html: aiResponse.preview_html // هذا هو الجزء الذي سيعرض الإبداع الكامل في المعاينة
+            html: aiResponse.preview_html 
         });
 
     } catch (error) {
