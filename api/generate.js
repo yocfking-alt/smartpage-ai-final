@@ -29,46 +29,74 @@ export default async function handler(req, res) {
         const offerText = customOffer ? `Special Offer: ${customOffer}` : "";
 
         // *****************************************************************
-        // الـ Prompt الجديد (معدل ليعمل مع نظامك التقني)
+        // الـ Prompt الجديد (المعدل حسب متطلباتك)
         // *****************************************************************
         const prompt = `
-            Act as a Senior Creative Director and Conversion Expert. 
-            Analyze this product: ${productName}. 
-            Category: ${productCategory}. 
-            Target Audience: ${targetAudience}.
-            Context/Features: ${productFeatures}.
-            Price: ${productPrice}. ${shippingText}. ${offerText}.
-            User Design Request: ${designDescription}.
-            
-            **Objective:** Create a high-converting, psychologically-driven landing page.
-            
-            **Design Rules:**
-            1. **No Templates:** Generate a completely unique layout.
-            2. **Custom CSS:** Write bespoke CSS for every section inside the HTML. Use advanced UI like glassmorphism, floating elements, creative gradients, and modern typography. 
-            3. **Marketing Flow:** - Start with a "Hook" (Benefit-driven Hero Section).
-               - Add "Agitation" (The problem the customer faces).
-               - "Visual Solution" (How this product fixes it).
-               - "Us vs Them" Comparison Table (if applicable).
-               - Creative Testimonials and FAQ.
-               - Strong Sticky CTA.
-            4. **Visuals:** Use FontAwesome for icons. Choose a color palette based on product psychology (e.g., Mint/White for Health, Black/Gold for Luxury).
-            5. **Responsiveness:** Must be fully responsive for mobile.
+Act as a Senior Creative Director and Conversion Expert. 
+Analyze this product: ${productName}. 
+Category: ${productCategory}. 
+Target Audience: ${targetAudience}.
+Context/Features: ${productFeatures}.
+Price: ${productPrice}. ${shippingText}. ${offerText}.
+User Design Request: ${designDescription}.
 
-            **Technical Output Requirement (CRITICAL):**
-            You must return a Strict JSON object. Do not include markdown formatting (like \`\`\`json).
-            The JSON must have exactly these three keys:
+## 🎯 **OBJECTIVE:**
+Create a completely unique, high-converting landing page with maximum creativity.
 
-            {
-              "html": "A complete, standalone index.html string including <style> and <body>. This is for the live preview.",
-              "liquid_code": "The Shopify Liquid template code. It should be similar to the HTML but using Liquid syntax ({{ product.title }}, etc) where appropriate, BUT DO NOT include the {% schema %} tag here.",
-              "schema": {
-                  "name": "Landing Page",
-                  "settings": [
-                      { "type": "text", "id": "headline", "label": "Headline", "default": "Your Headline Here" }
-                      // Generate relevant schema settings for the sections you created
-                  ]
-              }
-            }
+## ⚠️ **STRICT REQUIREMENTS (MUST FOLLOW):**
+
+### **1. HERO SECTION (FIRST VISIBLE ELEMENT):**
+- Must be the first section users see
+- Include: Creative Headline (H1) + Subtitle + Primary CTA Button
+- Design: Use advanced CSS (glassmorphism, animations, gradients, etc.)
+
+### **2. CUSTOMER INFO BOX (IMMEDIATELY AFTER HERO):**
+Must contain this exact form structure:
+<div class="customer-info-box">
+  <input type="text" placeholder="Full Name" required>
+  <select required>
+    <option value="">Select State/Province</option>
+    <!-- State options -->
+  </select>
+  <input type="tel" placeholder="Phone Number" required>
+  <button type="submit">Submit</button>
+</div>
+
+### **3. OUTPUT FORMAT - CRITICAL (MUST BE EXACT):**
+You MUST return a **Strict JSON object** with exactly these 3 keys:
+{
+  "html": "Complete HTML string with <style> in head and <body> content",
+  "liquid_code": "Shopify Liquid template code (without {% schema %})",
+  "schema": {
+    "name": "Landing Page",
+    "settings": [
+      // Generate relevant settings here
+    ]
+  }
+}
+
+## 🚀 **COMPLETE CREATIVE FREEDOM (FOR EVERYTHING ELSE):**
+After the required sections above, you have 100% creative freedom:
+- Create any number of unique sections
+- Use any layout/design patterns (parallax, 3D, interactive, etc.)
+- Surprise with innovative psychological triggers
+- No restrictions on section order or content
+- Break conventional patterns for better conversion
+
+## 🎨 **DESIGN GUIDELINES (NOT RESTRICTIONS):**
+- Use FontAwesome 6 icons
+- Write custom CSS (no templates)
+- Fully responsive design
+- Modern CSS (Grid, Flexbox, CSS Variables)
+- Consider color psychology
+
+## 🔧 **TECHNICAL NOTES:**
+- The \`html\` key: For live preview (complete standalone HTML)
+- The \`liquid_code\` key: For Shopify (use Liquid syntax like {{ product.title }})
+- The \`schema\` key: Settings for Shopify theme editor
+- Return ONLY the JSON object, no additional text
+
+**Remember:** Only the Hero structure, Info Box fields, and output format are fixed. Everything else should be uniquely creative each time!
         `;
 
         const response = await fetch(GEMINI_ENDPOINT, {
@@ -76,7 +104,12 @@ export default async function handler(req, res) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { responseMimeType: "application/json", temperature: 0.9 }
+                generationConfig: { 
+                    responseMimeType: "application/json", 
+                    temperature: 0.95,
+                    topP: 0.95,
+                    topK: 40
+                }
             })
         });
 
