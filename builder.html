@@ -1,3 +1,5 @@
+[file name]: builder.html
+[file content begin]
 <!DOCTYPE html>
 <html lang="en">
 <head> 
@@ -6,7 +8,7 @@
     <title>SmartPage AI - Build Your Landing Page</title> 
     <script src="https://cdn.tailwindcss.com"></script> 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script> 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/typed.js/2.0.12/typed.min.js"></script> 
+    <script src="https://cdnjs.com/ajax/libs/typed.js/2.0.12/typed.min.js"></script> 
     <script src="https://unpkg.com/splitting@1.0.6/dist/splitting.js"></script> 
     <link rel="stylesheet" href="https://unpkg.com/splitting@1.0.6/dist/splitting.css"/> 
     <script src="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/js/splide.min.js"></script> 
@@ -86,46 +88,14 @@
         .nav-link:hover::after { 
             width: 100%; 
         } 
-        /* Styles for Image Gallery */
-        .image-preview-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-            gap: 10px;
-            margin-top: 10px;
-        }
-        .image-preview-item {
-            position: relative;
-            width: 100%;
-            height: 80px;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 2px solid #e5e7eb;
-        }
-        .image-preview-item img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .remove-image-btn {
-            position: absolute;
-            top: 2px;
-            right: 2px;
-            background: rgba(220, 38, 38, 0.9);
-            color: white;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            cursor: pointer;
-            border: none;
-            transition: background 0.2s;
-        }
-        .remove-image-btn:hover {
-            background: rgb(185, 28, 28);
-        }
+        .image-preview { 
+            max-width: 100%; 
+            max-height: 150px; 
+            object-fit: contain; 
+            border-radius: 8px; 
+            border: 2px dashed #d1d5db; 
+            margin-top: 8px; 
+        } 
         @media (max-width: 768px) { 
             .builder-grid { 
                 grid-template-columns: 1fr; 
@@ -174,27 +144,6 @@
                 <div class="builder-panel p-6"> 
                     <h3 class="text-xl font-semibold mb-6" style="color: var(--accent);">1. Product Details</h3> 
                     
-                    <div class="mb-6">
-                        <label class="block text-sm font-medium mb-2 text-gray-700">🖼️ Brand Logo:</label>
-                        <input type="file" id="logo-input" accept="image/*" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-200">
-                    </div>
-
-                    <div class="mb-6">
-                        <label class="block text-sm font-medium mb-2 text-gray-700">📸 Product Images (Multi-select):</label>
-                        <div class="flex items-center justify-center w-full">
-                            <label for="product-images-input" class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                                <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                                    <svg class="w-8 h-8 mb-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
-                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
-                                    </svg>
-                                    <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">Click to upload</span> multiple images</p>
-                                </div>
-                                <input id="product-images-input" type="file" class="hidden" multiple accept="image/*" />
-                            </label>
-                        </div>
-                        <div id="images-preview" class="image-preview-grid"></div>
-                    </div>
-
                     <div class="mb-6"> 
                         <label for="product-category" class="block text-sm font-medium mb-2 text-gray-700">📦 Product Category:</label> 
                         <select id="product-category" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"> 
@@ -221,6 +170,25 @@
                             <option value="professionals">💼 Professionals</option> 
                             <option value="general">🌍 General</option> 
                         </select> 
+                    </div>
+
+                    <!-- قسم رفع الصور المضاف -->
+                    <div class="mb-6">
+                        <label for="product-image" class="block text-sm font-medium mb-2 text-gray-700">
+                            🖼️ Product Image (Required)
+                        </label>
+                        <input type="file" id="product-image" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        <img id="product-image-preview" class="image-preview hidden">
+                        <p class="text-xs text-gray-500 mt-1">Upload a clear product photo (max 2MB)</p>
+                    </div>
+
+                    <div class="mb-6">
+                        <label for="brand-image" class="block text-sm font-medium mb-2 text-gray-700">
+                            🏢 Brand Logo (Optional)
+                        </label>
+                        <input type="file" id="brand-image" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        <img id="brand-image-preview" class="image-preview hidden">
+                        <p class="text-xs text-gray-500 mt-1">Upload your company logo (optional)</p>
                     </div>
 
                     <div class="mb-6"> 
@@ -331,77 +299,61 @@
         const errorMessageDiv = document.getElementById("error-message");
         const previewIframe = document.getElementById("preview");
         
-        // Image & Logo Variables
-        const logoInput = document.getElementById('logo-input');
-        const imageInput = document.getElementById('product-images-input');
-        const imagesPreviewDiv = document.getElementById('images-preview');
+        // متغيرات لتخزين كود Liquid و Schema
+        let generatedLiquidCode = null;
+        let generatedSchema = null;
+        let productImageBase64 = null;
+        let brandImageBase64 = null;
         
-        let logoBase64 = null; // لتخزين الشعار
-        let selectedImagesBase64 = []; // لتخزين مصفوفة صور المنتج
-
-        // ********* Logo Handling Logic *********
-        logoInput.addEventListener('change', async function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                try {
-                    logoBase64 = await convertFileToBase64(file);
-                } catch (err) {
-                    console.error("Error reading logo:", err);
-                }
+        // ********* دالة لتحويل الصور إلى Base64 *********
+        function convertImageToBase64(fileInput, callback) {
+            const file = fileInput.files[0];
+            if (!file) {
+                callback(null);
+                return;
             }
-        });
-
-        // ********* Multi-Image Handling Logic *********
-        imageInput.addEventListener('change', async function(e) {
-            const files = Array.from(e.target.files);
-            for (let file of files) {
-                if (file.type.startsWith('image/')) {
-                    try {
-                        const base64 = await convertFileToBase64(file);
-                        selectedImagesBase64.push(base64);
-                    } catch (err) {
-                        console.error("Error reading file:", err);
-                    }
-                }
+            
+            // التحقق من حجم الملف (2MB كحد أقصى)
+            if (file.size > 2 * 1024 * 1024) {
+                showError("Image size must be less than 2MB");
+                callback(null);
+                return;
             }
-            updateImagePreview();
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                callback(e.target.result);
+            };
+            reader.onerror = function() {
+                callback(null);
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // ********* عرض معاينة الصور *********
+        document.getElementById('product-image').addEventListener('change', function(e) {
+            convertImageToBase64(this, function(base64) {
+                if (base64) {
+                    productImageBase64 = base64;
+                    const preview = document.getElementById('product-image-preview');
+                    preview.src = base64;
+                    preview.classList.remove('hidden');
+                }
+            });
         });
-
-        function convertFileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = error => reject(error);
+        
+        document.getElementById('brand-image').addEventListener('change', function(e) {
+            convertImageToBase64(this, function(base64) {
+                if (base64) {
+                    brandImageBase64 = base64;
+                    const preview = document.getElementById('brand-image-preview');
+                    preview.src = base64;
+                    preview.classList.remove('hidden');
+                }
             });
-        }
-
-        function updateImagePreview() {
-            imagesPreviewDiv.innerHTML = '';
-            selectedImagesBase64.forEach((imgBase64, index) => {
-                const div = document.createElement('div');
-                div.className = 'image-preview-item';
-                
-                const img = document.createElement('img');
-                img.src = imgBase64;
-                
-                const removeBtn = document.createElement('button');
-                removeBtn.className = 'remove-image-btn';
-                removeBtn.innerHTML = '<i class="fas fa-times"></i>';
-                removeBtn.onclick = () => removeImage(index);
-                
-                div.appendChild(img);
-                div.appendChild(removeBtn);
-                imagesPreviewDiv.appendChild(div);
-            });
-        }
-
-        function removeImage(index) {
-            selectedImagesBase64.splice(index, 1);
-            updateImagePreview();
-        }
-
-        // ********* Helper Functions *********
+        });
+        
+        // ********* دوال مساعدة جديدة *********
         function showLoading() {
             loadingIndicator.classList.remove('hidden');
             errorMessageDiv.classList.add('hidden');
@@ -438,11 +390,12 @@
             const features = document.getElementById("product-features").value;
             const price = document.getElementById("product-price").value;
             
-            const shippingOption = document.getElementById("shipping-select").value;
-            const customShippingPrice = document.getElementById("custom-shipping-price").value;
-            const useOffer = document.getElementById("use-offer-toggle").checked;
-            const customOffer = document.getElementById("custom-offer-input").value;
-
+            // التحقق من صورة المنتج (مطلوبة)
+            if (!productImageBase64) {
+                showError("Please upload a product image!");
+                return;
+            }
+            
             if (!name || !features || !price) {
                 showError("Please fill in all required fields!");
                 return;
@@ -464,11 +417,11 @@
                         productCategory: document.getElementById("product-category").value,
                         targetAudience: document.getElementById("target-audience").value,
                         designDescription: document.getElementById("description-input").value,
-                        shippingOption: shippingOption,
-                        customShippingPrice: shippingOption === 'custom' ? customShippingPrice : null,
-                        customOffer: useOffer ? customOffer : null,
-                        productImages: selectedImagesBase64, // المصفوفة
-                        brandLogo: logoBase64 // الشعار
+                        shippingOption: document.getElementById("shipping-select").value,
+                        customShippingPrice: document.getElementById("shipping-select").value === 'custom' ? document.getElementById("custom-shipping-price").value : null,
+                        customOffer: document.getElementById("use-offer-toggle").checked ? document.getElementById("custom-offer-input").value : null,
+                        productImageBase64: productImageBase64,
+                        brandImageBase64: brandImageBase64
                     })
                 });
 
@@ -478,9 +431,11 @@
                     generatedLiquidCode = data.liquid_code;
                     generatedSchema = data.schema;
                     
+                    // حفظ البيانات في sessionStorage
                     sessionStorage.setItem('liquid_code', generatedLiquidCode);
                     sessionStorage.setItem('schema', JSON.stringify(generatedSchema));
                     
+                    // ✅ عرض صفحة الهبوط الكاملة
                     previewIframe.srcdoc = data.html;
                     
                     downloadBtn.disabled = false;
@@ -491,7 +446,6 @@
                     showError(`Error: ${data.error || 'Unknown error'}`);
                 }
             } catch (err) {
-                console.error(err);
                 showError("Network error. Please try again.");
             } finally {
                 hideLoading();
@@ -499,28 +453,29 @@
             }
         }
 
-        // ********* HTML Download *********
+        // ********* HTML Download Function *********
         function downloadHTML() {
             const htmlContent = previewIframe.srcdoc;
             if (!htmlContent) {
-                showError("No page generated yet.");
+                showError("No page generated yet. Please generate a page first.");
                 return;
             }
+            
             const blob = new Blob([htmlContent], { type: "text/html" });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
             link.download = "smartpage-ai-landing.html";
             link.click();
-            showSuccess("✅ Page downloaded!");
+            showSuccess("✅ Page downloaded successfully!");
         }
 
-        // ********* Shopify Publish *********
+        // ********* Shopify Publish Function *********
         async function publishToShopify() {
-            const liquid_code = generatedLiquidCode || localStorage.getItem('liquid_code');
-            const schema = generatedSchema || localStorage.getItem('schema');
+            const liquid_code = generatedLiquidCode || sessionStorage.getItem('liquid_code');
+            const schema = generatedSchema || JSON.parse(sessionStorage.getItem('schema') || 'null');
             
             if (!liquid_code || !schema) {
-                showError("الرجاء توليد الصفحة أولاً.");
+                showError("الرجاء توليد الصفحة أولاً قبل محاولة النشر على Shopify.");
                 return;
             }
             
@@ -565,6 +520,7 @@
         downloadBtn.addEventListener('click', downloadHTML);
         shopifyBtn.addEventListener('click', publishToShopify);
         
+        // التحكم في إظهار/إخفاء الحقول
         const shippingSelect = document.getElementById('shipping-select');
         const customShippingContainer = document.getElementById('custom-shipping-container');
         const useOfferToggle = document.getElementById('use-offer-toggle');
@@ -590,7 +546,9 @@
             });
         }
 
+        // ********* Initialize Page *********
         document.addEventListener('DOMContentLoaded', function () {
+            // Mobile Menu Toggle
             const mobileMenuBtn = document.getElementById('mobile-menu-btn');
             const mobileMenu = document.getElementById('mobile-menu');
             if (mobileMenuBtn && mobileMenu) {
@@ -598,6 +556,8 @@
                     mobileMenu.classList.toggle('hidden');
                 });
             }
+
+            // Close mobile menu when clicking outside
             document.addEventListener('click', (e) => {
                 if (!e.target.closest('#mobile-menu') && !e.target.closest('#mobile-menu-btn')) {
                     mobileMenu.classList.add('hidden');
@@ -607,3 +567,4 @@
     </script>
 </body>
 </html>
+[file content end]
