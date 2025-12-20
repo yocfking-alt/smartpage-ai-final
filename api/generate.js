@@ -36,11 +36,8 @@ export default async function handler(req, res) {
         const shippingText = shippingOption === 'free' ? "شحن مجاني" : `الشحن: ${customShippingPrice}`;
         const offerText = customOffer ? `عرض خاص: ${customOffer}` : "";
 
-        // *****************************************************************
-        // الـ Prompt الجديد مع دمج الصور
-        // *****************************************************************
-        const prompt = `
-Act as a Senior Creative Director and Conversion Expert. 
+        // استخدام backticks متعددة الأسطر للـ prompt
+        const prompt = `Act as a Senior Creative Director and Conversion Expert. 
 Analyze this product: ${productName}. 
 Category: ${productCategory}. 
 Target Audience: ${targetAudience}.
@@ -83,13 +80,11 @@ User Design Request: ${designDescription}.
   <div class="form-group">
     <label>الولاية</label>
     <input type="text" placeholder="Wilaya" required>
-    <!-- ملاحظة: لا تستخدم قائمة منسدلة select، استخدم input نصي فقط -->
   </div>
   
   <div class="form-group">
     <label>البلدية</label>
     <input type="text" placeholder="أدخل بلديتك" required>
-    <!-- ملاحظة: لا تستخدم قائمة منسدلة select، استخدم input نصي فقط -->
   </div>
   
   <div class="form-group">
@@ -111,9 +106,7 @@ User Design Request: ${designDescription}.
   "liquid_code": "كود قالب Shopify Liquid (بدون {% schema %})",
   "schema": {
     "name": "Landing Page",
-    "settings": [
-      // إنشاء الإعدادات المناسبة هنا
-    ]
+    "settings": []
   }
 }
 
@@ -139,13 +132,12 @@ User Design Request: ${designDescription}.
 - فكر في سيكولوجية الألوان المناسبة للمنتج
 
 ## 🔧 **ملاحظات تقنية:**
-- مفتاح \`html\`: للمعاينة الحية (HTML كامل وقائم بذاته)
-- مفتاح \`liquid_code\`: لـShopify (استخدم صيغة Liquid مثل {{ product.title }})
-- مفتاح \`schema\>: إعدادات لمحرر قوالب Shopify
+- مفتاح 'html': للمعاينة الحية (HTML كامل وقائم بذاته)
+- مفتاح 'liquid_code': لـShopify (استخدم صيغة Liquid مثل {{ product.title }})
+- مفتاح 'schema': إعدادات لمحرر قوالب Shopify
 - أعد فقط كائن JSON، بدون أي نص إضافي
 
-**تذكر:** فقط هيكل الهيرو، حقول استمارة الطلب، وتنسيق الإخراج ثابتة. كل شيء آخر يجب أن يكون مبدعًا وفريدًا في كل مرة!
-        `;
+**تذكر:** فقط هيكل الهيرو، حقول استمارة الطلب، وتنسيق الإخراج ثابتة. كل شيء آخر يجب أن يكون مبدعًا وفريدًا في كل مرة!`;
 
         const response = await fetch(GEMINI_ENDPOINT, {
             method: 'POST',
@@ -172,30 +164,53 @@ User Design Request: ${designDescription}.
         const aiResponseText = data.candidates[0].content.parts[0].text;
         
         // تنظيف النص من علامات Markdown
-        const cleanedText = aiResponseText.replace(/```json/g, '').replace(/```/g, '').trim();
-        const aiResponse = JSON.parse(cleanedText);
+        let cleanedText = aiResponseText;
+        if (cleanedText.includes('```json')) {
+            cleanedText = cleanedText.replace(/```json/g, '').replace(/```/g, '').trim();
+        }
+        
+        let aiResponse;
+        try {
+            aiResponse = JSON.parse(cleanedText);
+        } catch (parseError) {
+            console.error("JSON Parse Error:", parseError);
+            // محاولة استخراج JSON من النص إذا كان محاطًا بعلامات أخرى
+            const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                try {
+                    aiResponse = JSON.parse(jsonMatch[0]);
+                } catch (e) {
+                    throw new Error('AI response is not valid JSON');
+                }
+            } else {
+                throw new Error('AI response is not valid JSON');
+            }
+        }
 
-        // استبدال الصور في HTML الناتج
+        // استبدال العلامات الخاصة بالصور
         let finalHtml = aiResponse.html;
         
-        // استبدال العلامات الخاصة بالصور إذا وجدت
-        if (finalHtml.includes('{{product_image}}')) {
-            finalHtml = finalHtml.replace(/{{product_image}}/g, productImageBase64);
+        // استبدال العلامات النائبة بالصور Base64
+        if (productImageBase64) {
+            finalHtml = finalHtml.replace(/{{product_image}}/gi, productImageBase64);
+            finalHtml = finalHtml.replace(/{{productImage}}/gi, productImageBase64);
+            finalHtml = finalHtml.replace(/\[PRODUCT_IMAGE\]/gi, productImageBase64);
         }
         
-        if (brandImageBase64 && finalHtml.includes('{{brand_image}}')) {
-            finalHtml = finalHtml.replace(/{{brand_image}}/g, brandImageBase64);
+        if (brandImageBase64) {
+            finalHtml = finalHtml.replace(/{{brand_image}}/gi, brandImageBase64);
+            finalHtml = finalHtml.replace(/{{brandImage}}/gi, brandImageBase64);
+            finalHtml = finalHtml.replace(/\[BRAND_IMAGE\]/gi, brandImageBase64);
         }
-        
-        // إضافة الصور مباشرة إذا لم تكن هناك علامات
+
+        // إذا لم تكن هناك علامات، أضف الصورة في مكان منطقي
         if (productImageBase64 && !finalHtml.includes(productImageBase64)) {
-            // إضافة صورة المنتج في مكان مناسب
-            finalHtml = finalHtml.replace(
-                /<body[^>]*>/i, 
-                `$&<div style="display:none;" id="uploaded-product-image">
-                    <img src="${productImageBase64}" alt="${productName}" />
-                 </div>`
-            );
+            // البحث عن أول قسم hero وإضافة الصورة
+            const heroSectionMatch = finalHtml.match(/<section[^>]*class=["'][^"']*hero[^"']*["'][^>]*>/i);
+            if (heroSectionMatch) {
+                const imgTag = `<img src="${productImageBase64}" alt="${productName}" style="max-width: 100%; height: auto; border-radius: 12px;" />`;
+                finalHtml = finalHtml.replace(heroSectionMatch[0], heroSectionMatch[0] + imgTag);
+            }
         }
 
         // إرسال النتيجة مع HTML المعدل
@@ -207,7 +222,10 @@ User Design Request: ${designDescription}.
 
     } catch (error) {
         console.error("Server Error:", error);
-        res.status(500).json({ error: error.message || 'Internal Server Error' });
+        res.status(500).json({ 
+            error: error.message || 'Internal Server Error',
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 }
 [file content end]
