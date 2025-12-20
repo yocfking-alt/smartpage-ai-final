@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
-    // 1. إعدادات CORS (نفس النظام القديم لضمان قبول الطلبات)
+    // 1. إعدادات CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -25,11 +25,11 @@ export default async function handler(req, res) {
         const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
         
         // بناء النصوص الخاصة بالشحن والعرض
-        const shippingText = shippingOption === 'free' ? "Free Shipping" : `Shipping: ${customShippingPrice}`;
-        const offerText = customOffer ? `Special Offer: ${customOffer}` : "";
+        const shippingText = shippingOption === 'free' ? "شحن مجاني" : `الشحن: ${customShippingPrice}`;
+        const offerText = customOffer ? `عرض خاص: ${customOffer}` : "";
 
         // *****************************************************************
-        // الـ Prompt الجديد (المعدل حسب متطلباتك)
+        // الـ Prompt الجديد مع استمارة الطلب المطلوبة
         // *****************************************************************
         const prompt = `
 Act as a Senior Creative Director and Conversion Expert. 
@@ -40,63 +40,91 @@ Context/Features: ${productFeatures}.
 Price: ${productPrice}. ${shippingText}. ${offerText}.
 User Design Request: ${designDescription}.
 
-## 🎯 **OBJECTIVE:**
-Create a completely unique, high-converting landing page with maximum creativity.
+## 🎯 **الهدف:**
+إنشاء صفحة هبوط فريدة ومبدعة لتحقيق أعلى معدلات التحويل.
 
-## ⚠️ **STRICT REQUIREMENTS (MUST FOLLOW):**
+## ⚠️ **متطلبات إلزامية (يجب اتباعها بدقة):**
 
-### **1. HERO SECTION (FIRST VISIBLE ELEMENT):**
-- Must be the first section users see
-- Include: Creative Headline (H1) + Subtitle + Primary CTA Button
-- Design: Use advanced CSS (glassmorphism, animations, gradients, etc.)
+### **1. قسم الهيرو (القسم الأول والأساسي):**
+- يجب أن يكون أول قسم يراه المستخدم
+- يتضمن: عنوان إبداعي (H1) + وصف ثانوي + زر دعوة رئيسي
+- التصميم: استخدام تأثيرات CSS متقدمة (glassmorphism, animations, gradients, etc.)
 
-### **2. CUSTOMER INFO BOX (IMMEDIATELY AFTER HERO):**
-Must contain this exact form structure:
+### **2. استمارة الطلب (مباشرة بعد الهيرو):**
+يجب أن تحتوي على هذا الهيكل الدقيق للحقول باللغة العربية:
 <div class="customer-info-box">
-  <input type="text" placeholder="Full Name" required>
-  <select required>
-    <option value="">Select State/Province</option>
-    <!-- State options -->
-  </select>
-  <input type="tel" placeholder="Phone Number" required>
-  <button type="submit">Submit</button>
+  <h3>استمارة الطلب</h3>
+  <p>المرجو إدخال معلوماتك الخاصة بك</p>
+  
+  <div class="form-group">
+    <label>الإسم الكامل</label>
+    <input type="text" placeholder="أدخل اسمك الكامل" required>
+  </div>
+  
+  <div class="form-group">
+    <label>رقم الهاتف</label>
+    <input type="tel" placeholder="+213 أدخل رقم هاتفك" required>
+  </div>
+  
+  <div class="form-group">
+    <label>الولاية</label>
+    <input type="text" placeholder="أدخل ولايتك" required>
+    <!-- ملاحظة: لا تستخدم قائمة منسدلة select، استخدم input نصي فقط -->
+  </div>
+  
+  <div class="form-group">
+    <label>البلدية</label>
+    <input type="text" placeholder="أدخل بلديتك" required>
+    <!-- ملاحظة: لا تستخدم قائمة منسدلة select، استخدم input نصي فقط -->
+  </div>
+  
+  <div class="form-group">
+    <label>الموقع / العنوان</label>
+    <input type="text" placeholder="أدخل عنوانك بالتفصيل" required>
+  </div>
+  
+  <div class="price-display">
+    <p>سعر المنتج: ${productPrice} دينار</p>
+  </div>
+  
+  <button type="submit" class="submit-btn">تأكيد الطلب</button>
 </div>
 
-### **3. OUTPUT FORMAT - CRITICAL (MUST BE EXACT):**
-You MUST return a **Strict JSON object** with exactly these 3 keys:
+### **3. تنسيق الإخراج - حاسم (يجب أن يكون دقيقًا):**
+يجب أن تعيد كائن JSON صارمًا يحتوي على هذه المفاتيح الثلاثة فقط:
 {
-  "html": "Complete HTML string with <style> in head and <body> content",
-  "liquid_code": "Shopify Liquid template code (without {% schema %})",
+  "html": "سلسلة HTML كاملة تحتوي على <style> في الرأس و<body> للمحتوى",
+  "liquid_code": "كود قالب Shopify Liquid (بدون {% schema %})",
   "schema": {
     "name": "Landing Page",
     "settings": [
-      // Generate relevant settings here
+      // إنشاء الإعدادات المناسبة هنا
     ]
   }
 }
 
-## 🚀 **COMPLETE CREATIVE FREEDOM (FOR EVERYTHING ELSE):**
-After the required sections above, you have 100% creative freedom:
-- Create any number of unique sections
-- Use any layout/design patterns (parallax, 3D, interactive, etc.)
-- Surprise with innovative psychological triggers
-- No restrictions on section order or content
-- Break conventional patterns for better conversion
+## 🚀 **حرية إبداعية كاملة (للباقي من الصفحة):**
+بعد الأقسام المطلوبة أعلاه، لديك 100% حرية إبداعية:
+- أنشئ أي عدد من الأقسام الفريدة
+- استخدم أي أنماط تخطيط وتصميم (parallax, 3D, interactive, etc.)
+- فاجئني بمحفزات نفسية مبتكرة
+- لا توجد قيود على ترتيب أو محتوى الأقسام
+- كسر الأنماط التقليدية لتحقيق تحويل أفضل
 
-## 🎨 **DESIGN GUIDELINES (NOT RESTRICTIONS):**
-- Use FontAwesome 6 icons
-- Write custom CSS (no templates)
-- Fully responsive design
-- Modern CSS (Grid, Flexbox, CSS Variables)
-- Consider color psychology
+## 🎨 **إرشادات التصميم (ليست قيودًا):**
+- استخدم أيقونات FontAwesome 6
+- اكتب CSS مخصص (بدون قوالب)
+- تصميم متجاوب بالكامل للهاتف المحمول
+- CSS حديث (Grid, Flexbox, CSS Variables)
+- فكر في سيكولوجية الألوان المناسبة للمنتج
 
-## 🔧 **TECHNICAL NOTES:**
-- The \`html\` key: For live preview (complete standalone HTML)
-- The \`liquid_code\` key: For Shopify (use Liquid syntax like {{ product.title }})
-- The \`schema\` key: Settings for Shopify theme editor
-- Return ONLY the JSON object, no additional text
+## 🔧 **ملاحظات تقنية:**
+- مفتاح \`html\`: للمعاينة الحية (HTML كامل وقائم بذاته)
+- مفتاح \`liquid_code\`: لـShopify (استخدم صيغة Liquid مثل {{ product.title }})
+- مفتاح \`schema\>: إعدادات لمحرر قوالب Shopify
+- أعد فقط كائن JSON، بدون أي نص إضافي
 
-**Remember:** Only the Hero structure, Info Box fields, and output format are fixed. Everything else should be uniquely creative each time!
+**تذكر:** فقط هيكل الهيرو، حقول استمارة الطلب، وتنسيق الإخراج ثابتة. كل شيء آخر يجب أن يكون مبدعًا وفريدًا في كل مرة!
         `;
 
         const response = await fetch(GEMINI_ENDPOINT, {
@@ -123,11 +151,11 @@ After the required sections above, you have 100% creative freedom:
 
         const aiResponseText = data.candidates[0].content.parts[0].text;
         
-        // تنظيف النص من علامات Markdown إذا وجدت لضمان عدم حدوث خطأ في الـ JSON
+        // تنظيف النص من علامات Markdown إذا وجدت
         const cleanedText = aiResponseText.replace(/```json/g, '').replace(/```/g, '').trim();
         const aiResponse = JSON.parse(cleanedText);
 
-        // إرسال النتيجة بنفس الهيكل الذي يتوقعه builder.html
+        // إرسال النتيجة بنفس الهيكل
         res.status(200).json({
             liquid_code: aiResponse.liquid_code,
             schema: aiResponse.schema,
