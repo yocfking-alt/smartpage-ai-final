@@ -86,6 +86,46 @@
         .nav-link:hover::after { 
             width: 100%; 
         } 
+        /* Styles for Image Gallery */
+        .image-preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .image-preview-item {
+            position: relative;
+            width: 100%;
+            height: 80px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #e5e7eb;
+        }
+        .image-preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .remove-image-btn {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: rgba(220, 38, 38, 0.9);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            border: none;
+            transition: background 0.2s;
+        }
+        .remove-image-btn:hover {
+            background: rgb(185, 28, 28);
+        }
         @media (max-width: 768px) { 
             .builder-grid { 
                 grid-template-columns: 1fr; 
@@ -134,6 +174,27 @@
                 <div class="builder-panel p-6"> 
                     <h3 class="text-xl font-semibold mb-6" style="color: var(--accent);">1. Product Details</h3> 
                     
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium mb-2 text-gray-700">🖼️ Brand Logo:</label>
+                        <input type="file" id="logo-input" accept="image/*" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-200">
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium mb-2 text-gray-700">📸 Product Images (Multi-select):</label>
+                        <div class="flex items-center justify-center w-full">
+                            <label for="product-images-input" class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                                <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                    <svg class="w-8 h-8 mb-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
+                                    </svg>
+                                    <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">Click to upload</span> multiple images</p>
+                                </div>
+                                <input id="product-images-input" type="file" class="hidden" multiple accept="image/*" />
+                            </label>
+                        </div>
+                        <div id="images-preview" class="image-preview-grid"></div>
+                    </div>
+
                     <div class="mb-6"> 
                         <label for="product-category" class="block text-sm font-medium mb-2 text-gray-700">📦 Product Category:</label> 
                         <select id="product-category" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"> 
@@ -162,19 +223,6 @@
                         </select> 
                     </div>
 
-                    <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <label class="block text-sm font-bold mb-2 text-gray-700">📸 صور المنتج (Images):</label>
-                        
-                        <div class="mb-4">
-                            <label for="product-image-upload" class="block text-xs font-medium mb-1 text-gray-500">صورة المنتج الرئيسية (Main Product Image):</label>
-                            <input type="file" id="product-image-upload" accept="image/*" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
-                        </div>
-
-                        <div>
-                            <label for="brand-logo-upload" class="block text-xs font-medium mb-1 text-gray-500">شعار المتجر (Brand Logo):</label>
-                            <input type="file" id="brand-logo-upload" accept="image/*" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
-                        </div>
-                    </div>
                     <div class="mb-6"> 
                         <label for="product-name" class="block text-sm font-medium mb-2 text-gray-700">🛍️ Product Name:</label> 
                         <input type="text" id="product-name" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="Enter your product name..."/> 
@@ -253,7 +301,7 @@
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <span class="text-lg font-medium text-blue-600">AI is generating your page (Uploading Images & Designing)... Please wait.</span>
+                <span class="text-lg font-medium text-blue-600">AI is generating your page... Please wait.</span>
             </div>
             <div id="error-message" class="hidden text-center mt-4 p-4 bg-red-100 border border-red-300 rounded-lg text-red-700"></div>
         </div>
@@ -283,9 +331,76 @@
         const errorMessageDiv = document.getElementById("error-message");
         const previewIframe = document.getElementById("preview");
         
-        let generatedLiquidCode = null;
-        let generatedSchema = null;
+        // Image & Logo Variables
+        const logoInput = document.getElementById('logo-input');
+        const imageInput = document.getElementById('product-images-input');
+        const imagesPreviewDiv = document.getElementById('images-preview');
         
+        let logoBase64 = null; // لتخزين الشعار
+        let selectedImagesBase64 = []; // لتخزين مصفوفة صور المنتج
+
+        // ********* Logo Handling Logic *********
+        logoInput.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                try {
+                    logoBase64 = await convertFileToBase64(file);
+                } catch (err) {
+                    console.error("Error reading logo:", err);
+                }
+            }
+        });
+
+        // ********* Multi-Image Handling Logic *********
+        imageInput.addEventListener('change', async function(e) {
+            const files = Array.from(e.target.files);
+            for (let file of files) {
+                if (file.type.startsWith('image/')) {
+                    try {
+                        const base64 = await convertFileToBase64(file);
+                        selectedImagesBase64.push(base64);
+                    } catch (err) {
+                        console.error("Error reading file:", err);
+                    }
+                }
+            }
+            updateImagePreview();
+        });
+
+        function convertFileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        function updateImagePreview() {
+            imagesPreviewDiv.innerHTML = '';
+            selectedImagesBase64.forEach((imgBase64, index) => {
+                const div = document.createElement('div');
+                div.className = 'image-preview-item';
+                
+                const img = document.createElement('img');
+                img.src = imgBase64;
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-image-btn';
+                removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                removeBtn.onclick = () => removeImage(index);
+                
+                div.appendChild(img);
+                div.appendChild(removeBtn);
+                imagesPreviewDiv.appendChild(div);
+            });
+        }
+
+        function removeImage(index) {
+            selectedImagesBase64.splice(index, 1);
+            updateImagePreview();
+        }
+
         // ********* Helper Functions *********
         function showLoading() {
             loadingIndicator.classList.remove('hidden');
@@ -312,18 +427,8 @@
                 errorMessageDiv.classList.add('hidden');
             }, 5000);
         }
-
-        // *** دالة جديدة لتحويل الصور إلى Base64 ***
-        function convertToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = error => reject(error);
-            });
-        }
         
-        // ********* Generate Function *********
+        // ********* Backend Connection Function *********
         async function generateLandingPage() {
             errorMessageDiv.classList.add('hidden');
             downloadBtn.disabled = true;
@@ -333,17 +438,13 @@
             const features = document.getElementById("product-features").value;
             const price = document.getElementById("product-price").value;
             
-            // الحصول على ملفات الصور
-            const imgFile = document.getElementById('product-image-upload').files[0];
-            const logoFile = document.getElementById('brand-logo-upload').files[0];
-
             const shippingOption = document.getElementById("shipping-select").value;
             const customShippingPrice = document.getElementById("custom-shipping-price").value;
             const useOffer = document.getElementById("use-offer-toggle").checked;
             const customOffer = document.getElementById("custom-offer-input").value;
 
             if (!name || !features || !price) {
-                showError("Please fill in all required fields (Name, Features, Price)!");
+                showError("Please fill in all required fields!");
                 return;
             }
 
@@ -351,21 +452,6 @@
             generateBtn.disabled = true;
 
             try {
-                // تحويل الصور إن وجدت
-                let imageBase64 = null;
-                let logoBase64 = null;
-                
-                if (imgFile) {
-                    // تحقق بسيط من الحجم لتجنب الضغط على السيرفر (اختياري)
-                    if (imgFile.size > 4 * 1024 * 1024) {
-                        throw new Error("Product Image is too large. Please use an image under 4MB.");
-                    }
-                    imageBase64 = await convertToBase64(imgFile);
-                }
-                if (logoFile) {
-                    logoBase64 = await convertToBase64(logoFile);
-                }
-
                 const BACKEND_URL = "/api/generate"; 
 
                 const res = await fetch(BACKEND_URL, { 
@@ -381,9 +467,8 @@
                         shippingOption: shippingOption,
                         customShippingPrice: shippingOption === 'custom' ? customShippingPrice : null,
                         customOffer: useOffer ? customOffer : null,
-                        // إرسال الصور Base64
-                        productImage: imageBase64,
-                        brandLogo: logoBase64
+                        productImages: selectedImagesBase64, // المصفوفة
+                        brandLogo: logoBase64 // الشعار
                     })
                 });
 
@@ -401,42 +486,41 @@
                     downloadBtn.disabled = false;
                     shopifyBtn.disabled = false; 
                     document.getElementById('preview-section').scrollIntoView({ behavior: 'smooth' });
-                    showSuccess("✅ Page generated successfully with Images!");
+                    showSuccess("✅ Page generated successfully!");
                 } else {
                     showError(`Error: ${data.error || 'Unknown error'}`);
                 }
             } catch (err) {
                 console.error(err);
-                showError(err.message || "Network error. Please try again.");
+                showError("Network error. Please try again.");
             } finally {
                 hideLoading();
                 generateBtn.disabled = false;
             }
         }
 
-        // ********* HTML Download Function *********
+        // ********* HTML Download *********
         function downloadHTML() {
             const htmlContent = previewIframe.srcdoc;
             if (!htmlContent) {
-                showError("No page generated yet. Please generate a page first.");
+                showError("No page generated yet.");
                 return;
             }
-            
             const blob = new Blob([htmlContent], { type: "text/html" });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = "smartpage-landing.html";
+            link.download = "smartpage-ai-landing.html";
             link.click();
-            showSuccess("✅ Page downloaded successfully!");
+            showSuccess("✅ Page downloaded!");
         }
 
-        // ********* Shopify Publish Function *********
+        // ********* Shopify Publish *********
         async function publishToShopify() {
-            const liquid_code = generatedLiquidCode || sessionStorage.getItem('liquid_code');
-            const schema = generatedSchema || sessionStorage.getItem('schema'); // لاحظ التغيير هنا لاستخدام sessionStorage
+            const liquid_code = generatedLiquidCode || localStorage.getItem('liquid_code');
+            const schema = generatedSchema || localStorage.getItem('schema');
             
             if (!liquid_code || !schema) {
-                showError("الرجاء توليد الصفحة أولاً قبل محاولة النشر على Shopify.");
+                showError("الرجاء توليد الصفحة أولاً.");
                 return;
             }
             
@@ -481,7 +565,6 @@
         downloadBtn.addEventListener('click', downloadHTML);
         shopifyBtn.addEventListener('click', publishToShopify);
         
-        // Toggle Listeners
         const shippingSelect = document.getElementById('shipping-select');
         const customShippingContainer = document.getElementById('custom-shipping-container');
         const useOfferToggle = document.getElementById('use-offer-toggle');
@@ -507,7 +590,6 @@
             });
         }
 
-        // Mobile Menu
         document.addEventListener('DOMContentLoaded', function () {
             const mobileMenuBtn = document.getElementById('mobile-menu-btn');
             const mobileMenu = document.getElementById('mobile-menu');
