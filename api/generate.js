@@ -14,11 +14,11 @@ export default async function handler(req, res) {
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
         if (!GEMINI_API_KEY) throw new Error('API Key is missing');
 
-        // استقبال البيانات (تمت إعادة brandLogo واستقبال productImages كمصفوفة)
+        // استقبال البيانات بما في ذلك الصور
         const { 
             productName, productFeatures, productPrice, productCategory,
             targetAudience, designDescription, shippingOption, customShippingPrice, 
-            customOffer, productImages, brandLogo 
+            customOffer, productImage, brandLogo 
         } = req.body;
 
         const GEMINI_MODEL = 'gemini-2.5-flash'; 
@@ -27,29 +27,9 @@ export default async function handler(req, res) {
         const shippingText = shippingOption === 'free' ? "شحن مجاني" : `الشحن: ${customShippingPrice}`;
         const offerText = customOffer ? `عرض خاص: ${customOffer}` : "";
 
-        // معالجة الصور: التأكد من أنها مصفوفة
-        const imagesArray = Array.isArray(productImages) && productImages.length > 0 ? productImages : [];
-        
-        // منطق بناء تعليمات الصور (Slider vs Single Image)
-        let imagesInstruction = "";
-        if (imagesArray.length > 1) {
-            imagesInstruction = `
-            The user provided ${imagesArray.length} product images.
-            You MUST create a responsive image slider/carousel using Splide.js (library is already included).
-            Generate HTML structure for exactly ${imagesArray.length} slides.
-            Use these placeholders for the slides:
-            ${imagesArray.map((_, i) => `- Slide ${i + 1}: src="[[IMG_${i}]]"`).join('\n')}
-            Initialize the Splide slider in a <script> tag at the end.
-            `;
-        } else {
-            imagesInstruction = `
-            The user provided 1 product image.
-            Use this placeholder for the main product image: "[[IMG_0]]".
-            Make it prominent in the Hero section.
-            `;
-        }
-
-        // تعريف رمز الشعار (كما كان في الكود الأصلي)
+        // تعريف المتغيرات البديلة للصور
+        // نستخدم نصوصاً مميزة ليعرف الذكاء الاصطناعي أين يضعها، ثم نستبدلها لاحقاً بالكود الحقيقي
+        const IMG_PLACEHOLDER = "[[PRODUCT_IMAGE_SRC]]";
         const LOGO_PLACEHOLDER = "[[BRAND_LOGO_SRC]]";
 
         const prompt = `
@@ -61,22 +41,24 @@ Context/Features: ${productFeatures}.
 Price: ${productPrice}. ${shippingText}. ${offerText}.
 User Design Request: ${designDescription}.
 
-## 🖼️ **Image & Logo Instructions (CRITICAL):**
-- **Logo:** Use exactly \`${LOGO_PLACEHOLDER}\` for the brand logo source. Place it in the Header or top of Hero.
-- **Product Images:** ${imagesInstruction}
-- Do NOT use unsplash or external links. ONLY use the placeholders provided.
+## 🖼️ **تعليمات الصور (مهم جداً):**
+- لقد تم تزويدك بصورة للمنتج وشعار.
+- في كود HTML و Liquid، **يجب** أن تستخدم هذا النص بالضبط كمصدر لصورة المنتج: \`${IMG_PLACEHOLDER}\`
+- **يجب** أن تستخدم هذا النص بالضبط كمصدر للشعار: \`${LOGO_PLACEHOLDER}\`
+- مثال: <img src="${IMG_PLACEHOLDER}" alt="Product Image" class="...">
+- لا تستخدم صوراً من unsplash أو روابط خارجية، استخدم فقط النصوص البديلة أعلاه.
 
-## 🎯 **Goal:**
-Create a high-converting landing page.
+## 🎯 **الهدف:**
+إنشاء صفحة هبوط فريدة ومبدعة لتحقيق أعلى معدلات التحويل.
 
-## ⚠️ **Mandatory Requirements:**
+## ⚠️ **متطلبات إلزامية:**
 
-### **1. Hero Section:**
-- Include the logo (\`${LOGO_PLACEHOLDER}\`).
-- Display the product image(s) prominently (or the slider if multiple images).
+### **1. قسم الهيرو:**
+- يتضمن الشعار (استخدم \`${LOGO_PLACEHOLDER}\`) في الأعلى أو في الهيدر.
+- صورة المنتج الرئيسية (استخدم \`${IMG_PLACEHOLDER}\`) يجب أن تكون بارزة جداً.
 
-### **2. Order Form (Directly after Hero):**
-Must contain this EXACT Arabic form structure:
+### **2. استمارة الطلب (مباشرة بعد الهيرو):**
+يجب أن تحتوي على هذا الهيكل الدقيق للحقول باللغة العربية:
 <div class="customer-info-box">
   <h3>استمارة الطلب</h3>
   <p>المرجو إدخال معلوماتك الخاصة بك</p>
@@ -113,16 +95,16 @@ Must contain this EXACT Arabic form structure:
   <button type="submit" class="submit-btn">تأكيد الطلب</button>
 </div>
 
-### **3. Output Format:**
-Return ONLY a JSON object:
+### **3. تنسيق الإخراج:**
+أعد كائن JSON فقط:
 {
-  "html": "Full HTML string",
-  "liquid_code": "Shopify Liquid code",
+  "html": "سلسلة HTML كاملة",
+  "liquid_code": "كود Shopify Liquid",
   "schema": { "name": "Landing Page", "settings": [] }
 }
 
-## 🚀 **Creative Freedom:**
-Design the rest of the page freely using modern CSS.
+## 🚀 **حرية إبداعية كاملة:**
+صمم باقي الصفحة بحرية تامة باستخدام CSS حديث وجذاب.
         `;
 
         const response = await fetch(GEMINI_ENDPOINT, {
@@ -148,34 +130,26 @@ Design the rest of the page freely using modern CSS.
         let aiResponse = JSON.parse(cleanedText);
 
         // ***************************************************************
-        // عملية الحقن: استبدال الرموز بالصور الحقيقية
+        // عملية الحقن: استبدال الرموز بالصور الحقيقية (Base64)
         // ***************************************************************
         
+        // صور افتراضية في حال لم يرفع المستخدم صوراً
         const defaultImg = "https://via.placeholder.com/600x600?text=Product+Image";
-        const defaultLogo = "https://via.placeholder.com/150x50?text=Logo"; // صورة احتياطية للشعار
+        const defaultLogo = "https://via.placeholder.com/150x50?text=Logo";
 
+        const finalProductImage = productImage || defaultImg;
         const finalBrandLogo = brandLogo || defaultLogo;
 
+        // دالة للاستبدال الآمن
         const replaceImages = (content) => {
             if (!content) return content;
-            let updatedContent = content;
-
-            // 1. استبدال الشعار (كما كان سابقاً)
-            updatedContent = updatedContent.split(LOGO_PLACEHOLDER).join(finalBrandLogo);
-
-            // 2. استبدال صور المنتج (الجديد: دعم المصفوفة)
-            if (imagesArray.length > 0) {
-                imagesArray.forEach((img, index) => {
-                    const placeholder = `[[IMG_${index}]]`;
-                    updatedContent = updatedContent.split(placeholder).join(img);
-                });
-            } else {
-                updatedContent = updatedContent.split('[[IMG_0]]').join(defaultImg);
-            }
-
-            return updatedContent;
+            // استبدال عالمي لكل ظهور للرمز
+            return content
+                .split(IMG_PLACEHOLDER).join(finalProductImage)
+                .split(LOGO_PLACEHOLDER).join(finalBrandLogo);
         };
 
+        // تطبيق الاستبدال على HTML و Liquid Code
         aiResponse.html = replaceImages(aiResponse.html);
         aiResponse.liquid_code = replaceImages(aiResponse.liquid_code);
 
