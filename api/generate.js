@@ -14,12 +14,16 @@ export default async function handler(req, res) {
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
         if (!GEMINI_API_KEY) throw new Error('API Key is missing');
 
-        // استقبال البيانات بما في ذلك مصفوفة الصور
+        // استقبال البيانات بما في ذلك الصور المتعددة
         const { 
             productName, productFeatures, productPrice, productCategory,
             targetAudience, designDescription, shippingOption, customShippingPrice, 
             customOffer, productImages, brandLogo 
         } = req.body;
+
+        // التعامل مع الصور المتعددة (نصي للتوافق مع الإصدارات السابقة)
+        const productImageArray = productImages || [];
+        const mainProductImage = productImageArray.length > 0 ? productImageArray[0] : null;
 
         const GEMINI_MODEL = 'gemini-2.5-flash'; 
         const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
@@ -27,19 +31,14 @@ export default async function handler(req, res) {
         const shippingText = shippingOption === 'free' ? "شحن مجاني" : `الشحن: ${customShippingPrice}`;
         const offerText = customOffer ? `عرض خاص: ${customOffer}` : "";
 
-        // صور افتراضية في حال لم يرفع المستخدم صوراً
-        const defaultImg = "https://via.placeholder.com/600x600?text=Product+Image";
-        const defaultLogo = "https://via.placeholder.com/150x50?text=Logo";
-
-        const finalProductImages = productImages && productImages.length > 0 ? productImages : [defaultImg];
-        const finalBrandLogo = brandLogo || defaultLogo;
-
-        // إنشاء placeholders للصور المتعددة
-        const imagePlaceholders = [];
-        if (finalProductImages && finalProductImages.length > 0) {
-            for (let i = 0; i < finalProductImages.length; i++) {
-                imagePlaceholders.push(`[[PRODUCT_IMAGE_${i}_SRC]]`);
-            }
+        // تعريف المتغيرات البديلة للصور
+        const MAIN_IMG_PLACEHOLDER = "[[PRODUCT_IMAGE_MAIN_SRC]]";
+        const LOGO_PLACEHOLDER = "[[BRAND_LOGO_SRC]]";
+        
+        // إنشاء نصوص بديلة للصور الإضافية
+        let galleryPlaceholders = "";
+        for (let i = 1; i < productImageArray.length && i <= 5; i++) {
+            galleryPlaceholders += `[[PRODUCT_IMAGE_${i + 1}_SRC]] `;
         }
 
         const prompt = `
@@ -51,43 +50,43 @@ Context/Features: ${productFeatures}.
 Price: ${productPrice}. ${shippingText}. ${offerText}.
 User Design Request: ${designDescription}.
 
-## 🖼️ **تعليمات الصور (مهم جداً):**
-لديك ${finalProductImages.length} صورة للمنتج وشعار العلامة التجارية.
+## 🖼️ **تعليمات الصور المتعددة (مهم جداً):**
+لقد تم تزويدك بعدة صور للمنتج (${productImageArray.length} صور) وشعار.
+**يجب اتباع التعليمات التالية بدقة:**
 
-### **تعليمات تقنية للصور:**
-${imagePlaceholders.map((ph, i) => `- صورة المنتج ${i + 1}: استخدم \`${ph}\``).join('\n')}
-- شعار العلامة التجارية: استخدم \`[[BRAND_LOGO_SRC]]\`
+### **1. الصورة الرئيسية:**
+- استخدم هذا النص بالضبط كمصدر للصورة الرئيسية: \`${MAIN_IMG_PLACEHOLDER}\`
+- مثال: <img src="${MAIN_IMG_PLACEHOLDER}" alt="${productName}" class="main-product-image">
 
-### **متطلبات عرض الصور:**
-1. يجب استخدام مكتبة Swiper لعرض جميع صور المنتج كسلايدر تفاعلي
-2. تضمين CDN مكتبة Swiper في الكود:
-   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
-   <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-3. تصميم السلايدر:
-   - عرض كامل العرض في قسم الهيرو
-   - مؤشرات (pagination) أسفل الصور
-   - أزرار تنقل (next/prev) مع أيقونات جميلة
-   - إمكانية السحب بالأصابع
-   - تأثير انتقال fade أو slide
-   - تكرار لانهائي (loop)
-4. إضافة معرض صور مصغرة (thumbnails) أسفل السلايدر الرئيسي
-5. الصورة الأولى هي الرئيسية ويجب أن تكون بارزة
+### **2. معرض الصور الإضافية:**
+- أضف قسم معرض صور يظهر الصور الإضافية للمنتج
+- استخدم النصوص التالية كمصادر للصور الإضافية:
+${productImageArray.length > 1 ? 
+  Array.from({length: Math.min(productImageArray.length - 1, 5)}, (_, i) => 
+    `  - الصورة ${i + 2}: استخدم \`[[PRODUCT_IMAGE_${i + 2}_SRC]]\``
+  ).join('\n') 
+  : '  - لا توجد صور إضافية'}
+- يمكنك إنشاء سلايدر، شبكة صور، أو معرض تفاعلي
+- تأكد من أن المعرض سريع الاستجابة ويعمل جيداً على الجوال
+
+### **3. الشعار:**
+- استخدم هذا النص بالضبط كمصدر للشعار: \`${LOGO_PLACEHOLDER}\`
+- مثال: <img src="${LOGO_PLACEHOLDER}" alt="شعار العلامة التجارية" class="logo">
 
 ## 🎯 **الهدف:**
-إنشاء صفحة هبوط فريدة بمجموعة صور تفاعلية لتحقيق أعلى معدلات التحويل.
+إنشاء صفحة هبوط فريدة ومبدعة تحتوي على جميع الصور المقدمة وتحقق أعلى معدلات التحويل.
 
 ## ⚠️ **متطلبات إلزامية:**
 
-### **1. قسم الهيرو مع السلايدر:**
-- تضمين سلايدر Swiper يعرض كل صور المنتج
-- كل شريحة (slide) تحتوي على صورة واحدة بحجم كبير وجودة عالية
-- شعار المتجر في أعلى الصفحة (استخدم \`[[BRAND_LOGO_SRC]]\`)
-- زر دعوة للإجراء واضح
+### **1. قسم الهيرو:**
+- يتضمن الشعار (استخدم \`${LOGO_PLACEHOLDER}\`) في الأعلى أو في الهيدر
+- صورة المنتج الرئيسية (استخدم \`${MAIN_IMG_PLACEHOLDER}\`) يجب أن تكون بارزة جداً
+- إذا كان هناك أكثر من صورة، أضف أزرار تنقل بين الصور أو معرض مصغر
 
-### **2. معرض الصور المصغرة:**
-- تحت السلايدر الرئيسي، أضف صفاً من الصور المصغرة
-- عند النقر على صورة مصغرة، تنتقل إلى تلك الصورة في السلايدر الرئيسي
-- الصورة النشطة يجب أن يكون لها تأكيد مرئي
+### **2. معرض الصور (إذا كان هناك أكثر من صورة):**
+- قم بإنشاء قسم مخصص لعرض جميع صور المنتج
+- استخدم تقنيات CSS/JS حديثة لعرض المعرض (مثل grid، flexbox، أو سلايدر)
+- تأكد من أن الصور معروضة بشكل جميل ومنظم
 
 ### **3. استمارة الطلب (مباشرة بعد الهيرو):**
 يجب أن تحتوي على هذا الهيكل الدقيق للحقول باللغة العربية:
@@ -97,17 +96,17 @@ ${imagePlaceholders.map((ph, i) => `- صورة المنتج ${i + 1}: استخد
   
   <div class="form-group">
     <label>الإسم الكامل</label>
-    <input type="text" placeholder="الاسم الكامل" required>
+    <input type="text" placeholder="Nom et prénom" required>
   </div>
   
   <div class="form-group">
     <label>رقم الهاتف</label>
-    <input type="tel" placeholder="رقم الهاتف" required>
+    <input type="tel" placeholder="Nombre" required>
   </div>
   
   <div class="form-group">
     <label>الولاية</label>
-    <input type="text" placeholder="الولاية" required>
+    <input type="text" placeholder="Wilaya" required>
   </div>
   
   <div class="form-group">
@@ -136,9 +135,10 @@ ${imagePlaceholders.map((ph, i) => `- صورة المنتج ${i + 1}: استخد
 }
 
 ## 🚀 **حرية إبداعية كاملة:**
-صمم باقي الصفحة بحرية تامة باستخدام CSS حديث وجذاب.
-استخدم ألوان متناسقة وخطوط عربية جميلة.
-أضف تأثيرات تفاعلية عند التمرير.
+- صمم باقي الصفحة بحرية تامة باستخدام CSS حديث وجذاب
+- استخدم تأثيرات hover، transitions، وanimations لجعل الصفحة تفاعلية
+- تأكد من أن الصفحة سريعة الاستجابة وتعمل على جميع الأجهزة
+- أضف أقسام إضافية مثل: مميزات المنتج، آراء العملاء، الأسئلة الشائعة، إلخ
         `;
 
         const response = await fetch(GEMINI_ENDPOINT, {
@@ -167,20 +167,30 @@ ${imagePlaceholders.map((ph, i) => `- صورة المنتج ${i + 1}: استخد
         // عملية الحقن: استبدال الرموز بالصور الحقيقية (Base64)
         // ***************************************************************
         
-        // دالة للاستبدال الآمن
+        // صور افتراضية في حال لم يرفع المستخدم صوراً
+        const defaultImg = "https://via.placeholder.com/600x600?text=Product+Image";
+        const defaultLogo = "https://via.placeholder.com/150x50?text=Logo";
+
+        const finalProductImages = productImageArray.length > 0 ? productImageArray : [defaultImg];
+        const finalBrandLogo = brandLogo || defaultLogo;
+
+        // دالة للاستبدال الآمن للصور المتعددة
         const replaceImages = (content) => {
             if (!content) return content;
             
             let result = content;
             
-            // استبدال كل placeholder بالصورة المناسبة
-            imagePlaceholders.forEach((placeholder, index) => {
-                const imageSrc = finalProductImages[index] || defaultImg;
-                result = result.split(placeholder).join(imageSrc);
-            });
+            // استبدال الصورة الرئيسية
+            result = result.split(MAIN_IMG_PLACEHOLDER).join(finalProductImages[0]);
             
             // استبدال الشعار
-            result = result.split('[[BRAND_LOGO_SRC]]').join(finalBrandLogo);
+            result = result.split(LOGO_PLACEHOLDER).join(finalBrandLogo);
+            
+            // استبدال الصور الإضافية في المعرض
+            for (let i = 1; i < finalProductImages.length && i <= 6; i++) {
+                const placeholder = `[[PRODUCT_IMAGE_${i + 1}_SRC]]`;
+                result = result.split(placeholder).join(finalProductImages[i]);
+            }
             
             return result;
         };
