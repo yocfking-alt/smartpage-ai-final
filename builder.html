@@ -1,16 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head> 
     <meta charset="UTF-8"/> 
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
-    <title>SmartPage AI - Build Your Landing Page</title> 
+    <title>SmartPage AI - بناء صفحة الهبوط</title> 
     <script src="https://cdn.tailwindcss.com"></script> 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script> 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/typed.js/2.0.12/typed.min.js"></script> 
     <script src="https://unpkg.com/splitting@1.0.6/dist/splitting.js"></script> 
     <link rel="stylesheet" href="https://unpkg.com/splitting@1.0.6/dist/splitting.css"/> 
-    <script src="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/js/splide.min.js"></script> 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/css/splide.min.css"/> 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script> 
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style> 
@@ -23,9 +24,9 @@
             --border-color: #D1D5DB;
         } 
         body { 
-            background: var(--bg-primary); 
+            background: var(--bg-secondary); 
             color: var(--text-primary); 
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+            font-family: 'Cairo', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
         } 
         .glow-button { 
             background: var(--accent); 
@@ -40,7 +41,7 @@
         } 
         .card-hover { 
             transition: all 0.3s ease; 
-            background: var(--bg-secondary); 
+            background: white; 
             border: 1px solid var(--border-color); 
             border-radius: 12px; 
         } 
@@ -54,7 +55,7 @@
             overflow: hidden; 
         } 
         .builder-panel { 
-            background: var(--bg-secondary); 
+            background: white; 
             border: 1px solid var(--border-color); 
             border-radius: 16px; 
         } 
@@ -77,7 +78,7 @@
             content: ''; 
             position: absolute; 
             bottom: -4px; 
-            left: 0; 
+            right: 0; 
             width: 0; 
             height: 2px; 
             background: var(--accent); 
@@ -85,11 +86,105 @@
         } 
         .nav-link:hover::after { 
             width: 100%; 
-        } 
+        }
+        
+        /* أنماط معرض الصور الجديدة */
+        .image-thumbnail {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            aspect-ratio: 1/1;
+            cursor: move;
+        }
+        .image-thumbnail:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+        }
+        .image-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .delete-image-btn {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            width: 28px;
+            height: 28px;
+            background: rgba(239, 68, 68, 0.95);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            font-size: 16px;
+            border: 2px solid white;
+            z-index: 10;
+        }
+        .image-thumbnail:hover .delete-image-btn {
+            opacity: 1;
+        }
+        .image-index {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(29, 78, 216, 0.9);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            border: 2px solid white;
+            z-index: 10;
+        }
+        .drag-over {
+            border-color: #3B82F6 !important;
+            background-color: rgba(59, 130, 246, 0.05) !important;
+            transform: scale(1.02);
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .shake {
+            animation: shake 0.5s ease;
+        }
+        .sortable-ghost {
+            opacity: 0.4;
+            background: #c8ebfb;
+        }
+        .sortable-chosen {
+            background: #f0f9ff;
+        }
+        .main-image-badge {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: #10B981;
+            color: white;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: bold;
+        }
+        
         @media (max-width: 768px) { 
             .builder-grid { 
                 grid-template-columns: 1fr; 
             } 
+            .image-thumbnail {
+                aspect-ratio: 4/3;
+            }
         } 
     </style> 
 </head> 
@@ -98,13 +193,13 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
             <div class="flex justify-between items-center h-16"> 
                 <div class="flex items-center"> 
-                    <img src="1000020147.jpg" alt="Smart Page AI Logo" class="w-8 h-8 rounded-full object-cover mr-3">
+                    <img src="1000020147.jpg" alt="Smart Page AI Logo" class="w-8 h-8 rounded-full object-cover ml-3">
                     <h1 class="text-2xl font-bold" style="color: var(--logo-color);">Smart Page AI</h1> 
                 </div> 
                 <div class="hidden md:block"> 
-                    <div class="ml-10 flex items-baseline space-x-8"> 
-                        <a href="index.html" class="nav-link px-3 py-2 text-sm font-medium">Home</a> 
-                        <a href="index.html#features" class="nav-link px-3 py-2 text-sm font-medium">Features</a> 
+                    <div class="mr-10 flex items-baseline space-x-8"> 
+                        <a href="index.html" class="nav-link px-3 py-2 text-sm font-medium">الرئيسية</a> 
+                        <a href="index.html#features" class="nav-link px-3 py-2 text-sm font-medium">المميزات</a> 
                     </div> 
                 </div> 
                 <div class="md:hidden"> 
@@ -118,8 +213,8 @@
         </div> 
         <div id="mobile-menu" class="md:hidden hidden bg-white/95 backdrop-blur-md border-t border-gray-200"> 
             <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3"> 
-                <a href="index.html" class="nav-link block px-3 py-2 text-base font-medium">Home</a> 
-                <a href="index.html#features" class="nav-link block px-3 py-2 text-base font-medium">Features</a> 
+                <a href="index.html" class="nav-link block px-3 py-2 text-base font-medium">الرئيسية</a> 
+                <a href="index.html#features" class="nav-link block px-3 py-2 text-base font-medium">المميزات</a> 
             </div> 
         </div> 
     </nav> 
@@ -127,108 +222,160 @@
     <section class="py-20 bg-white mt-16"> 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
             <div class="text-center mb-12"> 
-                <h2 class="text-4xl font-bold mb-4 text-gray-900">Build Your Landing Page</h2> 
-                <p class="text-xl text-gray-600">Describe your product and watch AI create magic</p> 
+                <h2 class="text-4xl font-bold mb-4 text-gray-900">بناء صفحة الهبوط الخاصة بك</h2> 
+                <p class="text-xl text-gray-600">صف منتجك وشاهد الذكاء الاصطناعي يصنع السحر</p> 
             </div> 
             <div class="builder-grid grid grid-cols-1 lg:grid-cols-2 gap-8"> 
                 <div class="builder-panel p-6"> 
-                    <h3 class="text-xl font-semibold mb-6" style="color: var(--accent);">1. Product Details</h3> 
+                    <h3 class="text-xl font-semibold mb-6" style="color: var(--accent);">1. تفاصيل المنتج</h3> 
                     
                     <div class="mb-6"> 
-                        <label for="product-category" class="block text-sm font-medium mb-2 text-gray-700">📦 Product Category:</label> 
+                        <label for="product-category" class="block text-sm font-medium mb-2 text-gray-700">📦 فئة المنتج:</label> 
                         <select id="product-category" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"> 
-                            <option value="beauty">💄 Beauty & Cosmetics</option> 
-                            <option value="electronics">📱 Electronics & Tech</option> 
-                            <option value="fashion">👕 Fashion & Clothing</option> 
-                            <option value="home">🏠 Home & Living</option> 
-                            <option value="education">📚 Education & Courses</option> 
-                            <option value="finance">💸 Financial Services</option>
-                            <option value="software">💻 Software & Tools</option>
-                            <option value="health">💊 Health & Fitness</option>
-                            <option value="food">🍕 Food & Beverages</option>
-                            <option value="travel">✈️ Travel & Tourism</option>
-                            <option value="other">📦 Other</option> 
+                            <option value="beauty">💄 الجمال والتجميل</option> 
+                            <option value="electronics">📱 الإلكترونيات والتكنولوجيا</option> 
+                            <option value="fashion">👕 الأزياء والملابس</option> 
+                            <option value="home">🏠 المنزل والمعيشة</option> 
+                            <option value="education">📚 التعليم والدورات</option> 
+                            <option value="finance">💸 الخدمات المالية</option>
+                            <option value="software">💻 البرامج والأدوات</option>
+                            <option value="health">💊 الصحة واللياقة</option>
+                            <option value="food">🍕 الطعام والمشروبات</option>
+                            <option value="travel">✈️ السفر والسياحة</option>
+                            <option value="other">📦 أخرى</option> 
                         </select> 
                     </div> 
 
                     <div class="mb-6"> 
-                        <label for="target-audience" class="block text-sm font-medium mb-2 text-gray-700">🎯 Target Audience:</label> 
+                        <label for="target-audience" class="block text-sm font-medium mb-2 text-gray-700">🎯 الجمهور المستهدف:</label> 
                         <select id="target-audience" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"> 
-                            <option value="women">👩 Women</option> 
-                            <option value="men">👨 Men</option> 
-                            <option value="youth">🧒 Youth</option> 
-                            <option value="professionals">💼 Professionals</option> 
-                            <option value="general">🌍 General</option> 
+                            <option value="women">👩 النساء</option> 
+                            <option value="men">👨 الرجال</option> 
+                            <option value="youth">🧒 الشباب</option> 
+                            <option value="professionals">💼 المحترفون</option> 
+                            <option value="general">🌍 عام</option> 
                         </select> 
                     </div>
 
                     <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <label class="block text-sm font-bold mb-2 text-gray-700">📸 صور المنتج (Images):</label>
+                        <label class="block text-sm font-bold mb-3 text-gray-700">📸 صور المنتج:</label>
                         
-                        <div class="mb-4">
-                            <label for="product-image-upload" class="block text-xs font-medium mb-1 text-gray-500">صورة المنتج الرئيسية (Main Product Image):</label>
-                            <input type="file" id="product-image-upload" accept="image/*" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
+                        <!-- منطقة سحب وإفلات -->
+                        <div id="drop-area" 
+                             class="border-3 border-dashed border-gray-400 rounded-xl p-8 text-center mb-4 cursor-pointer transition-all duration-300 hover:border-blue-500 hover:bg-blue-50">
+                            <div class="text-5xl mb-4 text-gray-400">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                            </div>
+                            <p class="text-lg font-medium text-gray-700 mb-2">اسحب وأفلت صور المنتج هنا</p>
+                            <p class="text-gray-500 mb-4">أو</p>
+                            <label for="product-images-upload" class="inline-block cursor-pointer">
+                                <span class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                                    <i class="fas fa-images ml-2"></i>اختر صور المنتج
+                                </span>
+                                <input type="file" id="product-images-upload" accept="image/*" multiple 
+                                       class="hidden">
+                            </label>
+                            <p class="text-sm text-gray-500 mt-4">يمكنك رفع حتى 6 صور • PNG, JPG, WEBP</p>
+                            <p class="text-xs text-gray-400 mt-2">الصورة الأولى ستكون الرئيسية</p>
                         </div>
 
-                        <div>
-                            <label for="brand-logo-upload" class="block text-xs font-medium mb-1 text-gray-500">شعار المتجر (Brand Logo):</label>
-                            <input type="file" id="brand-logo-upload" accept="image/*" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
+                        <!-- معرض الصور المصغرة -->
+                        <div id="images-preview-container" class="hidden">
+                            <div class="flex justify-between items-center mb-3">
+                                <h4 class="font-medium text-gray-700">الصور المختارة (<span id="images-count">0</span>)</h4>
+                                <button type="button" id="clear-all-images" 
+                                        class="text-sm text-red-600 hover:text-red-800 font-medium">
+                                    <i class="fas fa-trash-alt ml-1"></i>حذف الكل
+                                </button>
+                            </div>
+                            
+                            <div id="images-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                                <!-- ستظهر الصور هنا ديناميكيًا -->
+                            </div>
+                            
+                            <div class="mt-4 text-sm text-gray-600">
+                                <i class="fas fa-info-circle ml-2"></i>
+                                اسحب الصور لتغيير ترتيبها (الأولى = صورة رئيسية)
+                            </div>
+                        </div>
+
+                        <!-- قسم الشعار -->
+                        <div class="mt-8 pt-6 border-t border-gray-300">
+                            <label for="brand-logo-upload" class="block text-sm font-medium mb-3 text-gray-700">
+                                <i class="fas fa-crown ml-2"></i>شعار المتجر:
+                            </label>
+                            <div class="flex items-center space-x-4">
+                                <div class="w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-blue-500" 
+                                     id="logo-preview-container">
+                                    <div id="logo-placeholder" class="text-center">
+                                        <i class="fas fa-plus text-gray-400 text-2xl mb-2"></i>
+                                        <p class="text-xs text-gray-500">أضف شعار</p>
+                                    </div>
+                                    <img id="logo-preview" class="hidden w-full h-full object-contain rounded-lg" alt="معاينة الشعار">
+                                </div>
+                                <div class="flex-1">
+                                    <input type="file" id="brand-logo-upload" accept="image/*" 
+                                           class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
+                                    <p class="text-xs text-gray-500 mt-2">يفضل شعار بخلفية شفافة PNG</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                    
                     <div class="mb-6"> 
-                        <label for="product-name" class="block text-sm font-medium mb-2 text-gray-700">🛍️ Product Name:</label> 
-                        <input type="text" id="product-name" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="Enter your product name..."/> 
+                        <label for="product-name" class="block text-sm font-medium mb-2 text-gray-700">🛍️ اسم المنتج:</label> 
+                        <input type="text" id="product-name" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="أدخل اسم المنتج..."/> 
                     </div> 
                     <div class="mb-6"> 
-                        <label for="product-features" class="block text-sm font-medium mb-2 text-gray-700">🧩 Product Features:</label> 
-                        <textarea id="product-features" rows="4" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none" placeholder="Write the key features or unique details about your product..."></textarea> 
+                        <label for="product-features" class="block text-sm font-medium mb-2 text-gray-700">🧩 مميزات المنتج:</label> 
+                        <textarea id="product-features" rows="4" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none" placeholder="اكتب المميزات الرئيسية أو التفاصيل الفريدة لمنتجك..."></textarea> 
                     </div> 
                     <div class="mb-6"> 
-                        <label for="product-price" class="block text-sm font-medium mb-2 text-gray-700">💰 Product Price:</label> 
-                        <input type="text" id="product-price" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="Enter the product price (e.g. $29.99)"/> 
+                        <label for="product-price" class="block text-sm font-medium mb-2 text-gray-700">💰 سعر المنتج:</label> 
+                        <input type="text" id="product-price" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="أدخل سعر المنتج (مثال: 29.99 دينار)"/> 
                     </div> 
                     
                     <div class="mb-6"> 
-                        <label for="shipping-select" class="block text-sm font-medium mb-2 text-gray-700">🚚 Shipping Options:</label> 
+                        <label for="shipping-select" class="block text-sm font-medium mb-2 text-gray-700">🚚 خيارات الشحن:</label> 
                         <select id="shipping-select" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"> 
-                            <option value="free" selected>Free Shipping (Recommended)</option> 
-                            <option value="custom">Custom Shipping Price</option> 
+                            <option value="free" selected>شحن مجاني (موصى به)</option> 
+                            <option value="custom">سعر شحن مخصص</option> 
                         </select> 
                     </div> 
                     <div id="custom-shipping-container" class="mb-6 hidden">
-                        <label for="custom-shipping-price" class="block text-sm font-medium mb-2 text-gray-700">💰 Enter Shipping Price:</label>
-                        <input type="text" id="custom-shipping-price" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="Example: $5.00"/> 
+                        <label for="custom-shipping-price" class="block text-sm font-medium mb-2 text-gray-700">💰 أدخل سعر الشحن:</label>
+                        <input type="text" id="custom-shipping-price" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="مثال: 5.00 دينار"/> 
                     </div>
                     <div class="mb-6"> 
-                        <label for="description-input" class="block text-sm font-medium mb-2 text-gray-700">🎨 Design Description:</label> 
-                        <textarea id="description-input" rows="3" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none" placeholder="Describe the design style you want (e.g., modern, elegant, bold)..."></textarea> 
+                        <label for="description-input" class="block text-sm font-medium mb-2 text-gray-700">🎨 وصف التصميم:</label> 
+                        <textarea id="description-input" rows="3" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none" placeholder="صف أسلوب التصميم الذي تريده (مثال: حديث، أنيق، جريء)..."></textarea> 
                     </div>
                 </div> 
 
                 <div class="builder-panel p-6"> 
-                    <h3 class="text-xl font-semibold mb-6" style="color: var(--accent);">2. Generate & Download</h3> 
+                    <h3 class="text-xl font-semibold mb-6" style="color: var(--accent);">2. توليد وتحميل</h3> 
                     
                     <div class="mb-6"> 
-                        <label for="use-offer-toggle" class="block text-sm font-medium mb-2 text-gray-700">🎁 Promotional Offer:</label>
+                        <label for="use-offer-toggle" class="block text-sm font-medium mb-2 text-gray-700">🎁 عرض ترويجي:</label>
                         <div class="flex items-center justify-between p-3 bg-white border border-gray-300 rounded-lg">
-                            <span class="text-gray-700">Include promotional offer?</span>
+                            <span class="text-gray-700">إضافة عرض ترويجي؟</span>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="use-offer-toggle" value="" class="sr-only peer">
-                                <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-200 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                             </label>
                         </div>
                     </div>
                     <div id="offer-input-container" class="mb-6 hidden">
-                        <label for="custom-offer-input" class="block text-sm font-medium mb-2 text-gray-700">✍️ Write Your Marketing Offer:</label>
-                        <textarea id="custom-offer-input" rows="2" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none" placeholder="Example: 50% OFF for first 100 customers!"></textarea>
+                        <label for="custom-offer-input" class="block text-sm font-medium mb-2 text-gray-700">✍️ اكتب العرض التسويقي:</label>
+                        <textarea id="custom-offer-input" rows="2" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none" placeholder="مثال: خصم 50% لأول 100 عميل!"></textarea>
                     </div>
                     
                     <button id="generate-btn" class="w-full glow-button py-4 rounded-lg text-lg font-medium mb-4"> 
-                        🚀 Generate Page 
+                        🚀 توليد الصفحة 
                     </button> 
                     
                     <button id="download-btn" class="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-lg text-lg font-medium transition-all duration-300" disabled> 
-                        📥 Download Landing Page 
+                        📥 تحميل صفحة الهبوط 
                     </button> 
                     
                     <button id="shopify-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-lg text-lg font-medium transition-all duration-300 mt-2"> 
@@ -236,7 +383,7 @@
                     </button>
                     
                     <div class="mt-4 text-center"> 
-                        <p class="text-sm text-gray-500">No signup required • Free forever</p> 
+                        <p class="text-sm text-gray-500">لا يلزم تسجيل • مجاني للأبد</p> 
                     </div> 
                 </div> 
             </div> 
@@ -245,15 +392,15 @@
     
     <section id="preview-section" class="py-20 bg-gray-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 class="text-4xl font-bold mb-8 text-center text-gray-900">Live Page Preview</h2>
+            <h2 class="text-4xl font-bold mb-8 text-center text-gray-900">معاينة الصفحة الحية</h2>
             <iframe id="preview" class="preview-frame w-full h-[800px] shadow-2xl border border-gray-300" sandbox="allow-same-origin allow-scripts"></iframe>
             
             <div id="loading-indicator" class="hidden text-center mt-8 p-4 bg-blue-100 border border-blue-300 rounded-lg">
-                <svg class="animate-spin h-5 w-5 mr-3 inline-block text-blue-600" viewBox="0 0 24 24">
+                <svg class="animate-spin h-5 w-5 ml-3 inline-block text-blue-600" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <span class="text-lg font-medium text-blue-600">AI is generating your page (Uploading Images & Designing)... Please wait.</span>
+                <span class="text-lg font-medium text-blue-600">الذكاء الاصطناعي يولد صفحتك (رفع الصور والتصميم)... الرجاء الانتظار.</span>
             </div>
             <div id="error-message" class="hidden text-center mt-4 p-4 bg-red-100 border border-red-300 rounded-lg text-red-700"></div>
         </div>
@@ -263,13 +410,13 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> 
             <div class="text-center"> 
                 <h3 class="text-2xl font-bold" style="color: var(--logo-color);">Smart Page AI</h3> 
-                <p class="text-gray-600 mb-6">Instantly build stunning product pages with AI</p> 
+                <p class="text-gray-600 mb-6">أنشئ صفحات منتجات مذهلة فوراً باستخدام الذكاء الاصطناعي</p> 
                 <div class="flex justify-center space-x-8 mb-6"> 
-                    <a href="#privacy" class="text-gray-600 hover:text-black transition-colors">Privacy</a> 
-                    <a href="#terms" class="text-gray-600 hover:text-black transition-colors">Terms</a> 
-                    <a href="#contact" class="text-gray-600 hover:text-black transition-colors">Contact</a> 
+                    <a href="#privacy" class="text-gray-600 hover:text-black transition-colors">الخصوصية</a> 
+                    <a href="#terms" class="text-gray-600 hover:text-black transition-colors">الشروط</a> 
+                    <a href="#contact" class="text-gray-600 hover:text-black transition-colors">اتصل بنا</a> 
                 </div> 
-                <p class="text-gray-500 text-sm">© 2025 Smart Page AI — All rights reserved.</p> 
+                <p class="text-gray-500 text-sm">© 2025 Smart Page AI — جميع الحقوق محفوظة.</p> 
             </div> 
         </div> 
     </footer> 
@@ -286,6 +433,20 @@
         let generatedLiquidCode = null;
         let generatedSchema = null;
         
+        // ********* إدارة الصور المتعددة *********
+        const dropArea = document.getElementById('drop-area');
+        const productImagesUpload = document.getElementById('product-images-upload');
+        const imagesGrid = document.getElementById('images-grid');
+        const imagesPreviewContainer = document.getElementById('images-preview-container');
+        const imagesCount = document.getElementById('images-count');
+        const clearAllImagesBtn = document.getElementById('clear-all-images');
+        const logoPreviewContainer = document.getElementById('logo-preview-container');
+        const logoPreview = document.getElementById('logo-preview');
+        const logoPlaceholder = document.getElementById('logo-placeholder');
+        const brandLogoUpload = document.getElementById('brand-logo-upload');
+
+        let productImages = []; // مصفوفة تخزن كائنات الصور
+        
         // ********* Helper Functions *********
         function showLoading() {
             loadingIndicator.classList.remove('hidden');
@@ -299,13 +460,13 @@
         function showError(message) {
             errorMessageDiv.textContent = message;
             errorMessageDiv.classList.remove('hidden');
-            errorMessageDiv.style.color = 'red';
+            errorMessageDiv.style.color = '#DC2626';
             errorMessageDiv.style.backgroundColor = '#FEE2E2';
         }
         
         function showSuccess(message) {
             errorMessageDiv.textContent = message;
-            errorMessageDiv.style.color = 'green';
+            errorMessageDiv.style.color = '#059669';
             errorMessageDiv.style.backgroundColor = '#D1FAE5';
             errorMessageDiv.classList.remove('hidden');
             setTimeout(() => {
@@ -313,7 +474,6 @@
             }, 5000);
         }
 
-        // *** دالة جديدة لتحويل الصور إلى Base64 ***
         function convertToBase64(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -322,6 +482,204 @@
                 reader.onerror = error => reject(error);
             });
         }
+        
+        // ********* أحداث السحب والإفلات *********
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, () => {
+                dropArea.classList.add('drag-over');
+                dropArea.innerHTML = '<div class="text-4xl text-blue-500 mb-3"><i class="fas fa-cloud-upload-alt"></i></div><p class="text-lg font-semibold text-blue-600">أفلت الصور هنا!</p>';
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, () => {
+                dropArea.classList.remove('drag-over');
+                resetDropArea();
+            }, false);
+        });
+
+        function resetDropArea() {
+            dropArea.innerHTML = `
+                <div class="text-5xl mb-4 text-gray-400">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <p class="text-lg font-medium text-gray-700 mb-2">اسحب وأفلت صور المنتج هنا</p>
+                <p class="text-gray-500 mb-4">أو</p>
+                <label for="product-images-upload" class="inline-block cursor-pointer">
+                    <span class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                        <i class="fas fa-images ml-2"></i>اختر صور المنتج
+                    </span>
+                </label>
+                <p class="text-sm text-gray-500 mt-4">يمكنك رفع حتى 6 صور • PNG, JPG, WEBP</p>
+                <p class="text-xs text-gray-400 mt-2">الصورة الأولى ستكون الرئيسية</p>
+            `;
+        }
+
+        dropArea.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleImageFiles(files);
+        }
+
+        // ********* معالجة اختيار الصور *********
+        productImagesUpload.addEventListener('change', function(e) {
+            handleImageFiles(e.target.files);
+        });
+
+        // ********* معالجة ملفات الصور *********
+        function handleImageFiles(files) {
+            if (productImages.length + files.length > 6) {
+                showError("يمكنك رفع حتى 6 صور فقط!");
+                return;
+            }
+            
+            Array.from(files).forEach(file => {
+                if (!file.type.match('image.*')) {
+                    showError(`الملف "${file.name}" ليس صورة!`);
+                    return;
+                }
+                
+                if (file.size > 5 * 1024 * 1024) {
+                    showError(`صورة "${file.name}" كبيرة جداً (الحد الأقصى 5MB)`);
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                
+                reader.onload = function(e) {
+                    const imageObject = {
+                        id: Date.now() + Math.random(),
+                        file: file,
+                        base64: e.target.result,
+                        name: file.name,
+                        size: file.size
+                    };
+                    
+                    productImages.push(imageObject);
+                    updateImagesPreview();
+                };
+                
+                reader.onerror = function() {
+                    showError(`خطأ في قراءة الصورة "${file.name}"`);
+                };
+            });
+        }
+
+        // ********* تحديث معرض الصور *********
+        function updateImagesPreview() {
+            if (productImages.length === 0) {
+                imagesPreviewContainer.classList.add('hidden');
+                return;
+            }
+            
+            imagesPreviewContainer.classList.remove('hidden');
+            imagesCount.textContent = productImages.length;
+            
+            imagesGrid.innerHTML = '';
+            
+            productImages.forEach((image, index) => {
+                const imageElement = document.createElement('div');
+                imageElement.className = 'image-thumbnail relative';
+                imageElement.draggable = true;
+                imageElement.dataset.id = image.id;
+                imageElement.dataset.index = index;
+                
+                imageElement.innerHTML = `
+                    <img src="${image.base64}" alt="صورة المنتج ${index + 1}" 
+                         class="w-full h-full object-cover">
+                    <div class="image-index">${index + 1}</div>
+                    <div class="delete-image-btn" onclick="deleteImage('${image.id}')">
+                        <i class="fas fa-times"></i>
+                    </div>
+                    ${index === 0 ? '<div class="main-image-badge">رئيسية</div>' : ''}
+                `;
+                
+                imagesGrid.appendChild(imageElement);
+            });
+            
+            // تهيئة SortableJS لإعادة الترتيب
+            if (productImages.length > 1) {
+                new Sortable(imagesGrid, {
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    onEnd: function(evt) {
+                        const oldIndex = evt.oldIndex;
+                        const newIndex = evt.newIndex;
+                        
+                        if (oldIndex !== newIndex) {
+                            const [movedItem] = productImages.splice(oldIndex, 1);
+                            productImages.splice(newIndex, 0, movedItem);
+                            updateImagesPreview();
+                            showSuccess("تم إعادة ترتيب الصور!");
+                        }
+                    }
+                });
+            }
+        }
+
+        // ********* حذف صورة *********
+        window.deleteImage = function(imageId) {
+            productImages = productImages.filter(img => img.id !== imageId);
+            updateImagesPreview();
+            showSuccess("تم حذف الصورة!");
+        };
+
+        // ********* حذف كل الصور *********
+        clearAllImagesBtn.addEventListener('click', function() {
+            if (productImages.length > 0) {
+                if (confirm(`هل تريد حذف جميع الصور (${productImages.length} صورة)؟`)) {
+                    productImages = [];
+                    updateImagesPreview();
+                    showSuccess("تم حذف جميع الصور");
+                }
+            }
+        });
+
+        // ********* إدارة شعار المتجر *********
+        logoPreviewContainer.addEventListener('click', () => {
+            brandLogoUpload.click();
+        });
+
+        brandLogoUpload.addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                
+                if (!file.type.match('image.*')) {
+                    showError("الملف المختار ليس صورة!");
+                    return;
+                }
+                
+                if (file.size > 2 * 1024 * 1024) {
+                    showError("حجم الشعار كبير جداً! الحد الأقصى 2MB");
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                
+                reader.onload = function(e) {
+                    logoPreview.src = e.target.result;
+                    logoPreview.classList.remove('hidden');
+                    logoPlaceholder.classList.add('hidden');
+                    logoPreviewContainer.classList.remove('border-dashed', 'border-gray-300');
+                    logoPreviewContainer.classList.add('border-solid', 'border-green-500');
+                    showSuccess("تم تحميل الشعار بنجاح!");
+                };
+            }
+        });
         
         // ********* Generate Function *********
         async function generateLandingPage() {
@@ -333,17 +691,15 @@
             const features = document.getElementById("product-features").value;
             const price = document.getElementById("product-price").value;
             
-            // الحصول على ملفات الصور
-            const imgFile = document.getElementById('product-image-upload').files[0];
-            const logoFile = document.getElementById('brand-logo-upload').files[0];
-
-            const shippingOption = document.getElementById("shipping-select").value;
-            const customShippingPrice = document.getElementById("custom-shipping-price").value;
-            const useOffer = document.getElementById("use-offer-toggle").checked;
-            const customOffer = document.getElementById("custom-offer-input").value;
-
+            // التحقق من الحقول المطلوبة
             if (!name || !features || !price) {
-                showError("Please fill in all required fields (Name, Features, Price)!");
+                showError("الرجاء ملء جميع الحقول المطلوبة (الاسم، المميزات، السعر)!");
+                return;
+            }
+            
+            // التحقق من وجود صور
+            if (productImages.length === 0) {
+                showError("الرجاء رفع صورة واحدة على الأقل للمنتج!");
                 return;
             }
 
@@ -351,19 +707,13 @@
             generateBtn.disabled = true;
 
             try {
-                // تحويل الصور إن وجدت
-                let imageBase64 = null;
-                let logoBase64 = null;
+                // تحويل الصور إلى base64
+                const productImagesBase64 = productImages.map(img => img.base64);
                 
-                if (imgFile) {
-                    // تحقق بسيط من الحجم لتجنب الضغط على السيرفر (اختياري)
-                    if (imgFile.size > 4 * 1024 * 1024) {
-                        throw new Error("Product Image is too large. Please use an image under 4MB.");
-                    }
-                    imageBase64 = await convertToBase64(imgFile);
-                }
-                if (logoFile) {
-                    logoBase64 = await convertToBase64(logoFile);
+                // تحويل شعار المتجر إذا وجد
+                let logoBase64 = null;
+                if (logoPreview.src && !logoPreview.src.includes('data:') && !logoPreview.src.includes('#')) {
+                    logoBase64 = logoPreview.src;
                 }
 
                 const BACKEND_URL = "/api/generate"; 
@@ -378,11 +728,10 @@
                         productCategory: document.getElementById("product-category").value,
                         targetAudience: document.getElementById("target-audience").value,
                         designDescription: document.getElementById("description-input").value,
-                        shippingOption: shippingOption,
-                        customShippingPrice: shippingOption === 'custom' ? customShippingPrice : null,
-                        customOffer: useOffer ? customOffer : null,
-                        // إرسال الصور Base64
-                        productImage: imageBase64,
+                        shippingOption: document.getElementById("shipping-select").value,
+                        customShippingPrice: document.getElementById("shipping-select").value === 'custom' ? document.getElementById("custom-shipping-price").value : null,
+                        customOffer: document.getElementById("use-offer-toggle").checked ? document.getElementById("custom-offer-input").value : null,
+                        productImages: productImagesBase64,
                         brandLogo: logoBase64
                     })
                 });
@@ -396,18 +745,22 @@
                     sessionStorage.setItem('liquid_code', generatedLiquidCode);
                     sessionStorage.setItem('schema', JSON.stringify(generatedSchema));
                     
+                    // عرض الصفحة في الإطار
                     previewIframe.srcdoc = data.html;
                     
                     downloadBtn.disabled = false;
                     shopifyBtn.disabled = false; 
+                    
+                    // التمرير لأسفل لرؤية المعاينة
                     document.getElementById('preview-section').scrollIntoView({ behavior: 'smooth' });
-                    showSuccess("✅ Page generated successfully with Images!");
+                    
+                    showSuccess("✅ تم توليد الصفحة بنجاح مع جميع الصور!");
                 } else {
-                    showError(`Error: ${data.error || 'Unknown error'}`);
+                    showError(`خطأ: ${data.error || 'خطأ غير معروف'}`);
                 }
             } catch (err) {
                 console.error(err);
-                showError(err.message || "Network error. Please try again.");
+                showError(err.message || "خطأ في الشبكة. الرجاء المحاولة مرة أخرى.");
             } finally {
                 hideLoading();
                 generateBtn.disabled = false;
@@ -418,7 +771,7 @@
         function downloadHTML() {
             const htmlContent = previewIframe.srcdoc;
             if (!htmlContent) {
-                showError("No page generated yet. Please generate a page first.");
+                showError("لم يتم توليد صفحة بعد. الرجاء توليد صفحة أولاً.");
                 return;
             }
             
@@ -427,13 +780,13 @@
             link.href = URL.createObjectURL(blob);
             link.download = "smartpage-landing.html";
             link.click();
-            showSuccess("✅ Page downloaded successfully!");
+            showSuccess("✅ تم تحميل الصفحة بنجاح!");
         }
 
         // ********* Shopify Publish Function *********
         async function publishToShopify() {
             const liquid_code = generatedLiquidCode || sessionStorage.getItem('liquid_code');
-            const schema = generatedSchema || sessionStorage.getItem('schema'); // لاحظ التغيير هنا لاستخدام sessionStorage
+            const schema = generatedSchema || JSON.parse(sessionStorage.getItem('schema') || 'null');
             
             if (!liquid_code || !schema) {
                 showError("الرجاء توليد الصفحة أولاً قبل محاولة النشر على Shopify.");
@@ -521,7 +874,16 @@
                     mobileMenu.classList.add('hidden');
                 }
             });
+            
+            // عرض أي صور محفوظة عند تحميل الصفحة
+            if (productImages.length > 0) {
+                updateImagesPreview();
+            }
         });
+        
+        // إضافة تداخل لتحويل الموقع للغة العربية
+        document.documentElement.lang = 'ar';
+        document.documentElement.dir = 'rtl';
     </script>
 </body>
 </html>
