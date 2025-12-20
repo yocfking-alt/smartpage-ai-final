@@ -14,7 +14,7 @@ export default async function handler(req, res) {
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
         if (!GEMINI_API_KEY) throw new Error('API Key is missing');
 
-        // استقبال البيانات بما في ذلك الصور
+        // استقبال البيانات
         const { 
             productName, productFeatures, productPrice, productCategory,
             targetAudience, designDescription, shippingOption, customShippingPrice, 
@@ -28,84 +28,60 @@ export default async function handler(req, res) {
         const offerText = customOffer ? `عرض خاص: ${customOffer}` : "";
 
         // تعريف المتغيرات البديلة للصور
-        // نستخدم نصوصاً مميزة ليعرف الذكاء الاصطناعي أين يضعها، ثم نستبدلها لاحقاً بالكود الحقيقي
         const IMG_PLACEHOLDER = "[[PRODUCT_IMAGE_SRC]]";
         const LOGO_PLACEHOLDER = "[[BRAND_LOGO_SRC]]";
 
+        // ***************************************************************
+        // 🔥 البرومبت المطور (The Super Prompt)
+        // ***************************************************************
         const prompt = `
-Act as a Senior Creative Director and Conversion Expert. 
-Analyze this product: ${productName}. 
-Category: ${productCategory}. 
-Target Audience: ${targetAudience}.
-Context/Features: ${productFeatures}.
-Price: ${productPrice}. ${shippingText}. ${offerText}.
-User Design Request: ${designDescription}.
+Act as a World-Class Creative Developer & UI/UX Expert (Awwwards Level).
+Your goal: Build a HIGH-END, INTERACTIVE Landing Page for: ${productName}.
+Category: ${productCategory}. Audience: ${targetAudience}.
+Context: ${productFeatures}. Price: ${productPrice}. ${shippingText}. ${offerText}.
+User Vibe Request: ${designDescription}.
 
-## 🖼️ **تعليمات الصور (مهم جداً):**
-- لقد تم تزويدك بصورة للمنتج وشعار.
-- في كود HTML و Liquid، **يجب** أن تستخدم هذا النص بالضبط كمصدر لصورة المنتج: \`${IMG_PLACEHOLDER}\`
-- **يجب** أن تستخدم هذا النص بالضبط كمصدر للشعار: \`${LOGO_PLACEHOLDER}\`
-- مثال: <img src="${IMG_PLACEHOLDER}" alt="Product Image" class="...">
-- لا تستخدم صوراً من unsplash أو روابط خارجية، استخدم فقط النصوص البديلة أعلاه.
+## 🖼️ CRITICAL IMAGE RULES:
+- Main Product Image: \`${IMG_PLACEHOLDER}\`
+- Brand Logo: \`${LOGO_PLACEHOLDER}\`
+- **BACKGROUND REMOVAL TRICK**: Since the image might have a white background, you MUST write CSS to blend it. 
+  - IF the page background is light, use \`mix-blend-mode: multiply;\` on the product image.
+  - OR place the product inside a standard shape (Circle/Blob) with \`overflow: visible\`.
+  - Add a strong \`filter: drop-shadow(0 20px 30px rgba(0,0,0,0.3));\` to create depth and 3D feel.
 
-## 🎯 **الهدف:**
-إنشاء صفحة هبوط فريدة ومبدعة لتحقيق أعلى معدلات التحويل.
+## 🎨 VISUAL CONCEPTS (Pick ONE Randomly to ensure variety):
+1. **The "Orbital" Concept:** The product floats in the center. Background elements rotate slowly behind it.
+2. **The "Split Screen" Concept:** HUGE typography on one side, HUGE product on the other that rotates on hover.
+3. **The "Glassmorphism" Concept:** Deep gradient background with frosted glass cards for the form and details.
+4. **The "Scroll-Trigger" Concept:** The product stays fixed (sticky) while features scroll past it.
 
-## ⚠️ **متطلبات إلزامية:**
+## ⚡ INTERACTIVITY (Like the Video Style):
+- Write custom **JavaScript** inside the HTML.
+- **Hero Animation:** The product image must have an entrance animation (e.g., slide up + rotate, or scale up).
+- **Mouse Movement:** Add a "Parallax Effect". When the mouse moves, the product image should tilt or move slightly opposite to the cursor.
+- **Floating Elements:** Add decorative CSS shapes (blobs, circles) behind the product that animate/pulse.
 
-### **1. قسم الهيرو:**
-- يتضمن الشعار (استخدم \`${LOGO_PLACEHOLDER}\`) في الأعلى أو في الهيدر.
-- صورة المنتج الرئيسية (استخدم \`${IMG_PLACEHOLDER}\`) يجب أن تكون بارزة جداً.
-
-### **2. استمارة الطلب (مباشرة بعد الهيرو):**
-يجب أن تحتوي على هذا الهيكل الدقيق للحقول باللغة العربية:
+## 📝 FORM STRUCTURE (Mandatory):
+The order form must be styled elegantly (Glassmorphism or Minimalist Clean) and include EXACTLY these fields with Arabic placeholders:
 <div class="customer-info-box">
   <h3>استمارة الطلب</h3>
-  <p>المرجو إدخال معلوماتك الخاصة بك</p>
-  
-  <div class="form-group">
-    <label>الإسم الكامل</label>
-    <input type="text" placeholder="Nom et prénom" required>
-  </div>
-  
-  <div class="form-group">
-    <label>رقم الهاتف</label>
-    <input type="tel" placeholder="Nombre" required>
-  </div>
-  
-  <div class="form-group">
-    <label>الولاية</label>
-    <input type="text" placeholder="Wilaya" required>
-  </div>
-  
-  <div class="form-group">
-    <label>البلدية</label>
-    <input type="text" placeholder="أدخل بلديتك" required>
-  </div>
-  
-  <div class="form-group">
-    <label>الموقع / العنوان</label>
-    <input type="text" placeholder="أدخل عنوانك بالتفصيل" required>
-  </div>
-  
-  <div class="price-display">
-    <p>سعر المنتج: ${productPrice} دينار</p>
-  </div>
-  
-  <button type="submit" class="submit-btn">تأكيد الطلب</button>
+  <div class="form-group"><label>الإسم الكامل</label><input type="text" placeholder="الاسم واللقب" required></div>
+  <div class="form-group"><label>رقم الهاتف</label><input type="tel" placeholder="رقم الهاتف" required></div>
+  <div class="form-group"><label>الولاية</label><input type="text" placeholder="الولاية" required></div>
+  <div class="form-group"><label>البلدية</label><input type="text" placeholder="البلدية" required></div>
+  <div class="form-group"><label>العنوان</label><input type="text" placeholder="العنوان بالتفصيل" required></div>
+  <div class="price-tag">السعر: ${productPrice} DZD</div>
+  <button type="submit" class="submit-btn">تأكيد الطلب (الدفع عند الاستلام)</button>
 </div>
 
-### **3. تنسيق الإخراج:**
-أعد كائن JSON فقط:
+## 🛠️ OUTPUT FORMAT:
+Return ONLY a valid JSON object without markdown:
 {
-  "html": "سلسلة HTML كاملة",
-  "liquid_code": "كود Shopify Liquid",
+  "html": "FULL HTML string including <style> for advanced CSS and <script> for animations",
+  "liquid_code": "Shopify Liquid version",
   "schema": { "name": "Landing Page", "settings": [] }
 }
-
-## 🚀 **حرية إبداعية كاملة:**
-صمم باقي الصفحة بحرية تامة باستخدام CSS حديث وجذاب.
-        `;
+`;
 
         const response = await fetch(GEMINI_ENDPOINT, {
             method: 'POST',
@@ -114,7 +90,7 @@ User Design Request: ${designDescription}.
                 contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: { 
                     responseMimeType: "application/json",
-                    temperature: 0.95
+                    temperature: 1.0 // زيادة الحرارة لزيادة الإبداع والتنوع
                 }
             })
         });
@@ -127,29 +103,31 @@ User Design Request: ${designDescription}.
 
         const aiResponseText = data.candidates[0].content.parts[0].text;
         const cleanedText = aiResponseText.replace(/```json/g, '').replace(/```/g, '').trim();
-        let aiResponse = JSON.parse(cleanedText);
+        
+        let aiResponse;
+        try {
+             aiResponse = JSON.parse(cleanedText);
+        } catch (e) {
+            console.error("JSON Parse Error:", cleanedText);
+            throw new Error("AI returned invalid JSON format.");
+        }
 
         // ***************************************************************
-        // عملية الحقن: استبدال الرموز بالصور الحقيقية (Base64)
+        // استبدال الصور
         // ***************************************************************
-        
-        // صور افتراضية في حال لم يرفع المستخدم صوراً
         const defaultImg = "https://via.placeholder.com/600x600?text=Product+Image";
         const defaultLogo = "https://via.placeholder.com/150x50?text=Logo";
 
         const finalProductImage = productImage || defaultImg;
         const finalBrandLogo = brandLogo || defaultLogo;
 
-        // دالة للاستبدال الآمن
         const replaceImages = (content) => {
             if (!content) return content;
-            // استبدال عالمي لكل ظهور للرمز
             return content
                 .split(IMG_PLACEHOLDER).join(finalProductImage)
                 .split(LOGO_PLACEHOLDER).join(finalBrandLogo);
         };
 
-        // تطبيق الاستبدال على HTML و Liquid Code
         aiResponse.html = replaceImages(aiResponse.html);
         aiResponse.liquid_code = replaceImages(aiResponse.liquid_code);
 
