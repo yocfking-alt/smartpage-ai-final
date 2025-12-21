@@ -14,6 +14,7 @@ export default async function handler(req, res) {
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
         if (!GEMINI_API_KEY) throw new Error('API Key is missing');
 
+        // استقبال البيانات
         const { 
             productName, productFeatures, productPrice, productCategory,
             targetAudience, designDescription, shippingOption, customShippingPrice, 
@@ -28,49 +29,126 @@ export default async function handler(req, res) {
         const offerText = customOffer ? `عرض خاص: ${customOffer}` : "";
         const MAIN_IMG_PLACEHOLDER = "[[PRODUCT_IMAGE_MAIN_SRC]]";
         const LOGO_PLACEHOLDER = "[[BRAND_LOGO_SRC]]";
-
-        // ***************************************************************
-        //  التعليمات المحدثة لضمان محاكاة فيسبوك واللهجة الجزائرية
-        // ***************************************************************
+        
+        // بناء التعليمات (Prompt)
         const prompt = `
-Act as a Senior Web Designer & Algerian Marketing Expert.
-Create a high-converting Landing Page for: ${productName}.
-Category: ${productCategory}.
-Audience: ${targetAudience}.
-Price: ${productPrice} DZD. ${shippingText}. ${offerText}.
+Act as a Senior Creative Director and Web Developer.
+Analyze this product: ${productName}. 
+Category: ${productCategory}. 
+Target Audience: ${targetAudience}.
+Context/Features: ${productFeatures}.
+Price: ${productPrice}. ${shippingText}. ${offerText}.
+User Design Request: ${designDescription}.
 
-## 🛑 STRICT INSTRUCTION: FACEBOOK COMMENTS SECTION (REVIEWS)
-You MUST generate a "Customer Reviews" section that looks **EXACTLY** like Facebook Mobile App comments (Screenshots).
+## 🖼️ **Image Instructions:**
+Use \`${MAIN_IMG_PLACEHOLDER}\` for the main image.
+Use \`${LOGO_PLACEHOLDER}\` for the logo.
+For extra images, create a gallery using:
+${productImageArray.length > 1 ? 
+  Array.from({length: Math.min(productImageArray.length - 1, 5)}, (_, i) => 
+    `[[PRODUCT_IMAGE_${i + 2}_SRC]]`
+  ).join(', ') 
+  : 'No extra images'}
 
-### 1. Visual Design Rules (CSS Injection):
-- Use a clean white container.
-- **Comment Bubble:** Use Background color \`#F0F2F5\`, Border-radius \`18px\`, Color \`#050505\`.
-- **Layout:** Avatar on the right (RTL), Name bold, Text inside the bubble.
-- **Interactions:** Below the bubble, add small text: "أعجبني · رد · منذ [Time]" in color \`#65676B\`.
-- **Reactions:** Simulate small floating reaction icons (Like/Love) under some comments.
+## 🎯 **Goal:**
+Create a high-converting HTML landing page.
 
-### 2. Content & Language (Algerian Context):
-- Generate 4 to 5 unique comments specifically about "${productName}".
-- **Dialect Mix:**
-  - **60% Algerian Darija:** Use terms like "Ya3tikom saha", "Top", "Haja chabba", "Waslatni f waqtha", "Merci", "Rabi ybarek".
-  - **40% Modern Standard Arabic:** Use terms like "منتج رائع", "مصداقية", "أنصح به".
-- **Context:** The comments MUST mention specific features of the product (e.g., if it's Honey, talk about taste; if it's a Watch, talk about quality).
-- **Identities:** Use realistic Algerian names (e.g., Mohamed Amine, Sarah, Rym, Yacine, Lamia).
-- **Avatars:** Use \`https://ui-avatars.com/api/?name=[Name]&background=random&color=fff\` for avatars.
+## ⚠️ **MANDATORY REQUIREMENTS:**
 
-### 3. Mandatory Structure:
-1. **Hero Section:** Title, Price, Order Button, Main Image (${MAIN_IMG_PLACEHOLDER}).
-2. **Order Form:** Standard Algerian delivery form (Name, Phone, Wilaya, Baladiya).
-3. **Facebook Comments Section:** As described above.
-4. **Gallery:** If extra images exist using [[PRODUCT_IMAGE_X_SRC]].
+### **1. Header & Hero:**
+- Must include Logo and Main Image.
+- High quality headline.
 
-## Output Format:
-Return ONLY a JSON object:
+### **2. Order Form (EXACT STRUCTURE):**
+Place this EXACT form structure immediately after the Hero section:
+<div class="customer-info-box">
+  <h3>استمارة الطلب</h3>
+  <p>المرجو إدخال معلوماتك الخاصة بك</p>
+  <div class="form-group"><label>الإسم الكامل</label><input type="text" placeholder="Nom et prénom" required></div>
+  <div class="form-group"><label>رقم الهاتف</label><input type="tel" placeholder="Nombre" required></div>
+  <div class="form-group"><label>الولاية</label><input type="text" placeholder="Wilaya" required></div>
+  <div class="form-group"><label>البلدية</label><input type="text" placeholder="أدخل بلديتك" required></div>
+  <div class="form-group"><label>الموقع / العنوان</label><input type="text" placeholder="أدخل عنوانك بالتفصيل" required></div>
+  <div class="price-display"><p>سعر المنتج: ${productPrice} دينار</p></div>
+  <button type="submit" class="submit-btn">تأكيد الطلب</button>
+</div>
+
+### **3. Customer Reviews (FACEBOOK STYLE CLONE):**
+You MUST create a section specifically for "Customer Reviews" that looks **exactly** like Facebook mobile comments.
+**Do NOT** use generic testimonial cards. Use the specific CSS and HTML structure below.
+
+**Content Requirements for Reviews:**
+- Generate **4 to 5 unique reviews** specifically about "${productName}".
+- **Language:** Mix between **Algerian Dialect (Darija)** and **Modern Standard Arabic**.
+    - Example Darija: "لحقني لبارح يعطيك الصحة"، "ما شاء الله كاليتي طوب"، "السومة مساعدة".
+    - Example Arabic: "منتج رائع ومصداقية في التعامل"، "وصلتني الطلبية في وقت قصير".
+- **Names:** Use realistic Algerian names (e.g., "Amine Sadi", "Meriem Dz", "Fares Lamri", "أم أيمن").
+- **Avatars:** Use random placeholder images: \`https://i.pravatar.cc/150?u=1\`, \`https://i.pravatar.cc/150?u=2\`, etc.
+- **Stats:** Vary the time (e.g., "منذ 2 ساعة", "أمس", "2d") and like counts (3, 12, 40...).
+
+**REQUIRED CSS for Reviews (Include this in your <style>):**
+\`\`\`css
+.fb-comments-container { max-width: 100%; background: #fff; padding: 20px 10px; direction: rtl; font-family: Helvetica, Arial, sans-serif; border-top: 1px solid #ddd; }
+.fb-stats-bar { display: flex; justify-content: space-between; padding: 10px 5px; border-bottom: 1px solid #eee; color: #65676b; font-size: 14px; }
+.fb-likes-count { display: flex; align-items: center; color: #050505; font-weight: bold; }
+.fb-blue-thumb { background: #1877f2; color: #fff; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; margin-left: 5px; }
+.fb-comment-item { display: flex; margin-top: 15px; align-items: flex-start; }
+.fb-avatar { width: 40px; height: 40px; border-radius: 50%; margin-left: 10px; background: #ddd; object-fit: cover;}
+.fb-comment-content { flex: 1; }
+.fb-user-header { display: flex; align-items: baseline; margin-bottom: 2px; }
+.fb-username { font-weight: bold; color: #050505; font-size: 14px; margin-left: 5px; }
+.fb-time { font-size: 12px; color: #65676b; }
+.fb-comment-text { font-size: 15px; color: #050505; line-height: 1.3; margin-bottom: 5px; }
+.fb-actions-bar { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #65676b; }
+.fb-actions-right { display: flex; align-items: center; gap: 15px; }
+.fb-action-link { font-weight: bold; cursor: pointer; }
+.fb-likes-display { display: flex; align-items: center; }
+.fb-view-reply { font-weight: bold; margin-top: 5px; cursor: pointer; display:flex; align-items:center; }
+.fb-footer-input { margin-top: 20px; background: #f0f2f5; padding: 10px 15px; border-radius: 20px; color: #65676b; font-size: 15px; text-align: right; }
+\`\`\`
+
+**REQUIRED HTML Template for Reviews (Use this structure, populate with AI content):**
+\`\`\`html
+<div class="fb-comments-container">
+    <div class="fb-stats-bar">
+        <div class="fb-likes-count"><span>[Random Number like 2.4K]</span><div class="fb-blue-thumb">👍</div></div>
+        <div>[Random Number] مشاركات</div>
+    </div>
+    
+    <div class="fb-comment-item">
+        <img src="https://i.pravatar.cc/150?u=[RandomID]" class="fb-avatar" alt="User">
+        <div class="fb-comment-content">
+            <div class="fb-user-header">
+                <span class="fb-username">[AI Generated Algerian Name]</span>
+                <span class="fb-time">[AI Time, e.g. 2h]</span>
+            </div>
+            <div class="fb-comment-text">
+                [AI Generated Review about ${productName} in Algerian/Arabic]
+            </div>
+            <div class="fb-actions-bar">
+                <div class="fb-actions-right">
+                    <span class="fb-action-link">رد</span>
+                    <div class="fb-likes-display"><span>[Random Small Number]</span> <div class="fb-blue-thumb" style="width:14px;height:14px;">👍</div></div>
+                </div>
+            </div>
+             <div class="fb-view-reply">↪ عرض رد واحد</div>
+        </div>
+    </div>
+    <div class="fb-footer-input">اكتب تعليقاً...</div>
+</div>
+\`\`\`
+
+### **4. JSON Output Format:**
+Return ONLY valid JSON:
 {
-  "html": "Full HTML with embedded CSS for the Facebook style",
-  "liquid_code": "Shopify Liquid version",
+  "html": "full HTML string",
+  "liquid_code": "Shopify Liquid string",
   "schema": { "name": "Landing Page", "settings": [] }
 }
+
+## 🚀 **Creative Freedom:**
+- Design the rest of the page (features, countdown, etc.) beautifully.
+- Ensure the page is responsive.
         `;
 
         const response = await fetch(GEMINI_ENDPOINT, {
@@ -80,7 +158,7 @@ Return ONLY a JSON object:
                 contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: { 
                     responseMimeType: "application/json",
-                    temperature: 0.95 // High creativity for varied comments every time
+                    temperature: 0.95 
                 }
             })
         });
@@ -96,8 +174,9 @@ Return ONLY a JSON object:
         let aiResponse = JSON.parse(cleanedText);
 
         // ***************************************************************
-        // استبدال الصور
+        // عملية الحقن واستبدال الصور
         // ***************************************************************
+        
         const defaultImg = "https://via.placeholder.com/600x600?text=Product+Image";
         const defaultLogo = "https://via.placeholder.com/150x50?text=Logo";
         const finalProductImages = productImageArray.length > 0 ? productImageArray : [defaultImg];
@@ -109,8 +188,7 @@ Return ONLY a JSON object:
             result = result.split(MAIN_IMG_PLACEHOLDER).join(finalProductImages[0]);
             result = result.split(LOGO_PLACEHOLDER).join(finalBrandLogo);
             for (let i = 1; i < finalProductImages.length && i <= 6; i++) {
-                const placeholder = `[[PRODUCT_IMAGE_${i + 1}_SRC]]`;
-                result = result.split(placeholder).join(finalProductImages[i]);
+                result = result.split(`[[PRODUCT_IMAGE_${i + 1}_SRC]]`).join(finalProductImages[i]);
             }
             return result;
         };
