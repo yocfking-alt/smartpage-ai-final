@@ -56,7 +56,7 @@ User Design Request: ${designDescription}.
 **يجب اتباع التعليمات التالية بدقة:**
 
 ### **1. الصورة الرئيسية:**
-- استخدم هذا النص بالضبط كمصدر للصورة الرئيسية: \`${MAIN_IMG_PLACEHOLDER}\`
+- استخدم هذا النص بالضبط كمصدر للصورة الرئيسية: ${MAIN_IMG_PLACEHOLDER}
 - مثال: <img src="${MAIN_IMG_PLACEHOLDER}" alt="${productName}" class="main-product-image">
 
 ### **2. معرض الصور الإضافية:**
@@ -64,14 +64,14 @@ User Design Request: ${designDescription}.
 - استخدم النصوص التالية كمصادر للصور الإضافية:
 ${productImageArray.length > 1 ? 
   Array.from({length: Math.min(productImageArray.length - 1, 5)}, (_, i) => 
-    `  - الصورة ${i + 2}: استخدم \`[[PRODUCT_IMAGE_${i + 2}_SRC]]\``
+    `  - الصورة ${i + 2}: استخدم [[PRODUCT_IMAGE_${i + 2}_SRC]]`
   ).join('\n') 
   : '  - لا توجد صور إضافية'}
 - يمكنك إنشاء سلايدر، شبكة صور، أو معرض تفاعلي
 - تأكد من أن المعرض سريع الاستجابة ويعمل جيداً على الجوال
 
 ### **3. الشعار:**
-- استخدم هذا النص بالضبط كمصدر للشعار: \`${LOGO_PLACEHOLDER}\`
+- استخدم هذا النص بالضبط كمصدر للشعار: ${LOGO_PLACEHOLDER}
 - مثال: <img src="${LOGO_PLACEHOLDER}" alt="شعار العلامة التجارية" class="logo">
 
 ## 🎯 **الهدف:**
@@ -80,8 +80,8 @@ ${productImageArray.length > 1 ?
 ## ⚠️ **متطلبات إلزامية:**
 
 ### **1. قسم الهيرو:**
-- يتضمن الشعار (استخدم \`${LOGO_PLACEHOLDER}\`) في الأعلى أو في الهيدر
-- صورة المنتج الرئيسية (استخدم \`${MAIN_IMG_PLACEHOLDER}\`) يجب أن تكون بارزة جداً
+- يتضمن الشعار (استخدم ${LOGO_PLACEHOLDER}) في الأعلى أو في الهيدر
+- صورة المنتج الرئيسية (استخدم ${MAIN_IMG_PLACEHOLDER}) يجب أن تكون بارزة جداً
 - إذا كان هناك أكثر من صورة، أضف أزرار تنقل بين الصور أو معرض مصغر
 
 ### **2. معرض الصور (إذا كان هناك أكثر من صورة):**
@@ -135,11 +135,11 @@ ${productImageArray.length > 1 ?
   1. صورة بروفايل للمستخدم (استخدم صور من https://i.pravatar.cc)
   2. اسم مستخدم حقيقي عربي
   3. تاريخ واقعي (منذ 3 أيام، قبل ساعة، أسبوع واحد، إلخ)
-  4. نص تعليق واقعي باللهجة العامية الجزائرية يتناسب مع المنتج
+  4. نص تعليق واقعي باللهجة العامية العربية يتناسب مع المنتج
   5. أزرار "أعجيني" و "رد" كتلك الموجودة في فيسبوك
   6. عدد واقعي للإعجابات والردود (مثل: ١٠٢ أعجيني، ٥ ردود)
 
-- أضف 3-4 تعليقات مختلفة
+- أضف 3-4 تعليقات مختلفة مع بعض الردود من البائع
 - استخدم أسماء وتعليقات مناسبة للمنتج الحالي
 
 ### **5. تنسيق الإخراج:**
@@ -158,6 +158,7 @@ ${productImageArray.length > 1 ?
 - أضف أقسام إضافية مثل: مميزات المنتج، الأسئلة الشائعة، إلخ
         `;
 
+        console.log("Sending request to Gemini API...");
         const response = await fetch(GEMINI_ENDPOINT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -170,15 +171,33 @@ ${productImageArray.length > 1 ?
             })
         });
 
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Gemini API error:", errorText);
+            throw new Error(`Gemini API responded with status: ${response.status}`);
+        }
+
         const data = await response.json();
+        console.log("Received response from Gemini");
 
         if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
             throw new Error('Failed to generate content from AI');
         }
 
         const aiResponseText = data.candidates[0].content.parts[0].text;
+        console.log("AI response received, length:", aiResponseText.length);
+        
+        // تنظيف النص من علامات التوضيح
         const cleanedText = aiResponseText.replace(/```json/g, '').replace(/```/g, '').trim();
-        let aiResponse = JSON.parse(cleanedText);
+        
+        let aiResponse;
+        try {
+            aiResponse = JSON.parse(cleanedText);
+        } catch (parseError) {
+            console.error("Failed to parse AI response as JSON:", parseError);
+            console.error("Cleaned text:", cleanedText.substring(0, 500));
+            throw new Error('AI response is not valid JSON');
+        }
 
         // ***************************************************************
         // عملية الحقن: استبدال الرموز بالصور الحقيقية (Base64)
@@ -224,7 +243,9 @@ ${productImageArray.length > 1 ?
 
     } catch (error) {
         console.error("Server Error:", error);
-        res.status(500).json({ error: error.message || 'Internal Server Error' });
+        res.status(500).json({ 
+            error: error.message || 'Internal Server Error',
+            details: error.stack
+        });
     }
 }
-[file content end]
