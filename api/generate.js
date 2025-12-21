@@ -26,50 +26,49 @@ export default async function handler(req, res) {
         
         const shippingText = shippingOption === 'free' ? "شحن مجاني" : `الشحن: ${customShippingPrice}`;
         const offerText = customOffer ? `عرض خاص: ${customOffer}` : "";
-
         const MAIN_IMG_PLACEHOLDER = "[[PRODUCT_IMAGE_MAIN_SRC]]";
         const LOGO_PLACEHOLDER = "[[BRAND_LOGO_SRC]]";
-        
-        // تم تحديث الـ Prompt لحل مشكلة JSON Error
+
+        // ***************************************************************
+        //  التعليمات المحدثة لضمان محاكاة فيسبوك واللهجة الجزائرية
+        // ***************************************************************
         const prompt = `
-Act as a Senior Creative Director and Web Developer. 
-Analyze this product: ${productName}. 
-Category: ${productCategory}. 
-Target Audience: ${targetAudience}.
-Features: ${productFeatures}.
-Price: ${productPrice}. ${shippingText}. ${offerText}.
-Design Request: ${designDescription}.
+Act as a Senior Web Designer & Algerian Marketing Expert.
+Create a high-converting Landing Page for: ${productName}.
+Category: ${productCategory}.
+Audience: ${targetAudience}.
+Price: ${productPrice} DZD. ${shippingText}. ${offerText}.
 
-## 🖼️ **تعليمات الصور:**
-- الصورة الرئيسية: \`${MAIN_IMG_PLACEHOLDER}\`
-- الشعار: \`${LOGO_PLACEHOLDER}\`
-- صور المعرض: استخدم \`[[PRODUCT_IMAGE_X_SRC]]\` حيث X هو رقم الصورة (2, 3...).
+## 🛑 STRICT INSTRUCTION: FACEBOOK COMMENTS SECTION (REVIEWS)
+You MUST generate a "Customer Reviews" section that looks **EXACTLY** like Facebook Mobile App comments (Screenshots).
 
-## 🎯 **الهدف:**
-إنشاء صفحة هبوط كاملة واحترافية.
+### 1. Visual Design Rules (CSS Injection):
+- Use a clean white container.
+- **Comment Bubble:** Use Background color \`#F0F2F5\`, Border-radius \`18px\`, Color \`#050505\`.
+- **Layout:** Avatar on the right (RTL), Name bold, Text inside the bubble.
+- **Interactions:** Below the bubble, add small text: "أعجبني · رد · منذ [Time]" in color \`#65676B\`.
+- **Reactions:** Simulate small floating reaction icons (Like/Love) under some comments.
 
-## ⚠️ **المتطلبات الإلزامية:**
+### 2. Content & Language (Algerian Context):
+- Generate 4 to 5 unique comments specifically about "${productName}".
+- **Dialect Mix:**
+  - **60% Algerian Darija:** Use terms like "Ya3tikom saha", "Top", "Haja chabba", "Waslatni f waqtha", "Merci", "Rabi ybarek".
+  - **40% Modern Standard Arabic:** Use terms like "منتج رائع", "مصداقية", "أنصح به".
+- **Context:** The comments MUST mention specific features of the product (e.g., if it's Honey, talk about taste; if it's a Watch, talk about quality).
+- **Identities:** Use realistic Algerian names (e.g., Mohamed Amine, Sarah, Rym, Yacine, Lamia).
+- **Avatars:** Use \`https://ui-avatars.com/api/?name=[Name]&background=random&color=fff\` for avatars.
 
-### **1. قسم الهيرو والاستمارة:**
-- شعار + صورة رئيسية + استمارة طلب مفصلة (الاسم، الهاتف، الولاية، البلدية).
+### 3. Mandatory Structure:
+1. **Hero Section:** Title, Price, Order Button, Main Image (${MAIN_IMG_PLACEHOLDER}).
+2. **Order Form:** Standard Algerian delivery form (Name, Phone, Wilaya, Baladiya).
+3. **Facebook Comments Section:** As described above.
+4. **Gallery:** If extra images exist using [[PRODUCT_IMAGE_X_SRC]].
 
-### **2. قسم آراء العملاء (Facebook Style):**
-- تصميم يشبه تعليقات فيسبوك (صورة دائرية + اسم عريض + خلفية رمادية للتعليق).
-- اكتب 4-6 تعليقات متنوعة:
-  - 60% لهجة جزائرية (أمثلة: "يعطيك الصحة"، "فور"، "سلعة شابة").
-  - 40% عربية فصحى بسيطة.
-- استخدم أسماء جزائرية واقعية وصور بروفايل من \`https://i.pravatar.cc/150?u=x\` (غيّر x لصور مختلفة).
-
-### **3. تقنية ومهم جداً (JSON Formatting):**
-- **يجب أن يكون كود HTML و Liquid مضغوطاً (Minified) في سطر واحد.**
-- **لا تستخدم أبداً أحرف سطر جديد (New Lines) حقيقية داخل قيم الـ JSON.**
-- إذا احتجت لسطر جديد، استخدم الرمز \`\\n\`.
-
-### **4. تنسيق الإخراج:**
-أعد كائن JSON صالح فقط (Valid JSON Object):
+## Output Format:
+Return ONLY a JSON object:
 {
-  "html": "سلسلة HTML كاملة في سطر واحد",
-  "liquid_code": "كود Liquid في سطر واحد",
+  "html": "Full HTML with embedded CSS for the Facebook style",
+  "liquid_code": "Shopify Liquid version",
   "schema": { "name": "Landing Page", "settings": [] }
 }
         `;
@@ -81,7 +80,7 @@ Design Request: ${designDescription}.
                 contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: { 
                     responseMimeType: "application/json",
-                    temperature: 0.95
+                    temperature: 0.95 // High creativity for varied comments every time
                 }
             })
         });
@@ -93,40 +92,14 @@ Design Request: ${designDescription}.
         }
 
         const aiResponseText = data.candidates[0].content.parts[0].text;
-        
-        // ***************************************************************
-        // دالة تنظيف متقدمة لإصلاح خطأ Bad Control Character
-        // ***************************************************************
-        const cleanAndParseJSON = (str) => {
-            // 1. إزالة كود ماركداون
-            let cleaned = str.replace(/```json/g, '').replace(/```/g, '').trim();
-            
-            // 2. محاولة إصلاح الأحرف المخفية التي تكسر الـ JSON
-            // هذا التعبير النمطي يزيل الأحرف التحكمية (Control Characters) ما عدا المسافات المسموحة
-            cleaned = cleaned.replace(/[\u0000-\u001F]+/g, (match) => {
-                // السماح فقط بـ \n (New Line) و \t (Tab) و \r
-                if (match === '\n' || match === '\r' || match === '\t') return match; 
-                return ''; // حذف أي حرف تحكم آخر يسبب المشكلة
-            });
-
-            return JSON.parse(cleaned);
-        };
-
-        let aiResponse;
-        try {
-            aiResponse = cleanAndParseJSON(aiResponseText);
-        } catch (parseError) {
-            console.error("JSON Parse Error Raw Text:", aiResponseText);
-            throw new Error(`Failed to parse AI response: ${parseError.message}`);
-        }
+        const cleanedText = aiResponseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        let aiResponse = JSON.parse(cleanedText);
 
         // ***************************************************************
-        // عملية الحقن (Images Injection)
+        // استبدال الصور
         // ***************************************************************
-        
         const defaultImg = "https://via.placeholder.com/600x600?text=Product+Image";
         const defaultLogo = "https://via.placeholder.com/150x50?text=Logo";
-
         const finalProductImages = productImageArray.length > 0 ? productImageArray : [defaultImg];
         const finalBrandLogo = brandLogo || defaultLogo;
 
