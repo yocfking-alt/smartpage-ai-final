@@ -126,31 +126,84 @@ ${productImageArray.length > 1 ?
   <button type="submit" class="submit-btn">تأكيد الطلب</button>
 </div>
 
-### **4. قسم آراء العملاء (Facebook Style Reviews):**
+### **4. قسم آراء العملاء (Facebook Style Reviews) - إبداع كامل مطلوب:**
 أريد تصميم هذا القسم ليشبه **تعليقات فيسبوك** لزيادة المصداقية.
 
-**📝 تعليمات المحتوى:**
+**📝 تعليمات المحتوى (حرية مطلقة):**
 1.  **التأليف:** قم بابتكار **4 إلى 6 تعليقات** جديدة تماماً.
-2.  **اللهجة:** استخدم **اللهجة الجزائرية (الدارجة)** بكل تنوعاتها. لك الحرية المطلقة في صياغة الجمل. اجعلها تبدو عفوية جداً وطبيعية.
-3.  **المصداقية:** اجعل التعليقات تتحدث عن تجربة الشراء، جودة المنتج، أو التعامل الجيد.
+2.  **اللهجة:** استخدم **اللهجة الجزائرية (الدارجة)** بكل تنوعاتها. لك الحرية المطلقة في صياغة الجمل (سواء كانت كلمات شوارع، خليط فرنسي-عربي، أو عربية بسيطة). اجعلها تبدو عفوية جداً وطبيعية ونابعة من أشخاص حقيقيين، دون التقيد بأي أمثلة مسبقة.
+3.  **المصداقية:** اجعل التعليقات تتحدث عن تجربة الشراء، جودة المنتج، أو التعامل الجيد، بطريقة مقنعة وغير "روبوتية".
 
-**👤 تعليمات صور الأشخاص (Avatars):**
-- **لا تستخدم روابط صور ثابتة.**
-- استخدم روابط ديناميكية باستخدام: \`https://i.pravatar.cc/150?u=[RANDOM_STRING_HERE]\`
-- **القاعدة:** يجب عليك أنت (الذكاء الاصطناعي) وضع سلسلة أحرف وأرقام عشوائية مختلفة في كل رابط صورة (مكان \`u=...\`) لضمان ظهور وجه جديد ومختلف كلياً في كل مرة.
-- تأكد من تطابق الجنس (ذكر/أنثى) مع الاسم الذي اخترته.
+**👤 تعليمات صور الأشخاص (Avatars) - منع التكرار:**
+- **لا تستخدم روابط صور ثابتة أو مكررة.**
+- بدلاً من ذلك، قم بتوليد روابط ديناميكية باستخدام خدمات مثل \`pravatar.cc\` أو \`randomuser.me\` مع إضافة "seed" أو معرف عشوائي في الرابط.
+- **مثال للطريقة المطلوبة:** \`https://i.pravatar.cc/150?u=[RANDOM_STRING_HERE]\`
+- **القاعدة:** يجب عليك أنت (الذكاء الاصطناعي) وضع سلسلة أحرف وأرقام عشوائية مختلفة في كل رابط صورة (مكان \`u=...\`) لضمان ظهور وجه جديد ومختلف كلياً في كل مرة يتم فيها إنشاء الصفحة.
+- تأكد من تطابق الجنس (ذكر/أنثى) مع الاسم الذي اخترته (اختر أسماء جزائرية واقعية).
 
-**🎨 تعليمات التصميم (CSS):**
-استخدم الهيكل التالي أو ما يشابهه لمحاكاة فيسبوك:
-\`\`\`css
-.fb-comments-section { background: #fff; padding: 20px; max-width: 600px; margin: 30px auto; direction: rtl; border-top: 1px solid #e5e5e5; }
-.fb-header-stat { margin-bottom: 15px; color: #65676B; font-weight: bold; }
-.fb-comment { display: flex; margin-bottom: 12px; gap: 8px; }
-.fb-avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; }
-.fb-bubble { background-color: #f0f2f5; padding: 8px 12px; border-radius: 18px; display: inline-block; }
-.fb-name { font-weight: 600; font-size: 13px; color: #050505; display: block; margin-bottom: 2px; }
-.fb-text { font-size: 15px; color: #050505; line-height: 1.35; }
-.fb-actions { font-size: 12px; color: #65676B; margin-top: 2px; }
+**🎨 تعليمات التصميم (CSS/HTML):**
+استخدم الهيكل التالي لمحاكاة فيسبوك بدقة:
+
+\`\`\`html
+<style>
+  .fb-comments-section {
+      background: #fff;
+      padding: 20px;
+      max-width: 600px;
+      margin: 30px auto;
+      direction: rtl;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      border-top: 1px solid #e5e5e5;
+  }
+  .fb-header-stat { display: flex; justify-content: space-between; margin-bottom: 15px; color: #65676B; font-size: 14px; }
+  .fb-comment { display: flex; margin-bottom: 12px; gap: 8px; }
+  .fb-avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; cursor: pointer; }
+  .fb-content-area { flex: 1; }
+  .fb-bubble {
+      background-color: #f0f2f5;
+      padding: 8px 12px;
+      border-radius: 18px;
+      display: inline-block;
+      position: relative;
+  }
+  .fb-name { font-weight: 600; font-size: 13px; color: #050505; display: block; margin-bottom: 2px; cursor: pointer; text-decoration: none; }
+  .fb-name:hover { text-decoration: underline; }
+  .fb-text { font-size: 15px; color: #050505; line-height: 1.35; word-break: break-word; }
+  .fb-actions { display: flex; align-items: center; gap: 12px; margin-right: 12px; margin-top: 2px; font-size: 12px; color: #65676B; font-weight: bold; }
+  .fb-actions span { cursor: pointer; }
+  .fb-actions span:hover { text-decoration: underline; }
+  .fb-likes-bubble {
+      position: absolute;
+      bottom: -10px;
+      left: -5px;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      padding: 2px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 11px;
+      color: #65676B;
+      font-weight: normal;
+  }
+  .fb-like-icon-small { background: #1877F2; color: white; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; padding: 2px; }
+</style>
+
+<div class="fb-comments-section">
+  <div class="fb-comment">
+      <img src="https://i.pravatar.cc/150?u=[GENERATE_RANDOM_STRING_HERE]" class="fb-avatar" alt="User">
+      <div class="fb-content-area">
+          <div class="fb-bubble">
+              <span class="fb-name">[GENERATE_ALGERIAN_NAME]</span>
+              <span class="fb-text">[GENERATE_CREATIVE_ALGERIAN_COMMENT]</span>
+              </div>
+          <div class="fb-actions">
+              <span>أعجبني</span> · <span>رد</span> · <span>[RANDOM_TIME: 14د, 2س, 1ي]</span>
+          </div>
+      </div>
+  </div>
+  </div>
 \`\`\`
 
 ### **5. تنسيق الإخراج:**
@@ -166,7 +219,7 @@ ${productImageArray.length > 1 ?
 - استخدم تأثيرات hover، transitions، وanimations لجعل الصفحة تفاعلية
 - تأكد من أن الصفحة سريعة الاستجابة وتعمل على جميع الأجهزة
 - أضف عد تنازلي أقل من ساعتان أنيق يحفز الزائر على الشراء بلون مناسب لصفحة و للمنتج
-- أضف أقسام إضافية مثل: مميزات المنتج، الأسئلة الشائعة، إلخ
+- أضف أقسام إضافية مثل: مميزات المنتج، الأسئلة الشائعة، إلخ (ملاحظة: لقد تم تغطية آراء العملاء أعلاه).
         `;
 
         const response = await fetch(GEMINI_ENDPOINT, {
