@@ -134,15 +134,12 @@ ${productImageArray.length > 1 ?
 2.  **اللهجة:** استخدم **اللهجة الجزائرية (الدارجة)** بكل تنوعاتها. لك الحرية المطلقة في صياغة الجمل (سواء كانت كلمات شوارع، خليط فرنسي-عربي، أو عربية بسيطة). اجعلها تبدو عفوية جداً وطبيعية ونابعة من أشخاص حقيقيين، دون التقيد بأي أمثلة مسبقة.
 3.  **المصداقية:** اجعل التعليقات تتحدث عن تجربة الشراء، جودة المنتج، أو التعامل الجيد، بطريقة مقنعة وغير "روبوتية".
 
-**👤 تعليمات صور الأشخاص (Avatars) - منع التكرار:**
-- **لا تستخدم روابط صور ثابتة أو مكررة.**
-- بدلاً من ذلك، قم بتوليد روابط ديناميكية باستخدام خدمات مثل \`pravatar.cc\` أو \`randomuser.me\` مع إضافة "seed" أو معرف عشوائي في الرابط.
-- **مثال للطريقة المطلوبة:** \`https://i.pravatar.cc/150?u=[RANDOM_STRING_HERE]\`
-- **القاعدة:** يجب عليك أنت (الذكاء الاصطناعي) وضع سلسلة أحرف وأرقام عشوائية مختلفة في كل رابط صورة (مكان \`u=...\`) لضمان ظهور وجه جديد ومختلف كلياً في كل مرة يتم فيها إنشاء الصفحة.
-- تأكد من تطابق الجنس (ذكر/أنثى) مع الاسم الذي اخترته (اختر أسماء جزائرية واقعية).
+**👤 تعليمات صور الأشخاص (Avatars) مع الخصوصية:**
+- قم بتوليد روابط ديناميكية باستخدام خدمات مثل \`pravatar.cc\`.
+- **هام جداً:** يجب تطبيق تأثير "خربشة" (Scribble) على الوجوه في CSS لإخفاء ملامحهم جزئياً (كما لو تم الشطب عليهم بقلم للحفاظ على الخصوصية).
 
 **🎨 تعليمات التصميم (CSS/HTML):**
-استخدم الهيكل التالي لمحاكاة فيسبوك بدقة:
+استخدم الهيكل التالي لمحاكاة فيسبوك بدقة مع إضافة طبقة الخربشة:
 
 \`\`\`html
 <style>
@@ -157,7 +154,48 @@ ${productImageArray.length > 1 ?
   }
   .fb-header-stat { display: flex; justify-content: space-between; margin-bottom: 15px; color: #65676B; font-size: 14px; }
   .fb-comment { display: flex; margin-bottom: 12px; gap: 8px; }
-  .fb-avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; cursor: pointer; }
+  
+  /* Avatar Container to hold image and scribble overlay */
+  .fb-avatar-container {
+      position: relative;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      overflow: hidden;
+      flex-shrink: 0;
+      cursor: pointer;
+  }
+  
+  .fb-avatar { 
+      width: 100%; 
+      height: 100%; 
+      object-fit: cover; 
+  }
+  
+  /* The Scribble Effect Overlay */
+  .fb-scribble-overlay {
+      position: absolute;
+      top: 0; 
+      left: 0; 
+      width: 100%; 
+      height: 100%;
+      /* Creates a messy marker/scribble effect */
+      background: repeating-linear-gradient(
+          45deg,
+          transparent,
+          transparent 2px,
+          rgba(0,0,0,0.6) 3px,
+          rgba(0,0,0,0.6) 4px
+      ), repeating-linear-gradient(
+          -45deg,
+          transparent,
+          transparent 2px,
+          rgba(0,0,0,0.6) 3px,
+          rgba(0,0,0,0.6) 4px
+      );
+      z-index: 2;
+  }
+
   .fb-content-area { flex: 1; }
   .fb-bubble {
       background-color: #f0f2f5;
@@ -172,27 +210,15 @@ ${productImageArray.length > 1 ?
   .fb-actions { display: flex; align-items: center; gap: 12px; margin-right: 12px; margin-top: 2px; font-size: 12px; color: #65676B; font-weight: bold; }
   .fb-actions span { cursor: pointer; }
   .fb-actions span:hover { text-decoration: underline; }
-  .fb-likes-bubble {
-      position: absolute;
-      bottom: -10px;
-      left: -5px;
-      background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-      padding: 2px;
-      display: flex;
-      align-items: center;
-      gap: 3px;
-      font-size: 11px;
-      color: #65676B;
-      font-weight: normal;
-  }
-  .fb-like-icon-small { background: #1877F2; color: white; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; padding: 2px; }
 </style>
 
 <div class="fb-comments-section">
   <div class="fb-comment">
-      <img src="https://i.pravatar.cc/150?u=[GENERATE_RANDOM_STRING_HERE]" class="fb-avatar" alt="User">
+      <div class="fb-avatar-container">
+          <img src="https://i.pravatar.cc/150?u=[GENERATE_RANDOM_STRING_HERE]" class="fb-avatar" alt="User">
+          <div class="fb-scribble-overlay"></div>
+      </div>
+      
       <div class="fb-content-area">
           <div class="fb-bubble">
               <span class="fb-name">[GENERATE_ALGERIAN_NAME]</span>
@@ -203,7 +229,7 @@ ${productImageArray.length > 1 ?
           </div>
       </div>
   </div>
-  </div>
+</div>
 \`\`\`
 
 ### **5. تنسيق الإخراج:**
