@@ -14,26 +14,35 @@ export default async function handler(req, res) {
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
         if (!GEMINI_API_KEY) throw new Error('API Key is missing');
 
+        // استقبال البيانات بما في ذلك الصور المتعددة
         const { 
             productName, productFeatures, productPrice, productCategory,
             targetAudience, designDescription, shippingOption, customShippingPrice, 
             customOffer, productImages, brandLogo 
         } = req.body;
 
+        // التعامل مع الصور المتعددة (نصي للتوافق مع الإصدارات السابقة)
         const productImageArray = productImages || [];
-        
+        const mainProductImage = productImageArray.length > 0 ? productImageArray[0] : null;
+
         const GEMINI_MODEL = 'gemini-2.5-flash'; 
         const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
         
         const shippingText = shippingOption === 'free' ? "شحن مجاني" : `الشحن: ${customShippingPrice}`;
         const offerText = customOffer ? `عرض خاص: ${customOffer}` : "";
 
+        // تعريف المتغيرات البديلة للصور
         const MAIN_IMG_PLACEHOLDER = "[[PRODUCT_IMAGE_MAIN_SRC]]";
         const LOGO_PLACEHOLDER = "[[BRAND_LOGO_SRC]]";
         
-        // تم تحديث الـ Prompt لمنح حرية كاملة في الصور واللهجة
+        // إنشاء نصوص بديلة للصور الإضافية
+        let galleryPlaceholders = "";
+        for (let i = 1; i < productImageArray.length && i <= 5; i++) {
+            galleryPlaceholders += `[[PRODUCT_IMAGE_${i + 1}_SRC]] `;
+        }
+
         const prompt = `
-Act as a Senior Creative Director, Conversion Expert, and Algerian Market Specialist. 
+Act as a Senior Creative Director and Conversion Expert. 
 Analyze this product: ${productName}. 
 Category: ${productCategory}. 
 Target Audience: ${targetAudience}.
@@ -41,25 +50,97 @@ Context/Features: ${productFeatures}.
 Price: ${productPrice}. ${shippingText}. ${offerText}.
 User Design Request: ${designDescription}.
 
-## 🖼️ **تعليمات الصور:**
-- الصورة الرئيسية: \`${MAIN_IMG_PLACEHOLDER}\`
-- الشعار: \`${LOGO_PLACEHOLDER}\`
-- للصور الإضافية استخدم: \`[[PRODUCT_IMAGE_2_SRC]]\`, \`[[PRODUCT_IMAGE_3_SRC]]\` ...إلخ.
+## 🖼️ **تعليمات الصور المتعددة (مهم جداً):**
+لقد تم تزويدك بعدة صور للمنتج (${productImageArray.length} صور) وشعار.
+**يجب اتباع التعليمات التالية بدقة:**
+
+### **1. الصورة الرئيسية:**
+- استخدم هذا النص بالضبط كمصدر للصورة الرئيسية: \`${MAIN_IMG_PLACEHOLDER}\`
+- مثال: <img src="${MAIN_IMG_PLACEHOLDER}" alt="${productName}" class="main-product-image">
+
+### **2. معرض الصور الإضافية:**
+- أضف قسم معرض صور يظهر الصور الإضافية للمنتج
+- استخدم النصوص التالية كمصادر للصور الإضافية:
+${productImageArray.length > 1 ? 
+  Array.from({length: Math.min(productImageArray.length - 1, 5)}, (_, i) => 
+    `  - الصورة ${i + 2}: استخدم \`[[PRODUCT_IMAGE_${i + 2}_SRC]]\``
+  ).join('\n') 
+  : '  - لا توجد صور إضافية'}
+- يمكنك إنشاء سلايدر، شبكة صور، أو معرض تفاعلي
+- تأكد من أن المعرض سريع الاستجابة ويعمل جيداً على الجوال
+
+### **3. الشعار:**
+- استخدم هذا النص بالضبط كمصدر للشعار: \`${LOGO_PLACEHOLDER}\`
+- مثال: <img src="${LOGO_PLACEHOLDER}" alt="شعار العلامة التجارية" class="logo">
 
 ## 🎯 **الهدف:**
-إنشاء صفحة هبوط احترافية (Landing Page) موجهة للسوق الجزائري، تركز على الإقناع ورفع معدل التحويل.
+إنشاء صفحة هبوط فريدة ومبدعة تحتوي على جميع الصور المقدمة وتحقق أعلى معدلات التحويل.
 
-## ⚠️ **المتطلبات الهيكلية:**
+## ⚠️ **متطلبات إلزامية:**
 
-### **1. قسم الهيرو (Hero Section):**
-- عنوان جذاب وقوي.
-- زر طلب واضح.
-- صورة المنتج بارزة.
+### **1. قسم الهيرو:**
+- يتضمن الشعار (استخدم \`${LOGO_PLACEHOLDER}\`) في الأعلى أو في الهيدر
+- صورة المنتج الرئيسية (استخدم \`${MAIN_IMG_PLACEHOLDER}\`) يجب أن تكون بارزة جداً
+- إذا كان هناك أكثر من صورة، أضف أزرار تنقل بين الصور أو معرض مصغر
 
-### **2. استمارة الطلب (Order Form):**
-نفس الحقول القياسية (الاسم، الهاتف، الولاية، البلدية) بتصميم نظيف.
+### **2. معرض الصور (إذا كان هناك أكثر من صورة):**
+- قم بإنشاء قسم مخصص لعرض جميع صور المنتج
+- استخدم تقنيات CSS/JS حديثة لعرض المعرض (مثل grid، flexbox، أو سلايدر)
+- تأكد من أن الصور معروضة بشكل جميل ومنظم
 
-### **3. قسم آراء العملاء (Facebook Style Reviews) - إبداع كامل مطلوب:**
+### **3. استمارة الطلب (مباشرة بعد الهيرو):**
+يجب أن تحتوي على هذا الهيكل الدقيق للحقول باللغة العربية:
+<div class="customer-info-box">
+  <h3>استمارة الطلب</h3>
+  <p>المرجو إدخال معلوماتك الخاصة بك</p>
+  
+  <div class="form-group">
+    <label>الإسم الكامل</label>
+    <input type="text" placeholder="Nom et prénom" required>
+  </div>
+  
+  <div class="form-group">
+    <label>رقم الهاتف</label>
+    <input type="tel" placeholder="Nombre" required>
+  </div>
+  
+  <div class="form-group">
+    <label>الولاية</label>
+    <input type="text" placeholder="Wilaya" required>
+  </div>
+  
+  <div class="form-group">
+    <label>البلدية</label>
+    <input type="text" placeholder="أدخل بلديتك" required>
+  </div>
+  
+  <div class="form-group">
+    <label>الموقع / العنوان</label>
+    <input type="text" placeholder="أدخل عنوانك بالتفصيل" required>
+  </div>
+  
+  <div class="price-display">
+    <p>سعر المنتج: ${productPrice} دينار</p>
+  </div>
+  
+  <button type="submit" class="submit-btn">تأكيد الطلب</button>
+</div>
+
+### **4. تنسيق الإخراج:**
+أعد كائن JSON فقط:
+{
+  "html": "سلسلة HTML كاملة",
+  "liquid_code": "كود Shopify Liquid",
+  "schema": { "name": "Landing Page", "settings": [] }
+}
+
+## 🚀 **حرية إبداعية كاملة:**
+- صمم باقي الصفحة بحرية تامة باستخدام CSS حديث وجذاب
+- استخدم تأثيرات hover، transitions، وanimations لجعل الصفحة تفاعلية
+- تأكد من أن الصفحة سريعة الاستجابة وتعمل على جميع الأجهزة
+- أضف عد تنازلي أقل من ساعتان أنيق يحفز الزائر على الشراء بلون مناسب لصفحة و للمنتج
+- أضف أقسام إضافية مثل: مميزات المنتج، ، الأسئلة الشائعة، إلخ
+### **. قسم آراء العملاء (Facebook Style Reviews) - إبداع كامل مطلوب:**
 أريد تصميم هذا القسم ليشبه **تعليقات فيسبوك** لزيادة المصداقية.
 
 **📝 تعليمات المحتوى (حرية مطلقة):**
@@ -139,19 +220,6 @@ User Design Request: ${designDescription}.
   </div>
 \`\`\`
 
-### **4. تنسيق الإخراج:**
-أعد كائن JSON فقط:
-{
-  "html": "سلسلة HTML كاملة",
-  "liquid_code": "كود Shopify Liquid",
-  "schema": { "name": "Landing Page", "settings": [] }
-}
-
-## 🚀 **تعليمات إضافية:**
-- صمم باقي الصفحة بحرية.
-- تأكد من التجاوب مع الجوال.
-        `;
-
         const response = await fetch(GEMINI_ENDPOINT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -159,7 +227,7 @@ User Design Request: ${designDescription}.
                 contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: { 
                     responseMimeType: "application/json",
-                    temperature: 1.0 // رفع درجة الحرارة لأقصى حد لضمان التنوع والإبداع
+                    temperature: 0.95
                 }
             })
         });
@@ -175,22 +243,29 @@ User Design Request: ${designDescription}.
         let aiResponse = JSON.parse(cleanedText);
 
         // ***************************************************************
-        // عملية الحقن واستبدال الصور
+        // عملية الحقن: استبدال الرموز بالصور الحقيقية (Base64)
         // ***************************************************************
         
+        // صور افتراضية في حال لم يرفع المستخدم صوراً
         const defaultImg = "https://via.placeholder.com/600x600?text=Product+Image";
         const defaultLogo = "https://via.placeholder.com/150x50?text=Logo";
 
         const finalProductImages = productImageArray.length > 0 ? productImageArray : [defaultImg];
         const finalBrandLogo = brandLogo || defaultLogo;
 
+        // دالة للاستبدال الآمن للصور المتعددة
         const replaceImages = (content) => {
             if (!content) return content;
+            
             let result = content;
             
+            // استبدال الصورة الرئيسية
             result = result.split(MAIN_IMG_PLACEHOLDER).join(finalProductImages[0]);
+            
+            // استبدال الشعار
             result = result.split(LOGO_PLACEHOLDER).join(finalBrandLogo);
             
+            // استبدال الصور الإضافية في المعرض
             for (let i = 1; i < finalProductImages.length && i <= 6; i++) {
                 const placeholder = `[[PRODUCT_IMAGE_${i + 1}_SRC]]`;
                 result = result.split(placeholder).join(finalProductImages[i]);
@@ -199,6 +274,7 @@ User Design Request: ${designDescription}.
             return result;
         };
 
+        // تطبيق الاستبدال على HTML و Liquid Code
         aiResponse.html = replaceImages(aiResponse.html);
         aiResponse.liquid_code = replaceImages(aiResponse.liquid_code);
 
