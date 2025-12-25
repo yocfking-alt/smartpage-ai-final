@@ -14,28 +14,23 @@ export default async function handler(req, res) {
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
         if (!GEMINI_API_KEY) throw new Error('API Key is missing');
 
-        // استقبال البيانات بما في ذلك الصور المتعددة
         const { 
             productName, productFeatures, productPrice, productCategory,
             targetAudience, designDescription, shippingOption, customShippingPrice, 
             customOffer, productImages, brandLogo 
         } = req.body;
 
-        // التعامل مع الصور المتعددة (نصي للتوافق مع الإصدارات السابقة)
         const productImageArray = productImages || [];
-        const mainProductImage = productImageArray.length > 0 ? productImageArray[0] : null;
-
+        
         const GEMINI_MODEL = 'gemini-2.5-flash'; 
         const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
         
         const shippingText = shippingOption === 'free' ? "شحن مجاني" : `الشحن: ${customShippingPrice}`;
         const offerText = customOffer ? `عرض خاص: ${customOffer}` : "";
 
-        // تعريف المتغيرات البديلة للصور
         const MAIN_IMG_PLACEHOLDER = "[[PRODUCT_IMAGE_MAIN_SRC]]";
         const LOGO_PLACEHOLDER = "[[BRAND_LOGO_SRC]]";
         
-        // إنشاء نصوص بديلة للصور الإضافية
         let galleryPlaceholders = "";
         for (let i = 1; i < productImageArray.length && i <= 5; i++) {
             galleryPlaceholders += `[[PRODUCT_IMAGE_${i + 1}_SRC]] `;
@@ -50,28 +45,10 @@ Context/Features: ${productFeatures}.
 Price: ${productPrice}. ${shippingText}. ${offerText}.
 User Design Request: ${designDescription}.
 
-## 🖼️ **تعليمات الصور المتعددة (مهم جداً):**
-لقد تم تزويدك بعدة صور للمنتج (${productImageArray.length} صور) وشعار.
-**يجب اتباع التعليمات التالية بدقة:**
-
-### **1. الصورة الرئيسية:**
-- استخدم هذا النص بالضبط كمصدر للصورة الرئيسية: \`${MAIN_IMG_PLACEHOLDER}\`
-- مثال: <img src="${MAIN_IMG_PLACEHOLDER}" alt="${productName}" class="main-product-image">
-
-### **2. معرض الصور الإضافية:**
-- أضف قسم معرض صور يظهر الصور الإضافية للمنتج
-- استخدم النصوص التالية كمصادر للصور الإضافية:
-${productImageArray.length > 1 ? 
-  Array.from({length: Math.min(productImageArray.length - 1, 5)}, (_, i) => 
-    `  - الصورة ${i + 2}: استخدم \`[[PRODUCT_IMAGE_${i + 2}_SRC]]\``
-  ).join('\n') 
-  : '  - لا توجد صور إضافية'}
-- يمكنك إنشاء سلايدر، شبكة صور، أو معرض تفاعلي
-- تأكد من أن المعرض سريع الاستجابة ويعمل جيداً على الجوال
-
-### **3. الشعار:**
-- استخدم هذا النص بالضبط كمصدر للشعار: \`${LOGO_PLACEHOLDER}\`
-- مثال: <img src="${LOGO_PLACEHOLDER}" alt="شعار العلامة التجارية" class="logo">
+## 🖼️ **تعليمات الصور:**
+- الصورة الرئيسية: \`${MAIN_IMG_PLACEHOLDER}\`
+- الشعار: \`${LOGO_PLACEHOLDER}\`
+- للصور الإضافية استخدم: \`[[PRODUCT_IMAGE_2_SRC]]\`, \`[[PRODUCT_IMAGE_3_SRC]]\` ...إلخ.
 
 ## 🎯 **الهدف:**
 إنشاء صفحة هبوط فريدة ومبدعة تحتوي على جميع الصور المقدمة وتحقق أعلى معدلات التحويل.
@@ -79,171 +56,84 @@ ${productImageArray.length > 1 ?
 ## ⚠️ **متطلبات إلزامية:**
 
 ### **1. قسم الهيرو:**
-- يتضمن الشعار (استخدم \`${LOGO_PLACEHOLDER}\`) في الأعلى أو في الهيدر
-- صورة المنتج الرئيسية (استخدم \`${MAIN_IMG_PLACEHOLDER}\`) يجب أن تكون بارزة جداً
-- إذا كان هناك أكثر من صورة، أضف أزرار تنقل بين الصور أو معرض مصغر
+- يتضمن الشعار وصورة المنتج الرئيسية بشكل بارز.
 
-### **2. معرض الصور (إذا كان هناك أكثر من صورة):**
-- قم بإنشاء قسم مخصص لعرض جميع صور المنتج
-- استخدم تقنيات CSS/JS حديثة لعرض المعرض (مثل grid، flexbox، أو سلايدر)
-- تأكد من أن الصور معروضة بشكل جميل ومنظم
-
-### **3. استمارة الطلب (مباشرة بعد الهيرو):**
+### **2. استمارة الطلب (مباشرة بعد الهيرو):**
 يجب أن تحتوي على هذا الهيكل الدقيق للحقول باللغة العربية:
 <div class="customer-info-box">
   <h3>استمارة الطلب</h3>
   <p>المرجو إدخال معلوماتك الخاصة بك</p>
-  
-  <div class="form-group">
-    <label>الإسم الكامل</label>
-    <input type="text" placeholder="Nom et prénom" required>
-  </div>
-  
-  <div class="form-group">
-    <label>رقم الهاتف</label>
-    <input type="tel" placeholder="Nombre" required>
-  </div>
-  
-  <div class="form-group">
-    <label>الولاية</label>
-    <input type="text" placeholder="Wilaya" required>
-  </div>
-  
-  <div class="form-group">
-    <label>البلدية</label>
-    <input type="text" placeholder="أدخل بلديتك" required>
-  </div>
-  
-  <div class="form-group">
-    <label>الموقع / العنوان</label>
-    <input type="text" placeholder="أدخل عنوانك بالتفصيل" required>
-  </div>
-  
-  <div class="price-display">
-    <p>سعر المنتج: ${productPrice} دينار</p>
-  </div>
-  
+  <div class="form-group"><label>الإسم الكامل</label><input type="text" placeholder="Nom et prénom" required></div>
+  <div class="form-group"><label>رقم الهاتف</label><input type="tel" placeholder="Nombre" required></div>
+  <div class="form-group"><label>الولاية</label><input type="text" placeholder="Wilaya" required></div>
+  <div class="form-group"><label>البلدية</label><input type="text" placeholder="أدخل بلديتك" required></div>
+  <div class="form-group"><label>الموقع / العنوان</label><input type="text" placeholder="أدخل عنوانك بالتفصيل" required></div>
+  <div class="price-display"><p>سعر المنتج: ${productPrice} دينار</p></div>
   <button type="submit" class="submit-btn">تأكيد الطلب</button>
 </div>
 
-### **4. قسم آراء العملاء (Facebook Style Reviews) - إبداع كامل مطلوب:**
-أريد تصميم هذا القسم ليشبه **تعليقات فيسبوك** لزيادة المصداقية.
+### **3. قسم آراء العملاء (Facebook Style Reviews) - الواقعية القصوى:**
+أريد تصميم هذا القسم ليشبه **تعليقات فيسبوك** تماماً.
+- **المحتوى:** 4-6 تعليقات باللهجة الجزائرية (الدارجة) متنوعة وعفوية جداً.
+- **الصور:** استخدم \`https://i.pravatar.cc/150?u=[RANDOM]\` لصور مختلفة.
 
-**📝 تعليمات المحتوى (حرية مطلقة):**
-1.  **التأليف:** قم بابتكار **4 إلى 6 تعليقات** جديدة تماماً.
-2.  **اللهجة:** استخدم **اللهجة الجزائرية (الدارجة)** بكل تنوعاتها. لك الحرية المطلقة في صياغة الجمل (سواء كانت كلمات شوارع، خليط فرنسي-عربي، أو عربية بسيطة). اجعلها تبدو عفوية جداً وطبيعية ونابعة من أشخاص حقيقيين، دون التقيد بأي أمثلة مسبقة.
-3.  **المصداقية:** اجعل التعليقات تتحدث عن تجربة الشراء، جودة المنتج، أو التعامل الجيد، بطريقة مقنعة وغير "روبوتية".
+**🎨 تأثير الشطب اليدوي (Scribble) - هام جداً:**
+يجب تطبيق تأثير "شطب بالقلم" على الوجوه لإخفاء الملامح.
+- الخطوط يجب أن تكون **رقيقة** (Thin lines)، عشوائية، سوداء.
+- يجب أن **تخرج عن حدود الصورة** (Overflow) لتبدو واقعية جداً.
+- **تحذير JSON:** عند كتابة كود SVG داخل CSS، تأكد من استخدام **Single Quotes** (') داخل الـ SVG string لتجنب كسر الـ JSON.
 
-**👤 تعليمات صور الأشخاص (Avatars) مع الخصوصية:**
-- قم بتوليد روابط ديناميكية باستخدام خدمات مثل \`pravatar.cc\`.
-- **هام جداً:** يجب تطبيق تأثير "شطب بالقلم" (Pen Scribble) على الوجوه.
-- **التفاصيل:** يجب أن تكون الخطوط **رقيقة**، عشوائية، سوداء، وتخرج قليلاً عن حدود الصورة لتبدو واقعية جداً.
+استخدم هذا الـ SVG بالتحديد داخل الـ CSS (لاحظ استخدام Single Quotes بالداخل):
+\`background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10,50 Q30,20 50,60 T90,30 M5,70 Q40,30 70,80 T95,20 M20,10 C40,90 60,90 80,10 M10,40 L90,70 M90,40 L10,70' stroke='%23000' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");\`
 
-**🎨 تعليمات التصميم (CSS/HTML):**
-استخدم الهيكل التالي لمحاكاة فيسبوك بدقة مع إضافة طبقة الشطب الواقعية:
-
+**الهيكل المطلوب للتعليقات:**
 \`\`\`html
 <style>
-  .fb-comments-section {
-      background: #fff;
-      padding: 20px;
-      max-width: 600px;
-      margin: 30px auto;
-      direction: rtl;
-      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      border-top: 1px solid #e5e5e5;
-  }
-  .fb-header-stat { display: flex; justify-content: space-between; margin-bottom: 15px; color: #65676B; font-size: 14px; }
+  .fb-comments-section { background: #fff; padding: 20px; max-width: 600px; margin: 30px auto; direction: rtl; font-family: sans-serif; border-top: 1px solid #e5e5e5; }
   .fb-comment { display: flex; margin-bottom: 12px; gap: 8px; }
-  
-  /* Avatar Container: IMPORTANT - NO OVERFLOW HIDDEN allows scribble to go outside */
-  .fb-avatar-container {
-      position: relative;
-      width: 38px;
-      height: 38px;
-      flex-shrink: 0;
-      cursor: pointer;
-      z-index: 1;
-  }
-  
-  .fb-avatar { 
-      width: 100%; 
-      height: 100%; 
-      object-fit: cover; 
-      border-radius: 50%; /* Radius applied here so image is round */
-  }
-  
+  /* Avatar Container: NO OVERFLOW HIDDEN allows scribble to go outside */
+  .fb-avatar-container { position: relative; width: 38px; height: 38px; flex-shrink: 0; z-index: 1; }
+  .fb-avatar { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
   /* The THIN REALISTIC SCRIBBLE Effect Overlay */
   .fb-scribble-overlay {
       position: absolute;
-      /* Positioning to allow it to be larger than the avatar */
-      top: -20%; 
-      left: -20%; 
-      width: 140%; 
-      height: 140%;
-      z-index: 10;
-      pointer-events: none; /* Allows clicking through the scribble */
-      opacity: 0.9;
-      
-      /* SVG Data URI: Thin (2px) black lines, messy, chaotic */
+      top: -20%; left: -20%; width: 140%; height: 140%; z-index: 10; pointer-events: none; opacity: 0.9;
       background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10,50 Q30,20 50,60 T90,30 M5,70 Q40,30 70,80 T95,20 M20,10 C40,90 60,90 80,10 M10,40 L90,70 M90,40 L10,70' stroke='%23000' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-      
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center;
+      background-size: contain; background-repeat: no-repeat; background-position: center;
       transform: rotate(var(--rotation, 0deg));
   }
-
   .fb-content-area { flex: 1; }
-  .fb-bubble {
-      background-color: #f0f2f5;
-      padding: 8px 12px;
-      border-radius: 18px;
-      display: inline-block;
-      position: relative;
-  }
-  .fb-name { font-weight: 600; font-size: 13px; color: #050505; display: block; margin-bottom: 2px; cursor: pointer; text-decoration: none; }
-  .fb-name:hover { text-decoration: underline; }
-  .fb-text { font-size: 15px; color: #050505; line-height: 1.35; word-break: break-word; }
-  .fb-actions { display: flex; align-items: center; gap: 12px; margin-right: 12px; margin-top: 2px; font-size: 12px; color: #65676B; font-weight: bold; }
-  .fb-actions span { cursor: pointer; }
-  .fb-actions span:hover { text-decoration: underline; }
+  .fb-bubble { background-color: #f0f2f5; padding: 8px 12px; border-radius: 18px; display: inline-block; }
+  .fb-name { font-weight: 600; font-size: 13px; color: #050505; display: block; }
+  .fb-text { font-size: 15px; color: #050505; line-height: 1.35; }
 </style>
 
-<div class="fb-comments-section">
-  <div class="fb-comment">
-      <div class="fb-avatar-container">
-          <img src="https://i.pravatar.cc/150?u=[GENERATE_RANDOM_STRING_HERE]" class="fb-avatar" alt="User">
-          <div class="fb-scribble-overlay" style="--rotation: [GENERATE_RANDOM_ANGLE_BETWEEN_-25_AND_25]deg;"></div>
-      </div>
-      
-      <div class="fb-content-area">
-          <div class="fb-bubble">
-              <span class="fb-name">[GENERATE_ALGERIAN_NAME]</span>
-              <span class="fb-text">[GENERATE_CREATIVE_ALGERIAN_COMMENT]</span>
-              </div>
-          <div class="fb-actions">
-              <span>أعجبني</span> · <span>رد</span> · <span>[RANDOM_TIME: 14د, 2س, 1ي]</span>
-          </div>
-      </div>
-  </div>
+<div class="fb-comment">
+    <div class="fb-avatar-container">
+        <img src="https://i.pravatar.cc/150?u=[RANDOM]" class="fb-avatar">
+        <div class="fb-scribble-overlay" style="--rotation: [RANDOM_DEG]deg;"></div>
+    </div>
+    <div class="fb-content-area">
+        <div class="fb-bubble">
+            <span class="fb-name">[NAME]</span>
+            <span class="fb-text">[COMMENT]</span>
+        </div>
+    </div>
 </div>
 \`\`\`
 
-### **5. تنسيق الإخراج:**
+### **4. تنسيق الإخراج:**
 أعد كائن JSON فقط:
 {
-  "html": "سلسلة HTML كاملة",
+  "html": "سلسلة HTML كاملة (be careful with quotes inside strings)",
   "liquid_code": "كود Shopify Liquid",
   "schema": { "name": "Landing Page", "settings": [] }
 }
 
-## 🚀 **حرية إبداعية كاملة:**
-- صمم باقي الصفحة بحرية تامة باستخدام CSS حديث وجذاب
-- استخدم تأثيرات hover، transitions، وanimations لجعل الصفحة تفاعلية
-- تأكد من أن الصفحة سريعة الاستجابة وتعمل على جميع الأجهزة
-- أضف عد تنازلي أقل من ساعتان أنيق يحفز الزائر على الشراء بلون مناسب لصفحة و للمنتج
-- أضف أقسام إضافية مثل: مميزات المنتج، الأسئلة الشائعة، إلخ (ملاحظة: لقد تم تغطية آراء العملاء أعلاه).
+## 🚀 **حرية إبداعية:**
+- صمم باقي الصفحة بحرية تامة.
+- أضف عد تنازلي.
+- أضف أقسام إضافية.
         `;
 
         const response = await fetch(GEMINI_ENDPOINT, {
@@ -265,42 +155,57 @@ ${productImageArray.length > 1 ?
         }
 
         const aiResponseText = data.candidates[0].content.parts[0].text;
-        const cleanedText = aiResponseText.replace(/```json/g, '').replace(/```/g, '').trim();
-        let aiResponse = JSON.parse(cleanedText);
 
         // ***************************************************************
-        // عملية الحقن: استبدال الرموز بالصور الحقيقية (Base64)
+        //  FIX: Robust JSON Parsing Function
+        //  دالة قوية لاستخراج JSON وتنظيفه من الأخطاء المحتملة
         // ***************************************************************
-        
-        // صور افتراضية في حال لم يرفع المستخدم صوراً
+        const parseJSONSafely = (text) => {
+            // محاولة 1: التنظيف البسيط
+            let clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
+            try {
+                return JSON.parse(clean);
+            } catch (e1) {
+                // محاولة 2: البحث عن بداية ونهاية كائن JSON
+                const firstBrace = text.indexOf('{');
+                const lastBrace = text.lastIndexOf('}');
+                
+                if (firstBrace !== -1 && lastBrace !== -1) {
+                    let jsonSubstring = text.substring(firstBrace, lastBrace + 1);
+                    try {
+                        return JSON.parse(jsonSubstring);
+                    } catch (e2) {
+                        console.error("JSON Parse Fail:", e2);
+                        throw new Error("Failed to parse AI response. The content might contain special characters.");
+                    }
+                }
+                throw e1;
+            }
+        };
+
+        let aiResponse = parseJSONSafely(aiResponseText);
+
+        // ***************************************************************
+        // عملية الحقن واستبدال الصور
+        // ***************************************************************
         const defaultImg = "https://via.placeholder.com/600x600?text=Product+Image";
         const defaultLogo = "https://via.placeholder.com/150x50?text=Logo";
 
         const finalProductImages = productImageArray.length > 0 ? productImageArray : [defaultImg];
         const finalBrandLogo = brandLogo || defaultLogo;
 
-        // دالة للاستبدال الآمن للصور المتعددة
         const replaceImages = (content) => {
             if (!content) return content;
-            
             let result = content;
-            
-            // استبدال الصورة الرئيسية
             result = result.split(MAIN_IMG_PLACEHOLDER).join(finalProductImages[0]);
-            
-            // استبدال الشعار
             result = result.split(LOGO_PLACEHOLDER).join(finalBrandLogo);
-            
-            // استبدال الصور الإضافية في المعرض
             for (let i = 1; i < finalProductImages.length && i <= 6; i++) {
                 const placeholder = `[[PRODUCT_IMAGE_${i + 1}_SRC]]`;
                 result = result.split(placeholder).join(finalProductImages[i]);
             }
-            
             return result;
         };
 
-        // تطبيق الاستبدال على HTML و Liquid Code
         aiResponse.html = replaceImages(aiResponse.html);
         aiResponse.liquid_code = replaceImages(aiResponse.liquid_code);
 
