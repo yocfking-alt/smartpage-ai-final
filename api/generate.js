@@ -136,10 +136,11 @@ ${productImageArray.length > 1 ?
 
 **👤 تعليمات صور الأشخاص (Avatars) مع الخصوصية:**
 - قم بتوليد روابط ديناميكية باستخدام خدمات مثل \`pravatar.cc\`.
-- **هام جداً:** يجب تطبيق تأثير "خربشة يدوية" (Real Scribble) على الوجوه في CSS باستخدام SVG مخصص لإخفاء ملامحهم تماماً كما في الصور الواقعية.
+- **هام جداً:** يجب تطبيق تأثير "شطب بالقلم" (Pen Scribble) على الوجوه.
+- **التفاصيل:** يجب أن تكون الخطوط **رقيقة**، عشوائية، سوداء، وتخرج قليلاً عن حدود الصورة لتبدو واقعية جداً.
 
 **🎨 تعليمات التصميم (CSS/HTML):**
-استخدم الهيكل التالي لمحاكاة فيسبوك بدقة مع إضافة طبقة الخربشة السوداء السميكة:
+استخدم الهيكل التالي لمحاكاة فيسبوك بدقة مع إضافة طبقة الشطب الواقعية:
 
 \`\`\`html
 <style>
@@ -155,35 +156,40 @@ ${productImageArray.length > 1 ?
   .fb-header-stat { display: flex; justify-content: space-between; margin-bottom: 15px; color: #65676B; font-size: 14px; }
   .fb-comment { display: flex; margin-bottom: 12px; gap: 8px; }
   
-  /* Avatar Container to hold image and scribble overlay */
+  /* Avatar Container: IMPORTANT - NO OVERFLOW HIDDEN allows scribble to go outside */
   .fb-avatar-container {
       position: relative;
       width: 38px;
       height: 38px;
-      border-radius: 50%;
-      overflow: hidden;
       flex-shrink: 0;
       cursor: pointer;
+      z-index: 1;
   }
   
   .fb-avatar { 
       width: 100%; 
       height: 100%; 
       object-fit: cover; 
+      border-radius: 50%; /* Radius applied here so image is round */
   }
   
-  /* The REAL BLACK MESSY Scribble Effect Overlay */
+  /* The THIN REALISTIC SCRIBBLE Effect Overlay */
   .fb-scribble-overlay {
       position: absolute;
-      top: -10%; 
-      left: -10%; 
-      width: 120%; 
-      height: 120%;
-      z-index: 2;
-      opacity: 1;
-      /* Heavy black chaotic scribble (SVG) */
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M5,10 L95,15 L5,35 L95,45 L5,65 L95,75 L10,95' stroke='%23000' stroke-width='22' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-      background-size: cover;
+      /* Positioning to allow it to be larger than the avatar */
+      top: -20%; 
+      left: -20%; 
+      width: 140%; 
+      height: 140%;
+      z-index: 10;
+      pointer-events: none; /* Allows clicking through the scribble */
+      opacity: 0.9;
+      
+      /* SVG Data URI: Thin (2px) black lines, messy, chaotic */
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10,50 Q30,20 50,60 T90,30 M5,70 Q40,30 70,80 T95,20 M20,10 C40,90 60,90 80,10 M10,40 L90,70 M90,40 L10,70' stroke='%23000' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      
+      background-size: contain;
+      background-repeat: no-repeat;
       background-position: center;
       transform: rotate(var(--rotation, 0deg));
   }
@@ -208,7 +214,7 @@ ${productImageArray.length > 1 ?
   <div class="fb-comment">
       <div class="fb-avatar-container">
           <img src="https://i.pravatar.cc/150?u=[GENERATE_RANDOM_STRING_HERE]" class="fb-avatar" alt="User">
-          <div class="fb-scribble-overlay" style="--rotation: [GENERATE_RANDOM_ANGLE_BETWEEN_-15_AND_15]deg;"></div>
+          <div class="fb-scribble-overlay" style="--rotation: [GENERATE_RANDOM_ANGLE_BETWEEN_-25_AND_25]deg;"></div>
       </div>
       
       <div class="fb-content-area">
