@@ -136,10 +136,10 @@ ${productImageArray.length > 1 ?
 
 **👤 تعليمات صور الأشخاص (Avatars) مع الخصوصية:**
 - قم بتوليد روابط ديناميكية باستخدام خدمات مثل \`pravatar.cc\`.
-- **هام جداً:** يجب تطبيق تأثير "خربشة يدوية" (Hand-drawn Scribble) على الوجوه في CSS لإخفاء ملامحهم تماماً.
+- **هام جداً:** يجب تطبيق تأثير "خربشة يدوية" (Real Scribble) على الوجوه في CSS باستخدام SVG مخصص لإخفاء ملامحهم تماماً كما في الصور الواقعية.
 
 **🎨 تعليمات التصميم (CSS/HTML):**
-استخدم الهيكل التالي لمحاكاة فيسبوك بدقة مع إضافة طبقة الخربشة اليدوية:
+استخدم الهيكل التالي لمحاكاة فيسبوك بدقة مع إضافة طبقة الخربشة السوداء السميكة:
 
 \`\`\`html
 <style>
@@ -172,17 +172,17 @@ ${productImageArray.length > 1 ?
       object-fit: cover; 
   }
   
-  /* The HAND-DRAWN Scribble Effect Overlay */
+  /* The REAL BLACK MESSY Scribble Effect Overlay */
   .fb-scribble-overlay {
       position: absolute;
-      top: -5px; 
-      left: -5px; 
+      top: -10%; 
+      left: -10%; 
       width: 120%; 
       height: 120%;
       z-index: 2;
-      opacity: 0.9;
-      /* SVG Data URI representing a chaotic black marker scribble */
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10,50 Q30,10 50,80 T90,20 M5,30 Q40,90 70,10 T95,80 M10,80 Q50,10 90,90' stroke='%23000' stroke-width='12' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      opacity: 1;
+      /* Heavy black chaotic scribble (SVG) */
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M5,10 L95,15 L5,35 L95,45 L5,65 L95,75 L10,95' stroke='%23000' stroke-width='22' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
       background-size: cover;
       background-position: center;
       transform: rotate(var(--rotation, 0deg));
@@ -208,7 +208,7 @@ ${productImageArray.length > 1 ?
   <div class="fb-comment">
       <div class="fb-avatar-container">
           <img src="https://i.pravatar.cc/150?u=[GENERATE_RANDOM_STRING_HERE]" class="fb-avatar" alt="User">
-          <div class="fb-scribble-overlay" style="--rotation: [GENERATE_RANDOM_ANGLE_BETWEEN_-20_AND_20]deg;"></div>
+          <div class="fb-scribble-overlay" style="--rotation: [GENERATE_RANDOM_ANGLE_BETWEEN_-15_AND_15]deg;"></div>
       </div>
       
       <div class="fb-content-area">
