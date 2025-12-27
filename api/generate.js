@@ -33,12 +33,7 @@ export default async function handler(req, res) {
         const MAIN_IMG_PLACEHOLDER = "[[PRODUCT_IMAGE_MAIN_SRC]]";
         const LOGO_PLACEHOLDER = "[[BRAND_LOGO_SRC]]";
         
-        let galleryPlaceholders = "";
-        for (let i = 1; i < productImageArray.length && i <= 5; i++) {
-            galleryPlaceholders += `[[PRODUCT_IMAGE_${i + 1}_SRC]] `;
-        }
-
-        // --- CSS الخاص بتعليقات الفيسبوك (من ملف t.html) ---
+        // --- CSS الخاص بتعليقات الفيسبوك (قلوب فقط) ---
         const fbStyles = `
         <style>
             :root { --bg-color: #ffffff; --comment-bg: #f0f2f5; --text-primary: #050505; --text-secondary: #65676b; --blue-link: #216fdb; --line-color: #eaebef; }
@@ -60,8 +55,9 @@ export default async function handler(req, res) {
             .react-count { font-size: 11px; color: var(--text-secondary); margin-left: 4px; margin-right: 2px; }
             .view-replies { display: flex; align-items: center; font-weight: 600; font-size: 14px; color: var(--text-primary); margin: 10px 0; padding-right: 50px; position: relative; cursor: pointer; }
             .view-replies::before { content: ''; position: absolute; right: 25px; top: 50%; width: 20px; height: 2px; background-color: var(--line-color); border-bottom-left-radius: 10px; }
+            
+            /* أيقونة القلب فقط */
             .icon-love { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%23f02849"/><path d="M16 26c-0.6 0-1.2-0.2-1.6-0.6 -5.2-4.6-9.4-8.4-9.4-13.4 0-3 2.4-5.4 5.4-5.4 2.1 0 3.9 1.1 4.9 2.9l0.7 1.2 0.7-1.2c1-1.8 2.8-2.9 4.9-2.9 3 0 5.4 2.4 5.4 5.4 0 5-4.2 8.8-9.4 13.4 -0.4 0.4-1 0.6-1.6 0.6z" fill="white"/></svg>') no-repeat center/cover; }
-            .icon-like { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%231877F2"/><path d="M16 8c-4.42 0-8 3.58-8 8 0 4.42 3.58 8 8 8h4.42v-5.58h-2.58v-3.42h2.58v-2.2c0-2.55 1.52-3.96 3.84-3.96 1.11 0 2.27 0.2 2.27 0.2v2.5h-1.28c-1.26 0-1.65 0.79-1.65 1.59v1.87h2.82l-0.45 3.42h-2.37v5.58c3.08-1.32 5.22-4.38 5.22-7.94 0-4.42-3.58-8-8-8z" fill="white"/></svg>') no-repeat center/cover; } 
         </style>
         `;
 
@@ -90,11 +86,13 @@ Price: ${productPrice}. ${shippingText}. ${offerText}.
    - **للذكور:** استخدم الاسم العربي المناسب واستخدم الرمز \`[[MALE_IMG]]\` في مصدر الصورة \`src\`.
    - **للإناث:** استخدم الاسم العربي المناسب واستخدم الرمز \`[[FEMALE_IMG]]\` في مصدر الصورة \`src\`.
    - نوّع الأسماء (مثال: "Reda Usmh", "أريج الزهور", "Amine Dz", "Oum Walid", etc).
-4. **التفاعل:**
-   - أضف أيقونات تفاعل (قلب/لايك) بأرقام عشوائية.
+4. **التفاعل (القلب فقط ❤️):**
+   - **هام جداً:** استخدم حصراً أيقونة القلب (\`icon-love\`) لجميع التفاعلات.
+   - **لا تستخدم أيقونة اللايك أبداً.**
+   - ضع أرقاماً عشوائية لعدد القلوب بجانب كل تعليق.
    - أضف "عرض الردود السابقة" بين بعض التعليقات لزيادة الواقعية.
 
-### نموذج HTML لتعليق واحد (كرر هذا النمط مع تغيير البيانات):
+### نموذج HTML لتعليق واحد (استخدم القلب فقط):
 \`\`\`html
 <div class="comment-row">
     <div class="avatar"><img src="[[FEMALE_IMG]]" alt="User"></div>
@@ -103,8 +101,7 @@ Price: ${productPrice}. ${shippingText}. ${offerText}.
             <span class="username">اسم المستخدم</span>
             <span class="text">نص التعليق هنا...</span>
             <div class="reactions-container">
-                <div class="react-icon icon-love"></div>
-                <span class="react-count">15</span>
+                <div class="react-icon icon-love"></div> <span class="react-count">15</span>
             </div>
         </div>
         <div class="actions">
@@ -157,9 +154,8 @@ ${fbStyles}
         // ***************************************************************
 
         // 1. إعداد الصور العشوائية (50 ذكر / 50 أنثى)
-        // نستخدم randomuser.me للحصول على صور حقيقية وثابتة عبر الـ IDs
         const getRandomAvatar = (gender) => {
-            const randomId = Math.floor(Math.random() * 50); // رقم عشوائي بين 0 و 49
+            const randomId = Math.floor(Math.random() * 50); 
             const genderPath = gender === 'male' ? 'men' : 'women';
             return `https://randomuser.me/api/portraits/${genderPath}/${randomId}.jpg`;
         };
