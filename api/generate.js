@@ -14,23 +14,28 @@ export default async function handler(req, res) {
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
         if (!GEMINI_API_KEY) throw new Error('API Key is missing');
 
+        // استقبال البيانات بما في ذلك الصور المتعددة
         const { 
             productName, productFeatures, productPrice, productCategory,
             targetAudience, designDescription, shippingOption, customShippingPrice, 
             customOffer, productImages, brandLogo 
         } = req.body;
 
+        // التعامل مع الصور المتعددة (نصي للتوافق مع الإصدارات السابقة)
         const productImageArray = productImages || [];
-        
+        const mainProductImage = productImageArray.length > 0 ? productImageArray[0] : null;
+
         const GEMINI_MODEL = 'gemini-2.5-flash'; 
         const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
         
         const shippingText = shippingOption === 'free' ? "شحن مجاني" : `الشحن: ${customShippingPrice}`;
         const offerText = customOffer ? `عرض خاص: ${customOffer}` : "";
 
+        // تعريف المتغيرات البديلة للصور
         const MAIN_IMG_PLACEHOLDER = "[[PRODUCT_IMAGE_MAIN_SRC]]";
         const LOGO_PLACEHOLDER = "[[BRAND_LOGO_SRC]]";
         
+        // إنشاء نصوص بديلة للصور الإضافية
         let galleryPlaceholders = "";
         for (let i = 1; i < productImageArray.length && i <= 5; i++) {
             galleryPlaceholders += `[[PRODUCT_IMAGE_${i + 1}_SRC]] `;
@@ -45,13 +50,26 @@ Context/Features: ${productFeatures}.
 Price: ${productPrice}. ${shippingText}. ${offerText}.
 User Design Request: ${designDescription}.
 
-## 🖼️ **تعليمات الصور:**
-- الصورة الرئيسية: \`${MAIN_IMG_PLACEHOLDER}\`
-- الشعار: \`${LOGO_PLACEHOLDER}\`
-- للصور الإضافية استخدم: \`[[PRODUCT_IMAGE_2_SRC]]\`, \`[[PRODUCT_IMAGE_3_SRC]]\` ...إلخ.
+## 🖼️ **تعليمات الصور المتعددة:**
+لقد تم تزويدك بعدة صور للمنتج (${productImageArray.length} صور) وشعار.
+
+### **1. الصورة الرئيسية:**
+- استخدم هذا النص بالضبط كمصدر للصورة الرئيسية: \`${MAIN_IMG_PLACEHOLDER}\`
+
+### **2. معرض الصور الإضافية:**
+- أضف قسم معرض صور يظهر الصور الإضافية للمنتج (إن وجدت).
+- استخدم النصوص التالية كمصادر للصور الإضافية:
+${productImageArray.length > 1 ? 
+  Array.from({length: Math.min(productImageArray.length - 1, 5)}, (_, i) => 
+    `  - الصورة ${i + 2}: استخدم \`[[PRODUCT_IMAGE_${i + 2}_SRC]]\``
+  ).join('\n') 
+  : '  - لا توجد صور إضافية'}
+
+### **3. الشعار:**
+- استخدم هذا النص بالضبط كمصدر للشعار: \`${LOGO_PLACEHOLDER}\`
 
 ## 🎯 **الهدف:**
-إنشاء صفحة هبوط فريدة ومبدعة تحتوي على جميع الصور المقدمة وتحقق أعلى معدلات التحويل.
+إنشاء صفحة هبوط تحقق أعلى معدلات التحويل.
 
 ## ⚠️ **متطلبات إلزامية:**
 
@@ -72,60 +90,31 @@ User Design Request: ${designDescription}.
   <button type="submit" class="submit-btn">تأكيد الطلب</button>
 </div>
 
-### **3. قسم آراء العملاء (Facebook Style Reviews) - الواقعية القصوى:**
-أريد تصميم هذا القسم ليشبه **تعليقات فيسبوك** تماماً.
-- **المحتوى:** 4-6 تعليقات باللهجة الجزائرية (الدارجة) متنوعة وعفوية جداً.
-- **الصور:** استخدم \`https://i.pravatar.cc/150?u=[RANDOM]\` لصور مختلفة.
+### **3. قسم آراء العملاء (Customer Reviews) - هام جداً:**
+أريد تصميم هذا القسم بدقة ليبدو وكأنه **تعليقات فيسبوك حقيقية (Facebook Comments UI)**.
+- العنوان الرئيسي للقسم: "شهادات زبائننا الكرام" أو "ماذا قالوا عن منتجنا؟"
+- **التصميم:**
+  - يجب أن يكون لكل تعليق صورة دائرية (Avatar) على اليمين.
+  - بجانب الصورة، "فقاعة" (Bubble) رمادية فاتحة (Background: #f0f2f5) تحتوي على اسم المستخدم ونص التعليق.
+  - تحت الفقاعة، أضف روابط صغيرة: "أعجبني . رد . منذ [وقت]" لتبدو واقعية.
+  - أضف أيقونات تفاعل (قلب أحمر صغير أو لايك) أسفل الفقاعة لإضفاء المصداقية.
 
-**🎨 تأثير الشطب اليدوي (Scribble) - هام جداً:**
-يجب تطبيق تأثير "شطب بالقلم" على الوجوه لإخفاء الملامح.
-- الخطوط يجب أن تكون **رقيقة** (Thin lines)، عشوائية، سوداء.
-- يجب أن **تخرج عن حدود الصورة** (Overflow) لتبدو واقعية جداً.
-- **تحذير JSON:** عند كتابة كود SVG داخل CSS، تأكد من استخدام **Single Quotes** (') داخل الـ SVG string لتجنب كسر الـ JSON.
+- **المحتوى (يجب توليده بذكاء):**
+  - قم بتوليد 4 إلى 6 تعليقات مختلفة تماماً ومناسبة لمنتج "${productName}".
+  - **اللغة:** اخلط بين **اللهجة الجزائرية الدارجة** (مثل: "يعطيكم الصحة"، "وصلتني مريقلة"، "فور"، "خدمة شابة") وبين **اللغة العربية الفصحى** (مثل: "منتج رائع"، "جودة ممتازة").
+  
+- **الصور والأسماء (توزيع 50/50):**
+  - **للذكور:** اختر أسماء جزائرية/عربية للذكور. للصورة استخدم الرابط التالي (مع تغيير الرقم X عشوائياً بين 1 و 50): \`https://randomuser.me/api/portraits/men/X.jpg\` (مثال: men/22.jpg).
+  - **للإناث:** اختر أسماء جزائرية/عربية للإناث. للصورة استخدم الرابط التالي (مع تغيير الرقم X عشوائياً بين 1 و 50): \`https://randomuser.me/api/portraits/women/X.jpg\` (مثال: women/45.jpg).
+  - تأكد من أن التعليق يتناسب مع جنس صاحب التعليق.
 
-استخدم هذا الـ SVG بالتحديد داخل الـ CSS (لاحظ استخدام Single Quotes بالداخل):
-\`background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10,50 Q30,20 50,60 T90,30 M5,70 Q40,30 70,80 T95,20 M20,10 C40,90 60,90 80,10 M10,40 L90,70 M90,40 L10,70' stroke='%23000' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");\`
-
-**الهيكل المطلوب للتعليقات:**
-\`\`\`html
-<style>
-  .fb-comments-section { background: #fff; padding: 20px; max-width: 600px; margin: 30px auto; direction: rtl; font-family: sans-serif; border-top: 1px solid #e5e5e5; }
-  .fb-comment { display: flex; margin-bottom: 12px; gap: 8px; }
-  /* Avatar Container: NO OVERFLOW HIDDEN allows scribble to go outside */
-  .fb-avatar-container { position: relative; width: 38px; height: 38px; flex-shrink: 0; z-index: 1; }
-  .fb-avatar { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-  /* The THIN REALISTIC SCRIBBLE Effect Overlay */
-  .fb-scribble-overlay {
-      position: absolute;
-      top: -20%; left: -20%; width: 140%; height: 140%; z-index: 10; pointer-events: none; opacity: 0.9;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10,50 Q30,20 50,60 T90,30 M5,70 Q40,30 70,80 T95,20 M20,10 C40,90 60,90 80,10 M10,40 L90,70 M90,40 L10,70' stroke='%23000' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-      background-size: contain; background-repeat: no-repeat; background-position: center;
-      transform: rotate(var(--rotation, 0deg));
-  }
-  .fb-content-area { flex: 1; }
-  .fb-bubble { background-color: #f0f2f5; padding: 8px 12px; border-radius: 18px; display: inline-block; }
-  .fb-name { font-weight: 600; font-size: 13px; color: #050505; display: block; }
-  .fb-text { font-size: 15px; color: #050505; line-height: 1.35; }
-</style>
-
-<div class="fb-comment">
-    <div class="fb-avatar-container">
-        <img src="https://i.pravatar.cc/150?u=[RANDOM]" class="fb-avatar">
-        <div class="fb-scribble-overlay" style="--rotation: [RANDOM_DEG]deg;"></div>
-    </div>
-    <div class="fb-content-area">
-        <div class="fb-bubble">
-            <span class="fb-name">[NAME]</span>
-            <span class="fb-text">[COMMENT]</span>
-        </div>
-    </div>
-</div>
-\`\`\`
+- **CSS الخاص بالتعليقات:**
+  أضف CSS مخصص داخل التاق <style> لهذا القسم ليحاكي فيسبوك (font-family, border-radius للفقاعة 18px، حجم خط الاسم bold 13px، لون الخلفية #f0f2f5، إلخ).
 
 ### **4. تنسيق الإخراج:**
 أعد كائن JSON فقط:
 {
-  "html": "سلسلة HTML كاملة (be careful with quotes inside strings)",
+  "html": "سلسلة HTML كاملة",
   "liquid_code": "كود Shopify Liquid",
   "schema": { "name": "Landing Page", "settings": [] }
 }
@@ -133,7 +122,7 @@ User Design Request: ${designDescription}.
 ## 🚀 **حرية إبداعية:**
 - صمم باقي الصفحة بحرية تامة.
 - أضف عد تنازلي.
-- أضف أقسام إضافية.
+- أضف مميزات المنتج والأسئلة الشائعة.
         `;
 
         const response = await fetch(GEMINI_ENDPOINT, {
@@ -155,39 +144,13 @@ User Design Request: ${designDescription}.
         }
 
         const aiResponseText = data.candidates[0].content.parts[0].text;
+        const cleanedText = aiResponseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        let aiResponse = JSON.parse(cleanedText);
 
         // ***************************************************************
-        //  FIX: Robust JSON Parsing Function
-        //  دالة قوية لاستخراج JSON وتنظيفه من الأخطاء المحتملة
+        // عملية الحقن: استبدال الرموز بالصور الحقيقية
         // ***************************************************************
-        const parseJSONSafely = (text) => {
-            // محاولة 1: التنظيف البسيط
-            let clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
-            try {
-                return JSON.parse(clean);
-            } catch (e1) {
-                // محاولة 2: البحث عن بداية ونهاية كائن JSON
-                const firstBrace = text.indexOf('{');
-                const lastBrace = text.lastIndexOf('}');
-                
-                if (firstBrace !== -1 && lastBrace !== -1) {
-                    let jsonSubstring = text.substring(firstBrace, lastBrace + 1);
-                    try {
-                        return JSON.parse(jsonSubstring);
-                    } catch (e2) {
-                        console.error("JSON Parse Fail:", e2);
-                        throw new Error("Failed to parse AI response. The content might contain special characters.");
-                    }
-                }
-                throw e1;
-            }
-        };
-
-        let aiResponse = parseJSONSafely(aiResponseText);
-
-        // ***************************************************************
-        // عملية الحقن واستبدال الصور
-        // ***************************************************************
+        
         const defaultImg = "https://via.placeholder.com/600x600?text=Product+Image";
         const defaultLogo = "https://via.placeholder.com/150x50?text=Logo";
 
