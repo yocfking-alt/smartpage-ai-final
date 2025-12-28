@@ -21,7 +21,7 @@ export default async function handler(req, res) {
             customOffer, productImages, brandLogo 
         } = req.body;
 
-        // التعامل مع الصور المتعددة (نصي للتوافق مع الإصدارات السابقة)
+        // التعامل مع الصور المتعددة
         const productImageArray = productImages || [];
         const mainProductImage = productImageArray.length > 0 ? productImageArray[0] : null;
 
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
         for (let i = 1; i < productImageArray.length && i <= 5; i++) {
             galleryPlaceholders += `[[PRODUCT_IMAGE_${i + 1}_SRC]] `;
         }
-        
+
         // --- CSS الخاص بتعليقات الفيسبوك (قلوب فقط) ---
         const fbStyles = `
         <style>
@@ -154,15 +154,7 @@ ${productImageArray.length > 1 ?
   <button type="submit" class="submit-btn">تأكيد الطلب</button>
 </div>
 
-### **4. تنسيق الإخراج:**
-أعد كائن JSON فقط:
-{
-  "html": "سلسلة HTML كاملة",
-  "liquid_code": "كود Shopify Liquid",
-  "schema": { "name": "Landing Page", "settings": [] }
-}
-
-## 💬 تعليمات قسم آراء العملاء (هام جداً - Facebook Style):
+### **4. قسم آراء العملاء (Facebook Style):**
 يجب أن يبدو القسم كأنه مأخوذ (Screenshot) من نقاش حقيقي على فيسبوك حول المنتج.
 1. **التصميم:** استخدم أكواد CSS المرفقة في المتغير \`fbStyles\`.
 2. **المحتوى:** أنشئ 3-5 تعليقات واقعية جداً.
@@ -174,7 +166,7 @@ ${productImageArray.length > 1 ?
 4. **التفاعل (القلب فقط ❤️):**
    - **هام جداً:** استخدم حصراً أيقونة القلب (\`icon-love\`) لجميع التفاعلات.
    - **لا تستخدم أيقونة اللايك أبداً.**
-   - ضع أرقاماً عشوائية لعدد القلوب بجانب كل تعليق.
+   - ضع أرقاماً عشوائية منطقية لعدد ساعات لعدد القلوب بجانب كل تعليق.
    - أضف "عرض الردود السابقة" بين بعض التعليقات لزيادة الواقعية.
 
 ### نموذج HTML لتعليق واحد (استخدم القلب فقط):
@@ -198,24 +190,21 @@ ${productImageArray.length > 1 ?
 </div>
 \`\`\`
 
-## 🚀 **حرية إبداعية كاملة:**
+### **5. تنسيق الإخراج:**
+أعد كائن JSON فقط:
+{
+  "html": "سلسلة HTML كاملة",
+  "liquid_code": "كود Shopify Liquid",
+  "schema": { "name": "Landing Page", "settings": [] }
+}
+
+## 🚀 **حرية إبداعية كاملة لباقي الأقسام:**
 - صمم باقي الصفحة بحرية تامة باستخدام CSS حديث وجذاب
 - استخدم تأثيرات hover، transitions، وanimations لجعل الصفحة تفاعلية
 - تأكد من أن الصفحة سريعة الاستجابة وتعمل على جميع الأجهزة
 - أضف عد تنازلي أقل من ساعتان أنيق يحفز الزائر على الشراء بلون مناسب لصفحة و للمنتج
-- أضف أقسام إضافية مثل: مميزات المنتج، آراء العملاء، الأسئلة الشائعة، إلخ
-**قسم آراء العملاء (Facebook Comments):**
-   - ابدأ بـ \`<div class="fb-reviews-section"><h3>آراء زبائننا الكرام</h3><div class="comment-thread"><div class="thread-line-container"></div>\`
-   - ضع التعليقات هنا.
-   - أغلق الـ divs.
-   - **مهم:** قم بتضمين كود CSS (\`fbStyles\`) الذي سأزودك به في بداية الـ HTML.
-
-## تنسيق الإخراج (JSON Only):
-{
-  "html": "كود HTML الكامل بما في ذلك الستايل",
-  "liquid_code": "كود Liquid",
-  "schema": { ... }
-}
+- أضف أقسام إضافية مثل: مميزات المنتج، الأسئلة الشائعة، إلخ
+- **مهم:** قم بتضمين كود CSS (\`fbStyles\`) الذي سأزودك به في بداية الـ HTML الناتج.
 
 قم بدمج هذا الـ CSS في بداية الـ HTML الناتج:
 ${fbStyles}
@@ -244,40 +233,54 @@ ${fbStyles}
         let aiResponse = JSON.parse(cleanedText);
 
         // ***************************************************************
-        // عملية الحقن: استبدال الرموز بالصور الحقيقية (Base64)
+        // عملية الحقن: استبدال الرموز (صور المنتج + صور الأشخاص)
         // ***************************************************************
         
-        // صور افتراضية في حال لم يرفع المستخدم صوراً
+        // صور افتراضية
         const defaultImg = "https://via.placeholder.com/600x600?text=Product+Image";
         const defaultLogo = "https://via.placeholder.com/150x50?text=Logo";
-
         const finalProductImages = productImageArray.length > 0 ? productImageArray : [defaultImg];
         const finalBrandLogo = brandLogo || defaultLogo;
 
-        // دالة للاستبدال الآمن للصور المتعددة
+        // دالة الصور العشوائية (أشخاص حقيقيين)
+        const getRandomAvatar = (gender) => {
+            const randomId = Math.floor(Math.random() * 50); 
+            const genderPath = gender === 'male' ? 'men' : 'women';
+            return `https://randomuser.me/api/portraits/${genderPath}/${randomId}.jpg`;
+        };
+
+        // دالة حقن صور الأشخاص
+        const injectAvatars = (htmlContent) => {
+            if (!htmlContent) return htmlContent;
+            let content = htmlContent;
+            while (content.includes('[[MALE_IMG]]')) {
+                content = content.replace('[[MALE_IMG]]', getRandomAvatar('male'));
+            }
+            while (content.includes('[[FEMALE_IMG]]')) {
+                content = content.replace('[[FEMALE_IMG]]', getRandomAvatar('female'));
+            }
+            return content;
+        };
+
+        // دالة للاستبدال الآمن لصور المنتج
         const replaceImages = (content) => {
             if (!content) return content;
-            
             let result = content;
-            
             // استبدال الصورة الرئيسية
             result = result.split(MAIN_IMG_PLACEHOLDER).join(finalProductImages[0]);
-            
             // استبدال الشعار
             result = result.split(LOGO_PLACEHOLDER).join(finalBrandLogo);
-            
-            // استبدال الصور الإضافية في المعرض
+            // استبدال الصور الإضافية
             for (let i = 1; i < finalProductImages.length && i <= 6; i++) {
                 const placeholder = `[[PRODUCT_IMAGE_${i + 1}_SRC]]`;
                 result = result.split(placeholder).join(finalProductImages[i]);
             }
-            
             return result;
         };
 
-        // تطبيق الاستبدال على HTML و Liquid Code
-        aiResponse.html = replaceImages(aiResponse.html);
-        aiResponse.liquid_code = replaceImages(aiResponse.liquid_code);
+        // تطبيق الاستبدال وحقن الأفاتار على HTML و Liquid Code
+        aiResponse.html = injectAvatars(replaceImages(aiResponse.html));
+        aiResponse.liquid_code = injectAvatars(replaceImages(aiResponse.liquid_code));
 
         res.status(200).json({
             liquid_code: aiResponse.liquid_code,
