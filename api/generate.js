@@ -41,62 +41,74 @@ export default async function handler(req, res) {
             galleryPlaceholders += `[[PRODUCT_IMAGE_${i + 1}_SRC]] `;
         }
 
-        // --- CSS معدل ليظهر التعليقات كلقطات شاشة منفصلة ---
+        // --- CSS الخاص بتعليقات الفيسبوك (تصميم سكرين شوت + قلوب فقط) ---
         const fbStyles = `
         <style>
             :root { --bg-color: #ffffff; --comment-bg: #f0f2f5; --text-primary: #050505; --text-secondary: #65676b; --blue-link: #216fdb; --line-color: #eaebef; }
-            .fb-reviews-section { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; direction: rtl; padding: 20px; background: #f9f9f9; margin-top: 30px; border-top: 1px solid #ddd; }
             
-            /* تصميم لقطة الشاشة */
-            .screenshot-wrapper {
-                background: #fff;
-                border: 1px solid #e1e1e1;
-                border-radius: 12px;
-                padding: 15px;
-                margin-bottom: 20px;
-                box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-                max-width: 500px;
-                margin-left: auto;
-                margin-right: auto;
-                position: relative;
-                overflow: hidden;
+            /* حاوية القسم العام */
+            .fb-reviews-section { 
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+                direction: rtl; 
+                padding: 20px; 
+                background: #f9f9f9; 
+                margin-top: 30px; 
+                border-top: 1px solid #ddd; 
+                text-align: center;
             }
-            /* شريط وهمي للهاتف لزيادة الواقعية */
-            .fake-phone-header {
-                border-bottom: 1px solid #f0f0f0;
-                padding-bottom: 8px;
-                margin-bottom: 10px;
-                display: flex;
-                align-items: center;
-                gap: 5px;
-            }
-            .fb-icon-mini { width: 16px; height: 16px; background-color: #1877f2; border-radius: 50%; display: inline-block; }
-            .fb-text-mini { font-size: 10px; color: #65676b; font-weight: bold; }
 
-            .comment-row { display: flex; align-items: flex-start; position: relative; z-index: 1; }
-            .avatar { width: 40px; height: 40px; border-radius: 50%; overflow: hidden; margin-left: 10px; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.1); }
+            .fb-reviews-title {
+                margin-bottom: 30px;
+                font-size: 1.5rem;
+                font-weight: bold;
+                color: #333;
+            }
+
+            /* تصميم السكرين شوت (الصورة الوهمية) */
+            .fb-screenshot-card {
+                background: #fff;
+                max-width: 500px;
+                margin: 0 auto 30px auto; /* مسافة بين كل سكرين شوت */
+                border: 1px solid #ddd;
+                border-radius: 12px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* ظل خفيف ليبدو كصورة طافية */
+                overflow: hidden;
+                text-align: right;
+                position: relative;
+            }
+
+            /* محاكاة شريط الحالة العلوي للفيسبوك (اختياري للواقعية) */
+            .fb-fake-header {
+                padding: 10px 15px;
+                border-bottom: 1px solid #eee;
+                font-size: 12px;
+                color: #65676b;
+                display: flex;
+                justify-content: space-between;
+                background: #fff;
+            }
+
+            .comment-thread { padding: 10px 15px 20px 15px; position: relative; }
+            .thread-line-container { position: absolute; right: 40px; top: 15px; bottom: 30px; width: 2px; background-color: var(--line-color); z-index: 0; }
+            
+            .comment-row { display: flex; align-items: flex-start; margin-bottom: 15px; position: relative; z-index: 1; }
+            .avatar { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; margin-left: 10px; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.1); }
             .avatar img { width: 100%; height: 100%; object-fit: cover; }
-            .comment-content { display: flex; flex-direction: column; width: 100%; }
-            .bubble { background-color: var(--comment-bg); padding: 10px 15px; border-radius: 18px; display: inline-block; position: relative; width: fit-content; }
-            .username { font-weight: 700; font-size: 14px; color: var(--text-primary); display: block; margin-bottom: 2px; cursor: pointer; }
-            .text { font-size: 15px; color: var(--text-primary); line-height: 1.4; white-space: pre-wrap; }
-            .actions { display: flex; gap: 15px; margin-right: 12px; margin-top: 5px; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
-            .time { font-weight: 400; }
+            .comment-content { display: flex; flex-direction: column; max-width: 88%; }
+            .bubble { background-color: var(--comment-bg); padding: 8px 12px; border-radius: 18px; display: inline-block; position: relative; min-width: 120px; }
+            .username { font-weight: 600; font-size: 13px; color: var(--text-primary); display: block; margin-bottom: 2px; cursor: pointer; }
+            .text { font-size: 14px; color: var(--text-primary); line-height: 1.3; white-space: pre-wrap; }
+            .actions { display: flex; gap: 15px; margin-right: 12px; margin-top: 3px; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
             
             /* التفاعلات */
-            .reactions-float { 
-                position: absolute; 
-                bottom: -10px; 
-                left: -5px; 
-                background: white; 
-                border-radius: 12px; 
-                box-shadow: 0 2px 4px rgba(0,0,0,0.15); 
-                padding: 2px 4px; 
-                display: flex; 
-                align-items: center; 
-            }
-            .icon-love { width: 18px; height: 18px; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%23f02849"/><path d="M16 26c-0.6 0-1.2-0.2-1.6-0.6 -5.2-4.6-9.4-8.4-9.4-13.4 0-3 2.4-5.4 5.4-5.4 2.1 0 3.9 1.1 4.9 2.9l0.7 1.2 0.7-1.2c1-1.8 2.8-2.9 4.9-2.9 3 0 5.4 2.4 5.4 5.4 0 5-4.2 8.8-9.4 13.4 -0.4 0.4-1 0.6-1.6 0.6z" fill="white"/></svg>') no-repeat center/cover; }
-            .react-count { font-size: 12px; color: #65676b; margin-left: 4px; }
+            .reactions-container { position: absolute; bottom: -8px; left: -10px; background-color: white; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); padding: 2px 4px; display: flex; align-items: center; height: 18px; z-index: 10; }
+            .react-icon { width: 16px; height: 16px; border: 2px solid #fff; border-radius: 50%; }
+            .react-count { font-size: 11px; color: var(--text-secondary); margin-left: 4px; margin-right: 2px; }
+            
+            .view-replies { display: flex; align-items: center; font-weight: 600; font-size: 13px; color: var(--text-primary); margin: 5px 0 15px 0; padding-right: 50px; cursor: pointer; }
+            
+            /* أيقونة القلب فقط */
+            .icon-love { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%23f02849"/><path d="M16 26c-0.6 0-1.2-0.2-1.6-0.6 -5.2-4.6-9.4-8.4-9.4-13.4 0-3 2.4-5.4 5.4-5.4 2.1 0 3.9 1.1 4.9 2.9l0.7 1.2 0.7-1.2c1-1.8 2.8-2.9 4.9-2.9 3 0 5.4 2.4 5.4 5.4 0 5-4.2 8.8-9.4 13.4 -0.4 0.4-1 0.6-1.6 0.6z" fill="white"/></svg>') no-repeat center/cover; }
         </style>
         `;
 
@@ -109,70 +121,140 @@ Context/Features: ${productFeatures}.
 Price: ${productPrice}. ${shippingText}. ${offerText}.
 User Design Request: ${designDescription}.
 
-## 🖼️ **تعليمات الصور المتعددة:**
-- استخدم \`${MAIN_IMG_PLACEHOLDER}\` للصورة الرئيسية.
-- استخدم \`${LOGO_PLACEHOLDER}\` للشعار.
+## 🖼️ **تعليمات الصور المتعددة (مهم جداً):**
+لقد تم تزويدك بعدة صور للمنتج (${productImageArray.length} صور) وشعار.
+**يجب اتباع التعليمات التالية بدقة:**
+
+### **1. الصورة الرئيسية:**
+- استخدم هذا النص بالضبط كمصدر للصورة الرئيسية: \`${MAIN_IMG_PLACEHOLDER}\`
+- مثال: <img src="${MAIN_IMG_PLACEHOLDER}" alt="${productName}" class="main-product-image">
+
+### **2. معرض الصور الإضافية:**
+- أضف قسم معرض صور يظهر الصور الإضافية للمنتج
+- استخدم النصوص التالية كمصادر للصور الإضافية:
 ${productImageArray.length > 1 ? 
   Array.from({length: Math.min(productImageArray.length - 1, 5)}, (_, i) => 
     `  - الصورة ${i + 2}: استخدم \`[[PRODUCT_IMAGE_${i + 2}_SRC]]\``
   ).join('\n') 
-  : ''}
+  : '  - لا توجد صور إضافية'}
+- يمكنك إنشاء سلايدر، شبكة صور، أو معرض تفاعلي
+- تأكد من أن المعرض سريع الاستجابة ويعمل جيداً على الجوال
+
+### **3. الشعار:**
+- استخدم هذا النص بالضبط كمصدر للشعار: \`${LOGO_PLACEHOLDER}\`
+- مثال: <img src="${LOGO_PLACEHOLDER}" alt="شعار العلامة التجارية" class="logo">
 
 ## 🎯 **الهدف:**
-إنشاء صفحة هبوط تحتوي على قسم آراء عملاء مميز جداً.
+إنشاء صفحة هبوط فريدة ومبدعة تحتوي على جميع الصور المقدمة وتحقق أعلى معدلات التحويل.
 
-## ⚠️ **متطلبات إلزامية لقسم الآراء (Facebook Screenshots Style):**
-يجب أن لا يكون القسم محادثة متصلة. بدلاً من ذلك، **أنشئ من 3 إلى 5 كتل منفصلة تماماً**، كل كتلة تمثل "لقطة شاشة" لتعليق إيجابي.
+## ⚠️ **متطلبات إلزامية:**
 
-1. **الكمية:** أنشئ ما بين 3 إلى 5 مراجعات (Reviews).
-2. **المحتوى:** تعليقات باللهجة الجزائرية الدارجة ممزوجة بالفصحى، تمدح المنتج بشدة.
-3. **التصميم:** كل تعليق يجب أن يكون داخل \`div\` بالكلاس \`screenshot-wrapper\` لكي يبدو كصورة مقصوصة.
-4. **الصور:**
-   - للذكور: \`[[MALE_IMG]]\`
-   - للإناث: \`[[FEMALE_IMG]]\`
-5. **التفاعل:** استخدم أيقونة القلب فقط (\`icon-love\`).
+### **1. قسم الهيرو:**
+- يتضمن الشعار (استخدم \`${LOGO_PLACEHOLDER}\`) في الأعلى أو في الهيدر
+- صورة المنتج الرئيسية (استخدم \`${MAIN_IMG_PLACEHOLDER}\`) يجب أن تكون بارزة جداً
+- إذا كان هناك أكثر من صورة، أضف أزرار تنقل بين الصور أو معرض مصغر
 
-### نموذج HTML لتعليق واحد (كرر هذا الهيكل 3-5 مرات بشكل منفصل):
+### **2. معرض الصور (إذا كان هناك أكثر من صورة):**
+- قم بإنشاء قسم مخصص لعرض جميع صور المنتج
+- استخدم تقنيات CSS/JS حديثة لعرض المعرض (مثل grid، flexbox، أو سلايدر)
+- تأكد من أن الصور معروضة بشكل جميل ومنظم
+
+### **3. استمارة الطلب (مباشرة بعد الهيرو):**
+يجب أن تحتوي على هذا الهيكل الدقيق للحقول باللغة العربية:
+<div class="customer-info-box">
+  <h3>استمارة الطلب</h3>
+  <p>المرجو إدخال معلوماتك الخاصة بك</p>
+  
+  <div class="form-group">
+    <label>الإسم الكامل</label>
+    <input type="text" placeholder="Nom et prénom" required>
+  </div>
+  
+  <div class="form-group">
+    <label>رقم الهاتف</label>
+    <input type="tel" placeholder="Nombre" required>
+  </div>
+  
+  <div class="form-group">
+    <label>الولاية</label>
+    <input type="text" placeholder="Wilaya" required>
+  </div>
+  
+  <div class="form-group">
+    <label>البلدية</label>
+    <input type="text" placeholder="أدخل بلديتك" required>
+  </div>
+  
+  <div class="form-group">
+    <label>الموقع / العنوان</label>
+    <input type="text" placeholder="أدخل عنوانك بالتفصيل" required>
+  </div>
+  
+  <div class="price-display">
+    <p>سعر المنتج: ${productPrice} دينار</p>
+  </div>
+  
+  <button type="submit" class="submit-btn">تأكيد الطلب</button>
+</div>
+
+### **4. قسم آراء العملاء (تصميم 3-5 لقطات شاشة - Facebook Style):**
+بدلاً من قائمة واحدة طويلة، يجب عليك إنشاء **3 إلى 5 "بطاقات" منفصلة** (Screenshots). كل بطاقة تمثل لقطة شاشة مستقلة لهاتف محمول تعرض نقاشاً مختلفاً.
+
+**الهيكل المطلوب لهذا القسم:**
+1. العنوان: \`<h3>ماذا يقول عملاؤنا</h3>\`
+2. التكرار: قم بتوليد **من 3 إلى 5** كتل \`div\` منفصلة، كل واحدة بالكلاس \`fb-screenshot-card\`.
+3. داخل كل \`fb-screenshot-card\` ضع **3 إلى 5 تعليقات مختلفة**.
+
+**تفاصيل كل بطاقة (Screenshot):**
+- استخدم الكلاس \`fb-screenshot-card\`.
+- **المحتوى:** محادثة فريدة (3-5 تعليقات) تمزج بين الدارجة الجزائرية (مثل: "هايلة"، "يعطيكم الصحة"، "وصلتني روعة") والعربية.
+- **الصور:**
+   - للذكور: استخدم \`[[MALE_IMG]]\`.
+   - للإناث: استخدم \`[[FEMALE_IMG]]\`.
+- **التفاعل (قلوب فقط ❤️):** استخدم \`<div class="react-icon icon-love"></div>\` فقط.
+- **التنسيق:** يجب أن تبدو كل بطاقة كسكرين شوت منفصلة تماماً (استخدم CSS المرفق).
+
+**مثال لهيكل بطاقة سكرين شوت واحدة (كرر هذا الكود 3-5 مرات ببيانات مختلفة):**
 \`\`\`html
-<div class="screenshot-wrapper">
-    <div class="fake-phone-header">
-       <span class="fb-icon-mini"></span>
-       <span class="fb-text-mini">Facebook</span>
-    </div>
-
-    <div class="comment-row">
-        <div class="avatar"><img src="[[MALE_IMG]]" alt="User"></div> <div class="comment-content">
-            <div class="bubble">
-                <span class="username">اسم الزبون</span>
-                <span class="text">التعليق هنا... (مثال: والله منتج روعة يعطيك الصحة)</span>
-                
-                <div class="reactions-float">
-                    <div class="icon-love"></div>
-                    <span class="react-count">24</span>
+<div class="fb-screenshot-card">
+    <div class="fb-fake-header">التعليقات الأكثر ملاءمة ▾</div>
+    <div class="comment-thread">
+        <div class="thread-line-container"></div>
+        
+        <div class="comment-row">
+            <div class="avatar"><img src="[[FEMALE_IMG]]" alt="User"></div>
+            <div class="comment-content">
+                <div class="bubble">
+                    <span class="username">سارة القسنطينية</span>
+                    <span class="text">منتج في القمة شكرا لكم على المصداقية</span>
+                    <div class="reactions-container">
+                        <div class="react-icon icon-love"></div> <span class="react-count">45</span>
+                    </div>
+                </div>
+                <div class="actions">
+                    <span class="time">2 س</span>
+                    <span class="action-link">أعجبني</span>
+                    <span class="action-link">رد</span>
                 </div>
             </div>
-            <div class="actions">
-                <span class="time">منذ 3 س</span>
-                <span>أعجبني</span>
-                <span>رد</span>
-            </div>
         </div>
-    </div>
+
+        </div>
 </div>
 \`\`\`
 
-### **باقي الأقسام (استمارة الطلب، الهيرو، إلخ):**
-- **الهيرو:** صورة المنتج + العنوان.
-- **الاستمارة:** كما هو معتاد (الإسم، الهاتف، الولاية، البلدية، العنوان).
-- تأكد من تضمين كود CSS (\`fbStyles\`) في بداية الـ HTML الناتج.
-
-### **تنسيق الإخراج:**
+### **5. تنسيق الإخراج:**
 أعد كائن JSON فقط:
 {
   "html": "سلسلة HTML كاملة",
   "liquid_code": "كود Shopify Liquid",
   "schema": { "name": "Landing Page", "settings": [] }
 }
+
+## 🚀 **حرية إبداعية كاملة لباقي الأقسام:**
+- صمم باقي الصفحة بحرية تامة باستخدام CSS حديث وجذاب
+- أضف عد تنازلي أقل من ساعتان.
+- **مهم:** قم بتضمين كود CSS (\`fbStyles\`) الذي سأزودك به في بداية الـ HTML الناتج.
 
 قم بدمج هذا الـ CSS في بداية الـ HTML الناتج:
 ${fbStyles}
