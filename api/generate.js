@@ -23,7 +23,6 @@ export default async function handler(req, res) {
 
         // التعامل مع الصور المتعددة
         const productImageArray = productImages || [];
-        // لم نعد نحتاج لتحديد صورة رئيسية منفصلة لأن الكل سيدخل في السلايدر
         const mainProductImage = productImageArray.length > 0 ? productImageArray[0] : null;
 
         const GEMINI_MODEL = 'gemini-2.5-flash'; 
@@ -36,17 +35,114 @@ export default async function handler(req, res) {
         const MAIN_IMG_PLACEHOLDER = "[[PRODUCT_IMAGE_MAIN_SRC]]";
         const LOGO_PLACEHOLDER = "[[BRAND_LOGO_SRC]]";
         
-        // إنشاء قائمة بالصور الإضافية للسلايدر
-        // قمنا بزيادة العدد أو إزالة الحد الأقصى ليشمل جميع الصور كما طلبت
-        let galleryPlaceholders = "";
-        for (let i = 1; i < productImageArray.length; i++) { 
-            galleryPlaceholders += `[[PRODUCT_IMAGE_${i + 1}_SRC]]\n`;
+        // تحضير قائمة الصور للسلايدر (الرئيسية + الإضافية)
+        let sliderImagesInstruction = `   - الشريحة 1 (الرئيسية): <img src="${MAIN_IMG_PLACEHOLDER}" class="slider-img active" data-index="1">`;
+        for (let i = 1; i < productImageArray.length && i <= 6; i++) {
+            sliderImagesInstruction += `\n   - الشريحة ${i + 1}: <img src="[[PRODUCT_IMAGE_${i + 1}_SRC]]" class="slider-img" data-index="${i + 1}">`;
         }
+        const totalImagesCount = Math.min(productImageArray.length, 7) || 1; // حساب العدد الكلي للصور
 
-        // --- CSS الخاص بتعليقات الفيسبوك (قلوب فقط) ---
-        const fbStyles = `
+        // --- CSS مدمج: تعليقات الفيسبوك + ستايل السلايدر الجديد المطابق للصورة ---
+        const combinedStyles = `
         <style>
+            /* إعدادات المتغيرات والألوان */
             :root { --bg-color: #ffffff; --comment-bg: #f0f2f5; --text-primary: #050505; --text-secondary: #65676b; --blue-link: #216fdb; --line-color: #eaebef; }
+            
+            /* --- 1. ستايل السلايدر المطابق للصورة المرفقة (Lazzwood Style) --- */
+            .product-viewer-container {
+                position: relative;
+                width: 100%;
+                max-width: 500px; /* عرض مناسب للصورة */
+                margin: 0 auto 30px auto;
+                background-color: #f9f9f9;
+                overflow: hidden;
+            }
+            .slider-wrapper {
+                position: relative;
+                width: 100%;
+                min-height: 400px; /* ارتفاع أولي */
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+                background-color: #f4f4f4;
+            }
+            .slider-img {
+                display: none;
+                width: 100%;
+                height: auto;
+                object-fit: contain;
+                transition: opacity 0.3s ease;
+                cursor: zoom-in;
+            }
+            .slider-img.active {
+                display: block;
+                animation: fadeIn 0.4s;
+            }
+            @keyframes fadeIn { from { opacity: 0.5; } to { opacity: 1; } }
+
+            /* زر التكبير (العدسة) */
+            .zoom-btn {
+                position: absolute;
+                top: 20px;
+                left: 20px;
+                width: 40px;
+                height: 40px;
+                background: white;
+                border-radius: 50%;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                z-index: 10;
+                border: none;
+                font-size: 18px;
+                color: #333;
+            }
+
+            /* شريط التحكم السفلي (أسهم + عداد) */
+            .slider-controls {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 15px 0;
+                gap: 20px;
+                background: transparent;
+                font-family: 'Times New Roman', serif; /* خط كلاسيكي للأرقام */
+            }
+            .nav-btn {
+                background: none;
+                border: none;
+                cursor: pointer;
+                font-size: 18px;
+                color: #666;
+                padding: 5px;
+                transition: color 0.2s;
+            }
+            .nav-btn:hover { color: #000; }
+            .slide-counter {
+                font-size: 16px;
+                font-style: italic;
+                color: #333;
+                letter-spacing: 2px;
+            }
+
+            /* مودال التكبير */
+            .lightbox-modal {
+                display: none;
+                position: fixed;
+                top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(255,255,255,0.95);
+                z-index: 9999;
+                justify-content: center;
+                align-items: center;
+            }
+            .lightbox-modal.open { display: flex; }
+            .lightbox-img { max-width: 90%; max-height: 90%; }
+            .close-lightbox { position: absolute; top: 20px; right: 20px; font-size: 30px; cursor: pointer; }
+
+            /* --- 2. ستايل تعليقات الفيسبوك --- */
             .fb-reviews-section { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; direction: rtl; padding: 20px; background: #fff; margin-top: 30px; border-top: 1px solid #ddd; }
             .comment-thread { max-width: 600px; margin: 0 auto; position: relative; }
             .thread-line-container { position: absolute; right: 25px; top: 50px; bottom: 30px; width: 2px; background-color: var(--line-color); z-index: 0; }
@@ -65,8 +161,6 @@ export default async function handler(req, res) {
             .react-count { font-size: 11px; color: var(--text-secondary); margin-left: 4px; margin-right: 2px; }
             .view-replies { display: flex; align-items: center; font-weight: 600; font-size: 14px; color: var(--text-primary); margin: 10px 0; padding-right: 50px; position: relative; cursor: pointer; }
             .view-replies::before { content: ''; position: absolute; right: 25px; top: 50%; width: 20px; height: 2px; background-color: var(--line-color); border-bottom-left-radius: 10px; }
-            
-            /* أيقونة القلب فقط */
             .icon-love { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%23f02849"/><path d="M16 26c-0.6 0-1.2-0.2-1.6-0.6 -5.2-4.6-9.4-8.4-9.4-13.4 0-3 2.4-5.4 5.4-5.4 2.1 0 3.9 1.1 4.9 2.9l0.7 1.2 0.7-1.2c1-1.8 2.8-2.9 4.9-2.9 3 0 5.4 2.4 5.4 5.4 0 5-4.2 8.8-9.4 13.4 -0.4 0.4-1 0.6-1.6 0.6z" fill="white"/></svg>') no-repeat center/cover; }
         </style>
         `;
@@ -80,118 +174,108 @@ Context/Features: ${productFeatures}.
 Price: ${productPrice}. ${shippingText}. ${offerText}.
 User Design Request: ${designDescription}.
 
-## 🖼️ **تعليمات الصور (نظام السلايدر الإلزامي):**
-لقد تم تزويدك بعدة صور للمنتج (${productImageArray.length} صور) وشعار.
-**هام جداً:** لا تضع صورة واحدة ثابتة. يجب إنشاء **سلايدر صور (Image Slider/Carousel)** في القسم الأول (Hero Section).
+## 🖼️ **تعليمات السلايدر (أهم جزء):**
+**لا تقم بإنشاء صورة رئيسية ثابتة ومعرض منفصل.** بدلاً من ذلك، يجب عليك إنشاء قسم "عارض المنتج" (Product Viewer) يطابق تماماً الهيكل والوظيفة التالية، حيث يتم دمج جميع الصور في مكان واحد مع أزرار تنقل في الأسفل.
 
-### **1. هيكلة السلايدر:**
-- قم بإنشاء حاوية سلايدر تحتوي على جميع الصور التالية:
-  - الشريحة الأولى (Slide 1) تحتوي على: \`${MAIN_IMG_PLACEHOLDER}\`
-  - الشرائح التالية تحتوي على (استخدم هذه الرموز بالترتيب):
-${galleryPlaceholders}
+### **هيكل HTML الإلزامي لقسم الصور:**
+يجب أن تضع هذا الكود في بداية الصفحة (بعد الهيدر) بدلاً من صورة الهيرو التقليدية:
 
-- **متطلبات السلايدر التقنية:**
-  - يجب أن يحتوي على **أسهم للتنقل (يمين/يسار)**.
-  - يجب أن يحتوي على **مؤشر رقمي** (مثال: 1/${productImageArray.length}) أو نقاط سفلية (Dots).
-  - يجب أن يدعم **السحب باللمس (Swipe)** للموبايل.
-  - اكتب كود JavaScript بسيط (Vanilla JS) داخل الصفحة لتفعيل حركة السلايدر والتنقل بين الصور بسلاسة.
-  - يجب أن يظهر السلايدر بشكل احترافي مثل مواقع التجارة الإلكترونية الكبرى (مثل الصورة المرفقة في خيالك: صورة كاملة مع إمكانية التقليب).
+\`\`\`html
+<div class="product-viewer-container">
+    <button class="zoom-btn" onclick="openLightbox()" aria-label="Zoom Image">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+    </button>
 
-### **2. الشعار:**
-- استخدم هذا النص بالضبط كمصدر للشعار: \`${LOGO_PLACEHOLDER}\`
-- مثال: <img src="${LOGO_PLACEHOLDER}" alt="شعار العلامة التجارية" class="logo">
+    <div class="slider-wrapper" id="mainSlider">
+        ${sliderImagesInstruction}
+    </div>
 
-## 🎯 **الهدف:**
-إنشاء صفحة هبوط فريدة ومبدعة، محورها الأساسي هو سلايدر الصور التفاعلي الذي يعرض جميع صور المنتج بوضوح.
+    <div class="slider-controls">
+        <button class="nav-btn prev" onclick="changeSlide(-1)">&#10094;</button> <span class="slide-counter" id="slideCounter">1 / ${totalImagesCount}</span>
+        <button class="nav-btn next" onclick="changeSlide(1)">&#10095;</button> </div>
+</div>
 
-## ⚠️ **متطلبات إلزامية:**
+<div id="lightbox" class="lightbox-modal" onclick="closeLightbox()">
+    <span class="close-lightbox">&times;</span>
+    <img id="lightbox-img" class="lightbox-img" src="">
+</div>
 
-### **1. قسم الهيرو (Hero Section):**
-- العنصر الأساسي هو **سلايدر الصور** (Carousel) الذي صممته في الخطوة السابقة.
-- تحت السلايدر أو فوقه، ضع العنوان وزر الطلب.
-- لا تضع "معرض صور" منفصل في الأسفل، لأن جميع الصور موجودة الآن في السلايدر الرئيسي.
+<script>
+    let currentSlide = 1;
+    const totalSlides = ${totalImagesCount};
+    
+    function changeSlide(direction) {
+        currentSlide += direction;
+        if (currentSlide > totalSlides) currentSlide = 1;
+        if (currentSlide < 1) currentSlide = totalSlides;
+        updateSlider();
+    }
+    
+    function updateSlider() {
+        // إخفاء الكل وإظهار الحالي
+        document.querySelectorAll('.slider-img').forEach(img => {
+            img.classList.remove('active');
+            if(parseInt(img.dataset.index) === currentSlide) {
+                img.classList.add('active');
+            }
+        });
+        // تحديث العداد
+        document.getElementById('slideCounter').innerText = currentSlide + ' / ' + totalSlides;
+    }
 
-### **2. استمارة الطلب (مباشرة بعد الهيرو):**
+    function openLightbox() {
+        const currentImgSrc = document.querySelector('.slider-img.active').src;
+        document.getElementById('lightbox-img').src = currentImgSrc;
+        document.getElementById('lightbox').classList.add('open');
+    }
+    
+    function closeLightbox() {
+        document.getElementById('lightbox').classList.remove('open');
+    }
+</script>
+\`\`\`
+
+---
+
+## 🎯 **باقي متطلبات الصفحة:**
+
+### **1. الشعار:**
+- استخدم \`${LOGO_PLACEHOLDER}\` في الهيدر.
+
+### **2. استمارة الطلب (مباشرة بعد السلايدر):**
 يجب أن تحتوي على هذا الهيكل الدقيق للحقول باللغة العربية:
 <div class="customer-info-box">
   <h3>استمارة الطلب</h3>
   <p>المرجو إدخال معلوماتك الخاصة بك</p>
-  
-  <div class="form-group">
-    <label>الإسم الكامل</label>
-    <input type="text" placeholder="Nom et prénom" required>
-  </div>
-  
-  <div class="form-group">
-    <label>رقم الهاتف</label>
-    <input type="tel" placeholder="Nombre" required>
-  </div>
-  
-  <div class="form-group">
-    <label>الولاية</label>
-    <input type="text" placeholder="Wilaya" required>
-  </div>
-  
-  <div class="form-group">
-    <label>البلدية</label>
-    <input type="text" placeholder="أدخل بلديتك" required>
-  </div>
-  
-  <div class="form-group">
-    <label>الموقع / العنوان</label>
-    <input type="text" placeholder="أدخل عنوانك بالتفصيل" required>
-  </div>
-  
-  <div class="price-display">
-    <p>سعر المنتج: ${productPrice} دينار</p>
-  </div>
-  
+  <div class="form-group"><label>الإسم الكامل</label><input type="text" placeholder="Nom et prénom" required></div>
+  <div class="form-group"><label>رقم الهاتف</label><input type="tel" placeholder="Nombre" required></div>
+  <div class="form-group"><label>الولاية</label><input type="text" placeholder="Wilaya" required></div>
+  <div class="form-group"><label>البلدية</label><input type="text" placeholder="أدخل بلديتك" required></div>
+  <div class="form-group"><label>الموقع / العنوان</label><input type="text" placeholder="أدخل عنوانك بالتفصيل" required></div>
+  <div class="price-display"><p>سعر المنتج: ${productPrice} دينار</p></div>
   <button type="submit" class="submit-btn">تأكيد الطلب</button>
 </div>
 
 ### **3. قسم آراء العملاء (Facebook Style):**
-يجب أن يبدو القسم كأنه مأخوذ (Screenshot) من نقاش حقيقي على فيسبوك حول المنتج.
-1. **التصميم:** استخدم أكواد CSS المرفقة في المتغير \`fbStyles\`.
-2. **المحتوى:** أنشئ 3-5 تعليقات واقعية جداً (دارجة جزائرية + فصحى).
-3. **الصور:** استخدم \`[[MALE_IMG]]\` للذكور و \`[[FEMALE_IMG]]\` للإناث.
-4. **التفاعل (القلب فقط ❤️):** استخدم حصراً أيقونة القلب (\`icon-love\`).
-
-### نموذج HTML لتعليق واحد (استخدم القلب فقط):
-\`\`\`html
-<div class="comment-row">
-    <div class="avatar"><img src="[[FEMALE_IMG]]" alt="User"></div>
-    <div class="comment-content">
-        <div class="bubble">
-            <span class="username">اسم المستخدم</span>
-            <span class="text">نص التعليق هنا...</span>
-            <div class="reactions-container">
-                <div class="react-icon icon-love"></div> <span class="react-count">15</span>
-            </div>
-        </div>
-        <div class="actions">
-            <span class="time">منذ ساعتين</span>
-            <span class="action-link">أعجبني</span>
-            <span class="action-link">رد</span>
-        </div>
-    </div>
-</div>
-\`\`\`
+يجب أن يبدو القسم كأنه مأخوذ من نقاش حقيقي على فيسبوك.
+- استخدم **الدارجة الجزائرية** و **العربية الفصحى**.
+- استخدم \`[[MALE_IMG]]\` و \`[[FEMALE_IMG]]\` للصور الرمزية.
+- استخدم كود HTML للتعليق المرفق في الستايل (مع القلوب فقط).
 
 ### **4. تنسيق الإخراج:**
 أعد كائن JSON فقط:
 {
-  "html": "سلسلة HTML كاملة تتضمن السلايدر والسكربت الخاص به",
+  "html": "سلسلة HTML كاملة",
   "liquid_code": "كود Shopify Liquid",
   "schema": { "name": "Landing Page", "settings": [] }
 }
 
 ## 🚀 **تعليمات التصميم:**
-- صمم السلايدر ليكون متجاوباً (Responsive) ويأخذ عرضاً مناسباً.
-- أضف عد تنازلي أنيق.
-- **مهم:** قم بتضمين كود CSS (\`fbStyles\`) الذي سأزودك به في بداية الـ HTML الناتج.
+- حافظ على التصميم نظيفاً جداً (Minimalist) ليتناسب مع ستايل السلايدر الجديد.
+- **مهم:** قم بتضمين كود CSS (\`combinedStyles\`) الذي سأزودك به في بداية الـ HTML الناتج.
 
 قم بدمج هذا الـ CSS في بداية الـ HTML الناتج:
-${fbStyles}
+${combinedStyles}
         `;
 
         const response = await fetch(GEMINI_ENDPOINT, {
@@ -217,23 +301,20 @@ ${fbStyles}
         let aiResponse = JSON.parse(cleanedText);
 
         // ***************************************************************
-        // عملية الحقن: استبدال الرموز (صور المنتج + صور الأشخاص)
+        // عملية الحقن: استبدال الرموز
         // ***************************************************************
         
-        // صور افتراضية
         const defaultImg = "https://via.placeholder.com/600x600?text=Product+Image";
         const defaultLogo = "https://via.placeholder.com/150x50?text=Logo";
         const finalProductImages = productImageArray.length > 0 ? productImageArray : [defaultImg];
         const finalBrandLogo = brandLogo || defaultLogo;
 
-        // دالة الصور العشوائية (أشخاص حقيقيين)
         const getRandomAvatar = (gender) => {
             const randomId = Math.floor(Math.random() * 50); 
             const genderPath = gender === 'male' ? 'men' : 'women';
             return `https://randomuser.me/api/portraits/${genderPath}/${randomId}.jpg`;
         };
 
-        // دالة حقن صور الأشخاص
         const injectAvatars = (htmlContent) => {
             if (!htmlContent) return htmlContent;
             let content = htmlContent;
@@ -246,23 +327,18 @@ ${fbStyles}
             return content;
         };
 
-        // دالة للاستبدال الآمن لصور المنتج
         const replaceImages = (content) => {
             if (!content) return content;
             let result = content;
-            // استبدال الصورة الرئيسية
             result = result.split(MAIN_IMG_PLACEHOLDER).join(finalProductImages[0]);
-            // استبدال الشعار
             result = result.split(LOGO_PLACEHOLDER).join(finalBrandLogo);
-            // استبدال الصور الإضافية (تم تعديل الشرط ليشمل جميع الصور المحتملة)
-            for (let i = 1; i < finalProductImages.length; i++) {
+            for (let i = 1; i < finalProductImages.length && i <= 6; i++) {
                 const placeholder = `[[PRODUCT_IMAGE_${i + 1}_SRC]]`;
                 result = result.split(placeholder).join(finalProductImages[i]);
             }
             return result;
         };
 
-        // تطبيق الاستبدال وحقن الأفاتار على HTML و Liquid Code
         aiResponse.html = injectAvatars(replaceImages(aiResponse.html));
         aiResponse.liquid_code = injectAvatars(replaceImages(aiResponse.liquid_code));
 
