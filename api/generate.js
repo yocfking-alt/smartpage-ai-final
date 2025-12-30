@@ -242,25 +242,79 @@ User Design Request: ${designDescription}.
 ### **1. الشعار:**
 - استخدم \`${LOGO_PLACEHOLDER}\` في الهيدر.
 
-### **2. استمارة الطلب (مباشرة بعد السلايدر):**
+### **2. استمارة الطلب (مباشرة بعد السلايد):**
 يجب أن تحتوي على هذا الهيكل الدقيق للحقول باللغة العربية:
 <div class="customer-info-box">
   <h3>استمارة الطلب</h3>
   <p>المرجو إدخال معلوماتك الخاصة بك</p>
-  <div class="form-group"><label>الإسم الكامل</label><input type="text" placeholder="Nom et prénom" required></div>
-  <div class="form-group"><label>رقم الهاتف</label><input type="tel" placeholder="Nombre" required></div>
-  <div class="form-group"><label>الولاية</label><input type="text" placeholder="Wilaya" required></div>
-  <div class="form-group"><label>البلدية</label><input type="text" placeholder="أدخل بلديتك" required></div>
-  <div class="form-group"><label>الموقع / العنوان</label><input type="text" placeholder="أدخل عنوانك بالتفصيل" required></div>
-  <div class="price-display"><p>سعر المنتج: ${productPrice} دينار</p></div>
+  
+  <div class="form-group">
+    <label>الإسم الكامل</label>
+    <input type="text" placeholder="Nom et prénom" required>
+  </div>
+  
+  <div class="form-group">
+    <label>رقم الهاتف</label>
+    <input type="tel" placeholder="Nombre" required>
+  </div>
+  
+  <div class="form-group">
+    <label>الولاية</label>
+    <input type="text" placeholder="Wilaya" required>
+  </div>
+  
+  <div class="form-group">
+    <label>البلدية</label>
+    <input type="text" placeholder="أدخل بلديتك" required>
+  </div>
+  
+  <div class="form-group">
+    <label>الموقع / العنوان</label>
+    <input type="text" placeholder="أدخل عنوانك بالتفصيل" required>
+  </div>
+  
+  <div class="price-display">
+    <p>سعر المنتج: ${productPrice} دينار</p>
+  </div>
+  
   <button type="submit" class="submit-btn">تأكيد الطلب</button>
 </div>
 
 ### **3. قسم آراء العملاء (Facebook Style):**
-يجب أن يبدو القسم كأنه مأخوذ من نقاش حقيقي على فيسبوك.
-- استخدم **الدارجة الجزائرية** و **العربية الفصحى**.
-- استخدم \`[[MALE_IMG]]\` و \`[[FEMALE_IMG]]\` للصور الرمزية.
-- استخدم كود HTML للتعليق المرفق في الستايل (مع القلوب فقط).
+يجب أن يبدو القسم كأنه مأخوذ (Screenshot) من نقاش حقيقي على فيسبوك حول المنتج.
+1. **التصميم:** استخدم أكواد CSS المرفقة في المتغير \`fbStyles\`.
+2. **المحتوى:** أنشئ 3-5 تعليقات واقعية جداً.
+   - امزج بين **الدارجة الجزائرية** (مثل: "الله يبارك"، "سلعة شابة"، "وصلتني في وقتها") و **العربية الفصحى البسيطة**.
+   - التعليقات يجب أن تمدح المنتج وتؤكد المصداقية.
+3. **الصور والأسماء:**
+   - **للذكور:** استخدم الاسم العربي المناسب واستخدم الرمز \`[[MALE_IMG]]\` في مصدر الصورة \`src\`.
+   - **للإناث:** استخدم الاسم العربي المناسب واستخدم الرمز \`[[FEMALE_IMG]]\` في مصدر الصورة \`src\`.
+4. **التفاعل (القلب فقط ❤️):**
+   - **هام جداً:** استخدم حصراً أيقونة القلب (\`icon-love\`) لجميع التفاعلات.
+   - **لا تستخدم أيقونة اللايك أبداً.**
+   - ضع أرقاماً عشوائية منطقية لعدد ساعات لعدد القلوب بجانب كل تعليق.
+   - أضف "عرض الردود السابقة" بين بعض التعليقات لزيادة الواقعية.
+
+### نموذج HTML لتعليق واحد (استخدم القلب فقط):
+\`\`\`html
+<div class="comment-row">
+    <div class="avatar"><img src="[[FEMALE_IMG]]" alt="User"></div>
+    <div class="comment-content">
+        <div class="bubble">
+            <span class="username">اسم المستخدم</span>
+            <span class="text">نص التعليق هنا...</span>
+            <div class="reactions-container">
+                <div class="react-icon icon-love"></div> <span class="react-count">15</span>
+            </div>
+        </div>
+        <div class="actions">
+            <span class="time">منذ ساعتين</span>
+            <span class="action-link">أعجبني</span>
+            <span class="action-link">رد</span>
+        </div>
+    </div>
+</div>
+\`\`\`
 
 ### **4. تنسيق الإخراج:**
 أعد كائن JSON فقط:
@@ -270,12 +324,16 @@ User Design Request: ${designDescription}.
   "schema": { "name": "Landing Page", "settings": [] }
 }
 
-## 🚀 **تعليمات التصميم:**
-- حافظ على التصميم نظيفاً جداً (Minimalist) ليتناسب مع ستايل السلايدر الجديد.
-- **مهم:** قم بتضمين كود CSS (\`combinedStyles\`) الذي سأزودك به في بداية الـ HTML الناتج.
+## 🚀 **حرية إبداعية كاملة لباقي الأقسام:**
+- صمم باقي الصفحة بحرية تامة باستخدام CSS حديث وجذاب
+- استخدم تأثيرات hover، transitions، وanimations لجعل الصفحة تفاعلية
+- تأكد من أن الصفحة سريعة الاستجابة وتعمل على جميع الأجهزة
+- أضف عد تنازلي أقل من يوم أو 20 ساعة أنيق يحفز الزائر على الشراء بلون مناسب لصفحة و للمنتج
+- أضف أقسام إضافية مثل: مميزات المنتج، الأسئلة الشائعة، إلخ
+- **مهم:** قم بتضمين كود CSS (\`fbStyles\`) الذي سأزودك به في بداية الـ HTML الناتج.
 
 قم بدمج هذا الـ CSS في بداية الـ HTML الناتج:
-${combinedStyles}
+${fbStyles}
         `;
 
         const response = await fetch(GEMINI_ENDPOINT, {
@@ -301,20 +359,23 @@ ${combinedStyles}
         let aiResponse = JSON.parse(cleanedText);
 
         // ***************************************************************
-        // عملية الحقن: استبدال الرموز
+        // عملية الحقن: استبدال الرموز (صور المنتج + صور الأشخاص)
         // ***************************************************************
         
+        // صور افتراضية
         const defaultImg = "https://via.placeholder.com/600x600?text=Product+Image";
         const defaultLogo = "https://via.placeholder.com/150x50?text=Logo";
         const finalProductImages = productImageArray.length > 0 ? productImageArray : [defaultImg];
         const finalBrandLogo = brandLogo || defaultLogo;
 
+        // دالة الصور العشوائية (أشخاص حقيقيين)
         const getRandomAvatar = (gender) => {
             const randomId = Math.floor(Math.random() * 50); 
             const genderPath = gender === 'male' ? 'men' : 'women';
             return `https://randomuser.me/api/portraits/${genderPath}/${randomId}.jpg`;
         };
 
+        // دالة حقن صور الأشخاص
         const injectAvatars = (htmlContent) => {
             if (!htmlContent) return htmlContent;
             let content = htmlContent;
@@ -327,11 +388,15 @@ ${combinedStyles}
             return content;
         };
 
+        // دالة للاستبدال الآمن لصور المنتج
         const replaceImages = (content) => {
             if (!content) return content;
             let result = content;
+            // استبدال الصورة الرئيسية
             result = result.split(MAIN_IMG_PLACEHOLDER).join(finalProductImages[0]);
+            // استبدال الشعار
             result = result.split(LOGO_PLACEHOLDER).join(finalBrandLogo);
+            // استبدال الصور الإضافية
             for (let i = 1; i < finalProductImages.length && i <= 6; i++) {
                 const placeholder = `[[PRODUCT_IMAGE_${i + 1}_SRC]]`;
                 result = result.split(placeholder).join(finalProductImages[i]);
@@ -339,6 +404,7 @@ ${combinedStyles}
             return result;
         };
 
+        // تطبيق الاستبدال وحقن الأفاتار على HTML و Liquid Code
         aiResponse.html = injectAvatars(replaceImages(aiResponse.html));
         aiResponse.liquid_code = injectAvatars(replaceImages(aiResponse.liquid_code));
 
