@@ -35,114 +35,36 @@ export default async function handler(req, res) {
         const MAIN_IMG_PLACEHOLDER = "[[PRODUCT_IMAGE_MAIN_SRC]]";
         const LOGO_PLACEHOLDER = "[[BRAND_LOGO_SRC]]";
         
-        // تحضير قائمة الصور للسلايدر (الرئيسية + الإضافية)
-        let sliderImagesInstruction = `   - الشريحة 1 (الرئيسية): <img src="${MAIN_IMG_PLACEHOLDER}" class="slider-img active" data-index="1">`;
+        // --- تعديل: تحضير شرائح السلايدر للبرومبت بدلاً من النصوص البديلة فقط ---
+        let sliderSlidesHTML = `   <img src="${MAIN_IMG_PLACEHOLDER}" class="slider-img active" data-index="1">`;
         for (let i = 1; i < productImageArray.length && i <= 6; i++) {
-            sliderImagesInstruction += `\n   - الشريحة ${i + 1}: <img src="[[PRODUCT_IMAGE_${i + 1}_SRC]]" class="slider-img" data-index="${i + 1}">`;
+            sliderSlidesHTML += `\n   <img src="[[PRODUCT_IMAGE_${i + 1}_SRC]]" class="slider-img" data-index="${i + 1}">`;
         }
-        const totalImagesCount = Math.min(productImageArray.length, 7) || 1; // حساب العدد الكلي للصور
+        const totalSlidesCount = Math.max(productImageArray.length, 1);
 
-        // --- CSS مدمج: تعليقات الفيسبوك + ستايل السلايدر الجديد المطابق للصورة ---
-        const combinedStyles = `
+        // --- CSS المدمج (فيسبوك + السلايدر الجديد) ---
+        // تم إضافة ستايل السلايدر هنا لضمان عدم تغيير طريقة استدعاء المتغير لاحقاً
+        const fbStyles = `
         <style>
-            /* إعدادات المتغيرات والألوان */
             :root { --bg-color: #ffffff; --comment-bg: #f0f2f5; --text-primary: #050505; --text-secondary: #65676b; --blue-link: #216fdb; --line-color: #eaebef; }
             
-            /* --- 1. ستايل السلايدر المطابق للصورة المرفقة (Lazzwood Style) --- */
-            .product-viewer-container {
-                position: relative;
-                width: 100%;
-                max-width: 500px; /* عرض مناسب للصورة */
-                margin: 0 auto 30px auto;
-                background-color: #f9f9f9;
-                overflow: hidden;
-            }
-            .slider-wrapper {
-                position: relative;
-                width: 100%;
-                min-height: 400px; /* ارتفاع أولي */
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                overflow: hidden;
-                background-color: #f4f4f4;
-            }
-            .slider-img {
-                display: none;
-                width: 100%;
-                height: auto;
-                object-fit: contain;
-                transition: opacity 0.3s ease;
-                cursor: zoom-in;
-            }
-            .slider-img.active {
-                display: block;
-                animation: fadeIn 0.4s;
-            }
+            /* --- 1. ستايل السلايدر الجديد (Lazzwood Style) --- */
+            .product-viewer-container { position: relative; width: 100%; max-width: 500px; margin: 0 auto 30px auto; background-color: #f9f9f9; overflow: hidden; border-radius: 8px; }
+            .slider-wrapper { position: relative; width: 100%; min-height: 400px; display: flex; align-items: center; justify-content: center; overflow: hidden; background-color: #f4f4f4; }
+            .slider-img { display: none; width: 100%; height: auto; object-fit: contain; transition: opacity 0.3s ease; cursor: zoom-in; }
+            .slider-img.active { display: block; animation: fadeIn 0.4s; }
             @keyframes fadeIn { from { opacity: 0.5; } to { opacity: 1; } }
-
-            /* زر التكبير (العدسة) */
-            .zoom-btn {
-                position: absolute;
-                top: 20px;
-                left: 20px;
-                width: 40px;
-                height: 40px;
-                background: white;
-                border-radius: 50%;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                z-index: 10;
-                border: none;
-                font-size: 18px;
-                color: #333;
-            }
-
-            /* شريط التحكم السفلي (أسهم + عداد) */
-            .slider-controls {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 15px 0;
-                gap: 20px;
-                background: transparent;
-                font-family: 'Times New Roman', serif; /* خط كلاسيكي للأرقام */
-            }
-            .nav-btn {
-                background: none;
-                border: none;
-                cursor: pointer;
-                font-size: 18px;
-                color: #666;
-                padding: 5px;
-                transition: color 0.2s;
-            }
+            .zoom-btn { position: absolute; top: 20px; left: 20px; width: 40px; height: 40px; background: white; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; border: none; color: #333; }
+            .slider-controls { display: flex; align-items: center; justify-content: center; padding: 15px 0; gap: 20px; background: transparent; font-family: 'Times New Roman', serif; }
+            .nav-btn { background: none; border: none; cursor: pointer; font-size: 22px; color: #666; padding: 0 10px; transition: color 0.2s; }
             .nav-btn:hover { color: #000; }
-            .slide-counter {
-                font-size: 16px;
-                font-style: italic;
-                color: #333;
-                letter-spacing: 2px;
-            }
-
-            /* مودال التكبير */
-            .lightbox-modal {
-                display: none;
-                position: fixed;
-                top: 0; left: 0; width: 100%; height: 100%;
-                background: rgba(255,255,255,0.95);
-                z-index: 9999;
-                justify-content: center;
-                align-items: center;
-            }
+            .slide-counter { font-size: 16px; font-style: italic; color: #333; letter-spacing: 2px; }
+            .lightbox-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.98); z-index: 9999; justify-content: center; align-items: center; }
             .lightbox-modal.open { display: flex; }
-            .lightbox-img { max-width: 90%; max-height: 90%; }
-            .close-lightbox { position: absolute; top: 20px; right: 20px; font-size: 30px; cursor: pointer; }
+            .lightbox-img { max-width: 90%; max-height: 90%; object-fit: contain; }
+            .close-lightbox { position: absolute; top: 20px; right: 20px; font-size: 35px; cursor: pointer; color: #333; }
 
-            /* --- 2. ستايل تعليقات الفيسبوك --- */
+            /* --- 2. ستايل تعليقات الفيسبوك الأصلي --- */
             .fb-reviews-section { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; direction: rtl; padding: 20px; background: #fff; margin-top: 30px; border-top: 1px solid #ddd; }
             .comment-thread { max-width: 600px; margin: 0 auto; position: relative; }
             .thread-line-container { position: absolute; right: 25px; top: 50px; bottom: 30px; width: 2px; background-color: var(--line-color); z-index: 0; }
@@ -161,6 +83,8 @@ export default async function handler(req, res) {
             .react-count { font-size: 11px; color: var(--text-secondary); margin-left: 4px; margin-right: 2px; }
             .view-replies { display: flex; align-items: center; font-weight: 600; font-size: 14px; color: var(--text-primary); margin: 10px 0; padding-right: 50px; position: relative; cursor: pointer; }
             .view-replies::before { content: ''; position: absolute; right: 25px; top: 50%; width: 20px; height: 2px; background-color: var(--line-color); border-bottom-left-radius: 10px; }
+            
+            /* أيقونة القلب فقط */
             .icon-love { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%23f02849"/><path d="M16 26c-0.6 0-1.2-0.2-1.6-0.6 -5.2-4.6-9.4-8.4-9.4-13.4 0-3 2.4-5.4 5.4-5.4 2.1 0 3.9 1.1 4.9 2.9l0.7 1.2 0.7-1.2c1-1.8 2.8-2.9 4.9-2.9 3 0 5.4 2.4 5.4 5.4 0 5-4.2 8.8-9.4 13.4 -0.4 0.4-1 0.6-1.6 0.6z" fill="white"/></svg>') no-repeat center/cover; }
         </style>
         `;
@@ -174,75 +98,56 @@ Context/Features: ${productFeatures}.
 Price: ${productPrice}. ${shippingText}. ${offerText}.
 User Design Request: ${designDescription}.
 
-## 🖼️ **تعليمات السلايدر (أهم جزء):**
-**لا تقم بإنشاء صورة رئيسية ثابتة ومعرض منفصل.** بدلاً من ذلك، يجب عليك إنشاء قسم "عارض المنتج" (Product Viewer) يطابق تماماً الهيكل والوظيفة التالية، حيث يتم دمج جميع الصور في مكان واحد مع أزرار تنقل في الأسفل.
+## 🖼️ **تعليمات عرض الصور (السلايدر التفاعلي):**
+لقد تم تزويدك بصور للمنتج (${productImageArray.length} صور).
+**بدلاً من عرض صور ثابتة، يجب عليك بناء "عارض منتج" (Slider) تفاعلي يطابق الكود التالي بدقة:**
 
-### **هيكل HTML الإلزامي لقسم الصور:**
-يجب أن تضع هذا الكود في بداية الصفحة (بعد الهيدر) بدلاً من صورة الهيرو التقليدية:
-
+### **1. كود HTML للسلايدر (يجب وضعه في مكان الصورة الرئيسية):**
+استخدم هذا الهيكل بالضبط مع تضمين الصور المجهزة:
 \`\`\`html
 <div class="product-viewer-container">
-    <button class="zoom-btn" onclick="openLightbox()" aria-label="Zoom Image">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
-    </button>
-
-    <div class="slider-wrapper" id="mainSlider">
-        ${sliderImagesInstruction}
+    <button class="zoom-btn" onclick="openLightbox()" aria-label="Zoom"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg></button>
+    
+    <div class="slider-wrapper">
+        ${sliderSlidesHTML}
     </div>
 
     <div class="slider-controls">
-        <button class="nav-btn prev" onclick="changeSlide(-1)">&#10094;</button> <span class="slide-counter" id="slideCounter">1 / ${totalImagesCount}</span>
-        <button class="nav-btn next" onclick="changeSlide(1)">&#10095;</button> </div>
+        <button class="nav-btn prev" onclick="changeSlide(-1)">&#10094;</button>
+        <span class="slide-counter" id="slideCounter">1 / ${totalSlidesCount}</span>
+        <button class="nav-btn next" onclick="changeSlide(1)">&#10095;</button>
+    </div>
 </div>
 
-<div id="lightbox" class="lightbox-modal" onclick="closeLightbox()">
-    <span class="close-lightbox">&times;</span>
-    <img id="lightbox-img" class="lightbox-img" src="">
-</div>
+<div id="lightbox" class="lightbox-modal" onclick="closeLightbox()"><span class="close-lightbox">&times;</span><img id="lightbox-img" class="lightbox-img" src=""></div>
 
 <script>
-    let currentSlide = 1;
-    const totalSlides = ${totalImagesCount};
-    
-    function changeSlide(direction) {
-        currentSlide += direction;
-        if (currentSlide > totalSlides) currentSlide = 1;
-        if (currentSlide < 1) currentSlide = totalSlides;
-        updateSlider();
+    let currentSlide = 1; const totalSlides = ${totalSlidesCount};
+    function changeSlide(d) { currentSlide += d; if (currentSlide > totalSlides) currentSlide = 1; if (currentSlide < 1) currentSlide = totalSlides; updateSlider(); }
+    function updateSlider() { 
+        document.querySelectorAll('.slider-img').forEach(img => { img.classList.remove('active'); if(parseInt(img.dataset.index) === currentSlide) img.classList.add('active'); });
+        document.getElementById('slideCounter').innerText = currentSlide + ' / ' + totalSlides; 
     }
-    
-    function updateSlider() {
-        // إخفاء الكل وإظهار الحالي
-        document.querySelectorAll('.slider-img').forEach(img => {
-            img.classList.remove('active');
-            if(parseInt(img.dataset.index) === currentSlide) {
-                img.classList.add('active');
-            }
-        });
-        // تحديث العداد
-        document.getElementById('slideCounter').innerText = currentSlide + ' / ' + totalSlides;
-    }
-
-    function openLightbox() {
-        const currentImgSrc = document.querySelector('.slider-img.active').src;
-        document.getElementById('lightbox-img').src = currentImgSrc;
-        document.getElementById('lightbox').classList.add('open');
-    }
-    
-    function closeLightbox() {
-        document.getElementById('lightbox').classList.remove('open');
-    }
+    function openLightbox() { document.getElementById('lightbox-img').src = document.querySelector('.slider-img.active').src; document.getElementById('lightbox').classList.add('open'); }
+    function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
 </script>
 \`\`\`
 
----
+### **2. الشعار:**
+- استخدم هذا النص بالضبط كمصدر للشعار: \`${LOGO_PLACEHOLDER}\`
+- مثال: <img src="${LOGO_PLACEHOLDER}" alt="شعار العلامة التجارية" class="logo">
 
-## 🎯 **باقي متطلبات الصفحة:**
+## 🎯 **الهدف:**
+إنشاء صفحة هبوط فريدة ومبدعة تحتوي على السلايدر أعلاه وتحقق أعلى معدلات التحويل.
 
-### **1. الشعار:**
-- استخدم \`${LOGO_PLACEHOLDER}\` في الهيدر.
+## ⚠️ **متطلبات إلزامية:**
 
-### **2. استمارة الطلب (مباشرة بعد السلايد):**
+### **1. قسم الهيرو:**
+- يتضمن الشعار في الهيدر.
+- **مهم جداً:** استبدل صورة المنتج التقليدية بكود "السلايدر التفاعلي" المذكور أعلاه بالكامل.
+- لا تضف معرض صور منفصل في الأسفل، السلايدر يكفي.
+
+### **2. استمارة الطلب (مباشرة بعد الهيرو):**
 يجب أن تحتوي على هذا الهيكل الدقيق للحقول باللغة العربية:
 <div class="customer-info-box">
   <h3>استمارة الطلب</h3>
@@ -328,7 +233,7 @@ User Design Request: ${designDescription}.
 - صمم باقي الصفحة بحرية تامة باستخدام CSS حديث وجذاب
 - استخدم تأثيرات hover، transitions، وanimations لجعل الصفحة تفاعلية
 - تأكد من أن الصفحة سريعة الاستجابة وتعمل على جميع الأجهزة
-- أضف عد تنازلي أقل من يوم أو 20 ساعة أنيق يحفز الزائر على الشراء بلون مناسب لصفحة و للمنتج
+- أضف عد تنازلي أقل من ساعتان أنيق يحفز الزائر على الشراء بلون مناسب لصفحة و للمنتج
 - أضف أقسام إضافية مثل: مميزات المنتج، الأسئلة الشائعة، إلخ
 - **مهم:** قم بتضمين كود CSS (\`fbStyles\`) الذي سأزودك به في بداية الـ HTML الناتج.
 
