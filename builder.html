@@ -86,21 +86,19 @@
         .nav-link:hover::after { 
             width: 100%; 
         } 
-        /* Styles for Variants */
-        .variant-row {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin-bottom: 0.75rem;
-            position: relative;
-        }
-        .variant-remove {
-            position: absolute;
-            top: 0.5rem;
-            right: 0.5rem;
-            color: #ef4444;
+        /* Styles for Variant Image Selector */
+        .variant-img-select {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            border: 2px solid transparent;
+            object-fit: cover;
             cursor: pointer;
+            transition: all 0.2s;
+        }
+        .variant-img-select.selected {
+            border-color: var(--accent);
+            transform: scale(1.1);
         }
         @media (max-width: 768px) { 
             .builder-grid { 
@@ -203,40 +201,46 @@
                         <label for="product-price" class="block text-sm font-medium mb-2 text-gray-700">💰 Product Price:</label> 
                         <input type="text" id="product-price" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="Enter the product price (e.g. $29.99)"/> 
                     </div> 
-                    
-                    <div class="mb-6 border-t border-b border-gray-200 py-4">
-                        <h4 class="text-lg font-bold mb-4 text-gray-800">🛍️ خيارات المنتج (Variants)</h4>
+
+                    <div class="mb-6 border-t border-b border-gray-300 py-6">
+                        <h4 class="text-lg font-semibold mb-4 text-gray-800">🛠️ خيارات المنتج (Variants)</h4>
                         
-                        <div class="mb-4">
-                            <div class="flex items-center justify-between mb-2">
-                                <label class="block text-sm font-medium text-gray-700">🎨 تفعيل الألوان (Colors)</label>
+                        <div class="mb-6 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+                            <div class="flex items-center justify-between mb-4">
+                                <label class="text-sm font-bold text-gray-700 flex items-center">
+                                    <span class="mr-2">🎨 الألوان (Colors)</span>
+                                </label>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="enable-colors-toggle" class="sr-only peer">
-                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                 </label>
                             </div>
                             
-                            <div id="colors-container" class="hidden pl-2 border-l-2 border-blue-100 mt-2">
-                                <div id="color-rows"></div>
-                                <button type="button" id="add-color-btn" class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center mt-2">
-                                    <i class="fas fa-plus-circle mr-1"></i> إضافة لون
+                            <div id="colors-container" class="hidden space-y-4">
+                                <div id="color-rows-wrapper" class="space-y-3">
+                                    </div>
+                                <button type="button" id="add-color-btn" class="text-sm text-blue-600 font-medium hover:text-blue-800 flex items-center mt-2">
+                                    <i class="fas fa-plus-circle mr-1"></i> إضافة لون جديد
                                 </button>
                             </div>
                         </div>
 
-                        <div class="mb-2">
-                            <div class="flex items-center justify-between mb-2">
-                                <label class="block text-sm font-medium text-gray-700">📏 تفعيل المقاسات (Sizes)</label>
+                        <div class="mb-0 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+                            <div class="flex items-center justify-between mb-4">
+                                <label class="text-sm font-bold text-gray-700 flex items-center">
+                                    <span class="mr-2">📏 المقاسات (Sizes)</span>
+                                </label>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="enable-sizes-toggle" class="sr-only peer">
-                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                 </label>
                             </div>
                             
-                            <div id="sizes-container" class="hidden pl-2 border-l-2 border-blue-100 mt-2">
-                                <div id="size-rows"></div>
-                                <button type="button" id="add-size-btn" class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center mt-2">
-                                    <i class="fas fa-plus-circle mr-1"></i> إضافة مقاس
+                            <div id="sizes-container" class="hidden space-y-4">
+                                <div id="size-rows-wrapper" class="space-y-3">
+                                    </div>
+                                <button type="button" id="add-size-btn" class="text-sm text-blue-600 font-medium hover:text-blue-800 flex items-center mt-2">
+                                    <i class="fas fa-plus-circle mr-1"></i> إضافة مقاس جديد
                                 </button>
                             </div>
                         </div>
@@ -335,130 +339,12 @@
         const errorMessageDiv = document.getElementById("error-message");
         const previewIframe = document.getElementById("preview");
         
-        // --- VARIANT LOGIC START ---
-        const productImageUpload = document.getElementById('product-image-upload');
-        const enableColorsToggle = document.getElementById('enable-colors-toggle');
-        const colorsContainer = document.getElementById('colors-container');
-        const addColorBtn = document.getElementById('add-color-btn');
-        const colorRows = document.getElementById('color-rows');
-        
-        const enableSizesToggle = document.getElementById('enable-sizes-toggle');
-        const sizesContainer = document.getElementById('sizes-container');
-        const addSizeBtn = document.getElementById('add-size-btn');
-        const sizeRows = document.getElementById('size-rows');
-
-        // Helper: Generate Image Options based on uploaded files
-        function getVariantImageOptions() {
-            const files = productImageUpload.files;
-            let options = `<option value="">-- No specific image --</option>`;
-            if (files && files.length > 0) {
-                for (let i = 0; i < files.length; i++) {
-                    // Using index as value to map later
-                    options += `<option value="${i}">Image ${i + 1} (${files[i].name})</option>`;
-                }
-            }
-            return options;
-        }
-
-        // Update all existing dropdowns when new images are uploaded
-        productImageUpload.addEventListener('change', () => {
-            const options = getVariantImageOptions();
-            document.querySelectorAll('.variant-img-select').forEach(select => {
-                const currentVal = select.value;
-                select.innerHTML = options;
-                select.value = currentVal; // Try to preserve selection if possible
-            });
-        });
-
-        // Toggle Sections
-        enableColorsToggle.addEventListener('change', () => {
-            colorsContainer.classList.toggle('hidden', !enableColorsToggle.checked);
-        });
-        enableSizesToggle.addEventListener('change', () => {
-            sizesContainer.classList.toggle('hidden', !enableSizesToggle.checked);
-        });
-
-        // Add Color Row
-        addColorBtn.addEventListener('click', () => {
-            const rowId = 'color-' + Date.now();
-            const div = document.createElement('div');
-            div.className = 'variant-row';
-            div.id = rowId;
-            div.innerHTML = `
-                <div class="variant-remove" onclick="document.getElementById('${rowId}').remove()"><i class="fas fa-times"></i></div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">اسم اللون & الدرجة</label>
-                        <div class="flex gap-2">
-                            <input type="color" class="variant-color-hex h-10 w-12 border rounded cursor-pointer" value="#000000">
-                            <input type="text" class="variant-color-name flex-1 border border-gray-300 rounded px-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-300" placeholder="مثال: أحمر">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">خيارات إضافية</label>
-                        <div class="space-y-2">
-                            <div class="flex items-center">
-                                <input type="checkbox" class="mr-2" onchange="this.nextElementSibling.classList.toggle('hidden', !this.checked)">
-                                <span class="text-sm text-gray-600 mr-2">سعر مختلف؟</span>
-                                <input type="number" class="variant-price hidden w-24 border border-gray-300 rounded px-2 py-1 text-sm" placeholder="+Price">
-                            </div>
-                            <div class="flex items-center">
-                                <input type="checkbox" class="mr-2" onchange="this.parentElement.nextElementSibling.classList.toggle('hidden', !this.checked)">
-                                <span class="text-sm text-gray-600">ربط بصورة؟</span>
-                            </div>
-                            <div class="hidden mt-1">
-                                <select class="variant-img-select w-full border border-gray-300 rounded px-2 py-1 text-sm">
-                                    ${getVariantImageOptions()}
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            colorRows.appendChild(div);
-        });
-
-        // Add Size Row
-        addSizeBtn.addEventListener('click', () => {
-            const rowId = 'size-' + Date.now();
-            const div = document.createElement('div');
-            div.className = 'variant-row';
-            div.id = rowId;
-            div.innerHTML = `
-                <div class="variant-remove" onclick="document.getElementById('${rowId}').remove()"><i class="fas fa-times"></i></div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">الحجم / المقاس</label>
-                        <input type="text" class="variant-size-name w-full border border-gray-300 rounded px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-300" placeholder="مثال: XL, 42, 120cm">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">خيارات إضافية</label>
-                        <div class="space-y-2">
-                            <div class="flex items-center">
-                                <input type="checkbox" class="mr-2" onchange="this.nextElementSibling.classList.toggle('hidden', !this.checked)">
-                                <span class="text-sm text-gray-600 mr-2">سعر مختلف؟</span>
-                                <input type="number" class="variant-price hidden w-24 border border-gray-300 rounded px-2 py-1 text-sm" placeholder="+Price">
-                            </div>
-                            <div class="flex items-center">
-                                <input type="checkbox" class="mr-2" onchange="this.parentElement.nextElementSibling.classList.toggle('hidden', !this.checked)">
-                                <span class="text-sm text-gray-600">ربط بصورة؟</span>
-                            </div>
-                            <div class="hidden mt-1">
-                                <select class="variant-img-select w-full border border-gray-300 rounded px-2 py-1 text-sm">
-                                    ${getVariantImageOptions()}
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            sizeRows.appendChild(div);
-        });
-        // --- VARIANT LOGIC END ---
-
         let generatedLiquidCode = null;
         let generatedSchema = null;
-        
+
+        // Image handling for Variants
+        let uploadedImagesBlobs = []; // Stores the Blob URLs for display
+
         function showLoading() {
             loadingIndicator.classList.remove('hidden');
             errorMessageDiv.classList.add('hidden');
@@ -493,6 +379,144 @@
                 reader.onerror = error => reject(error);
             });
         }
+
+        // ==========================================
+        // VARIANTS LOGIC (Colors & Sizes)
+        // ==========================================
+
+        const productImageUpload = document.getElementById('product-image-upload');
+        const colorsToggle = document.getElementById('enable-colors-toggle');
+        const colorsContainer = document.getElementById('colors-container');
+        const addColorBtn = document.getElementById('add-color-btn');
+        const colorRowsWrapper = document.getElementById('color-rows-wrapper');
+
+        const sizesToggle = document.getElementById('enable-sizes-toggle');
+        const sizesContainer = document.getElementById('sizes-container');
+        const addSizeBtn = document.getElementById('add-size-btn');
+        const sizeRowsWrapper = document.getElementById('size-rows-wrapper');
+
+        // 1. Handle Main Image Upload to Populate Variant Pickers
+        productImageUpload.addEventListener('change', function(e) {
+            uploadedImagesBlobs = [];
+            if(this.files && this.files.length > 0) {
+                Array.from(this.files).forEach(file => {
+                    uploadedImagesBlobs.push(URL.createObjectURL(file));
+                });
+            }
+            updateAllVariantImagePickers();
+        });
+
+        function updateAllVariantImagePickers() {
+            document.querySelectorAll('.variant-image-picker-container').forEach(container => {
+                renderVariantImagePicker(container);
+            });
+        }
+
+        function renderVariantImagePicker(container) {
+            // Keep the currently selected index if possible
+            const currentInput = container.querySelector('input[type="hidden"]');
+            const selectedIndex = currentInput ? currentInput.value : "";
+            
+            container.innerHTML = ''; // Clear current
+
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.className = 'selected-image-index';
+            hiddenInput.value = selectedIndex;
+            container.appendChild(hiddenInput);
+
+            const grid = document.createElement('div');
+            grid.className = 'flex flex-wrap gap-2 mt-2';
+            
+            if (uploadedImagesBlobs.length === 0) {
+                grid.innerHTML = '<span class="text-xs text-gray-400">Upload product images above first.</span>';
+            } else {
+                uploadedImagesBlobs.forEach((blobUrl, index) => {
+                    const img = document.createElement('img');
+                    img.src = blobUrl;
+                    img.className = 'variant-img-select';
+                    if (selectedIndex !== "" && index == selectedIndex) {
+                        img.classList.add('selected');
+                    }
+                    img.onclick = () => {
+                        // Deselect all
+                        grid.querySelectorAll('.variant-img-select').forEach(el => el.classList.remove('selected'));
+                        // Select this
+                        img.classList.add('selected');
+                        hiddenInput.value = index;
+                    };
+                    grid.appendChild(img);
+                });
+            }
+            container.appendChild(grid);
+        }
+
+        // 2. Toggles
+        colorsToggle.addEventListener('change', () => {
+            colorsContainer.classList.toggle('hidden', !colorsToggle.checked);
+            if(colorsToggle.checked && colorRowsWrapper.children.length === 0) addColorRow();
+        });
+
+        sizesToggle.addEventListener('change', () => {
+            sizesContainer.classList.toggle('hidden', !sizesToggle.checked);
+            if(sizesToggle.checked && sizeRowsWrapper.children.length === 0) addSizeRow();
+        });
+
+        // 3. Add Rows Functions
+        function addColorRow() {
+            const rowId = 'color-' + Date.now();
+            const div = document.createElement('div');
+            div.className = 'p-3 border border-gray-200 rounded-md bg-gray-50 relative group';
+            div.innerHTML = `
+                <button type="button" class="absolute top-2 right-2 text-red-400 hover:text-red-600" onclick="this.parentElement.remove()">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+                <div class="grid grid-cols-2 gap-4 mb-2">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Name</label>
+                        <input type="text" class="color-name-input w-full border border-gray-300 rounded px-2 py-1 text-sm" placeholder="Red, Blue...">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Hex</label>
+                        <input type="color" class="color-hex-input w-full h-8 border border-gray-300 rounded cursor-pointer" value="#000000">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500">Link Image (Optional)</label>
+                    <div class="variant-image-picker-container"></div>
+                </div>
+            `;
+            colorRowsWrapper.appendChild(div);
+            renderVariantImagePicker(div.querySelector('.variant-image-picker-container'));
+        }
+
+        function addSizeRow() {
+            const rowId = 'size-' + Date.now();
+            const div = document.createElement('div');
+            div.className = 'p-3 border border-gray-200 rounded-md bg-gray-50 relative group';
+            div.innerHTML = `
+                <button type="button" class="absolute top-2 right-2 text-red-400 hover:text-red-600" onclick="this.parentElement.remove()">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+                <div class="mb-2">
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Size Name</label>
+                    <input type="text" class="size-name-input w-full border border-gray-300 rounded px-2 py-1 text-sm" placeholder="S, M, 42, 44...">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500">Link Image (Optional)</label>
+                    <div class="variant-image-picker-container"></div>
+                </div>
+            `;
+            sizeRowsWrapper.appendChild(div);
+            renderVariantImagePicker(div.querySelector('.variant-image-picker-container'));
+        }
+
+        addColorBtn.addEventListener('click', addColorRow);
+        addSizeBtn.addEventListener('click', addSizeRow);
+
+        // ==========================================
+        // END VARIANTS LOGIC
+        // ==========================================
         
         async function generateLandingPage() {
             errorMessageDiv.classList.add('hidden');
@@ -511,42 +535,32 @@
             const useOffer = document.getElementById("use-offer-toggle").checked;
             const customOffer = document.getElementById("custom-offer-input").value;
 
+            // Collect Variants Data
+            const variants = {
+                colors: { enabled: colorsToggle.checked, items: [] },
+                sizes: { enabled: sizesToggle.checked, items: [] }
+            };
+
+            if (variants.colors.enabled) {
+                document.querySelectorAll('#color-rows-wrapper > div').forEach(row => {
+                    const name = row.querySelector('.color-name-input').value;
+                    const hex = row.querySelector('.color-hex-input').value;
+                    const imgIndex = row.querySelector('.selected-image-index').value;
+                    if(name) variants.colors.items.push({ name, hex, imgIndex });
+                });
+            }
+
+            if (variants.sizes.enabled) {
+                document.querySelectorAll('#size-rows-wrapper > div').forEach(row => {
+                    const name = row.querySelector('.size-name-input').value;
+                    const imgIndex = row.querySelector('.selected-image-index').value;
+                    if(name) variants.sizes.items.push({ name, imgIndex });
+                });
+            }
+
             if (!name || !features || !price) {
                 showError("Please fill in all required fields (Name, Features, Price)!");
                 return;
-            }
-
-            // GATHER VARIANT DATA
-            let variants = {
-                colors: [],
-                sizes: []
-            };
-
-            if (enableColorsToggle.checked) {
-                document.querySelectorAll('#color-rows .variant-row').forEach(row => {
-                    const name = row.querySelector('.variant-color-name').value;
-                    if(name) {
-                        variants.colors.push({
-                            name: name,
-                            hex: row.querySelector('.variant-color-hex').value,
-                            price: row.querySelector('.variant-price').value || null,
-                            imageIndex: row.querySelector('.variant-img-select').value || null
-                        });
-                    }
-                });
-            }
-
-            if (enableSizesToggle.checked) {
-                document.querySelectorAll('#size-rows .variant-row').forEach(row => {
-                    const name = row.querySelector('.variant-size-name').value;
-                    if(name) {
-                        variants.sizes.push({
-                            name: name,
-                            price: row.querySelector('.variant-price').value || null,
-                            imageIndex: row.querySelector('.variant-img-select').value || null
-                        });
-                    }
-                });
             }
 
             showLoading();
@@ -584,7 +598,7 @@
                         customOffer: useOffer ? customOffer : null,
                         productImages: productImagesBase64,
                         brandLogo: logoBase64,
-                        variants: variants // SEND VARIANTS TO BACKEND
+                        variants: variants // Send new variants data
                     })
                 });
 
@@ -602,7 +616,7 @@
                     downloadBtn.disabled = false;
                     shopifyBtn.disabled = false; 
                     document.getElementById('preview-section').scrollIntoView({ behavior: 'smooth' });
-                    showSuccess("✅ Page generated successfully with Images & Variants!");
+                    showSuccess("✅ Page generated successfully with Variants!");
                 } else {
                     showError(`Error: ${data.error || 'Unknown error'}`);
                 }
