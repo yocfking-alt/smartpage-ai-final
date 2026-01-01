@@ -14,16 +14,17 @@ export default async function handler(req, res) {
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
         if (!GEMINI_API_KEY) throw new Error('API Key is missing');
 
-        // استقبال البيانات بما في ذلك المتغيرات الجديدة (variants)
+        // استقبال البيانات بما في ذلك الصور المتعددة والمتغيرات الجديدة
         const { 
             productName, productFeatures, productPrice, productCategory,
             targetAudience, designDescription, shippingOption, customShippingPrice, 
-            customOffer, productImages, brandLogo, variants 
+            customOffer, productImages, brandLogo, variants // <-- تم إضافة variants هنا
         } = req.body;
 
         // التعامل مع الصور المتعددة
         const productImageArray = productImages || [];
-        
+        const mainProductImage = productImageArray.length > 0 ? productImageArray[0] : null;
+
         const GEMINI_MODEL = 'gemini-2.5-flash'; 
         const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
         
@@ -34,39 +35,44 @@ export default async function handler(req, res) {
         const MAIN_IMG_PLACEHOLDER = "[[PRODUCT_IMAGE_MAIN_SRC]]";
         const LOGO_PLACEHOLDER = "[[BRAND_LOGO_SRC]]";
         
-        // --- تحضير شرائح السلايدر للبرومبت ---
+        // --- تحضير شرائح السلايدر ---
         let sliderSlidesHTML = `   <img src="${MAIN_IMG_PLACEHOLDER}" class="slider-img active" data-index="1">`;
         for (let i = 1; i < productImageArray.length && i <= 6; i++) {
             sliderSlidesHTML += `\n   <img src="[[PRODUCT_IMAGE_${i + 1}_SRC]]" class="slider-img" data-index="${i + 1}">`;
         }
         const totalSlidesCount = Math.max(productImageArray.length, 1);
 
-        // --- تحضير وصف المتغيرات (Variants Description) ---
-        // هذا الجزء يجهز البيانات ليقرأها الذكاء الاصطناعي ويبني المنطق بناء عليها
-        let variantsPrompt = "";
-        
-        if (variants) {
-            if (variants.colors && variants.colors.length > 0) {
-                variantsPrompt += "\n\n### بيانات الألوان المتاحة (Colors):\n";
-                variants.colors.forEach((col, idx) => {
-                    // imageIndex + 1 because slider starts at 1 (index 0 is image 1)
-                    // If imageIndex is null/undefined, pass null
-                    let imgTarget = col.imageIndex !== null && col.imageIndex !== "" ? parseInt(col.imageIndex) + 1 : "null";
-                    let priceAdd = col.price ? col.price : "0";
-                    variantsPrompt += `- Color ${idx+1}: Name="${col.name}", Hex="${col.hex}", ExtraPrice=${priceAdd}, LinkedSlideIndex=${imgTarget}\n`;
+        // --- تحضير وصف المتغيرات (Variants) للبرومبت ---
+        let variantsInstruction = "";
+        let hasVariants = false;
+
+        if (variants && (variants.colors.enabled || variants.sizes.enabled)) {
+            hasVariants = true;
+            variantsInstruction += `\n### **تعليمات المتغيرات (Variants Logic):**\n`;
+            variantsInstruction += `يحتوي هذا المنتج على خيارات متقدمة. يجب عليك إنشاء منطق JS و HTML للتعامل معها بدقة:\n`;
+            
+            if (variants.colors.enabled) {
+                variantsInstruction += `**1. الألوان (Colors):**\n`;
+                variantsInstruction += `أنشئ "Color Swatches" (دوائر ملونة) للاختيارات التالية:\n`;
+                variants.colors.items.forEach((col, idx) => {
+                    // تحديد مؤشر الصورة المرتبطة (مع مراعاة أن الصورة الرئيسية هي 1)
+                    let targetSlide = col.imgIndex !== "" ? parseInt(col.imgIndex) + 1 : null; 
+                    variantsInstruction += `- لون: ${col.name} (Hex: ${col.hex}) ${targetSlide ? `-> عند النقر عليه، يجب أن ينتقل السلايدر فوراً للشريحة رقم ${targetSlide}` : ""}\n`;
                 });
             }
-            if (variants.sizes && variants.sizes.length > 0) {
-                variantsPrompt += "\n\n### بيانات المقاسات المتاحة (Sizes):\n";
-                variants.sizes.forEach((sz, idx) => {
-                    let imgTarget = sz.imageIndex !== null && sz.imageIndex !== "" ? parseInt(sz.imageIndex) + 1 : "null";
-                    let priceAdd = sz.price ? sz.price : "0";
-                    variantsPrompt += `- Size ${idx+1}: Name="${sz.name}", ExtraPrice=${priceAdd}, LinkedSlideIndex=${imgTarget}\n`;
-                });
+
+            if (variants.sizes.enabled) {
+                variantsInstruction += `**2. المقاسات (Sizes):**\n`;
+                variantsInstruction += `أنشئ أزرار اختيار للمقاسات التالية: ${variants.sizes.items.map(s => s.name).join(', ')}\n`;
             }
+
+            variantsInstruction += `**3. السعر والكمية:**\n`;
+            variantsInstruction += `- أضف عداد للكمية (+/-).\n`;
+            variantsInstruction += `- السعر الأساسي هو: ${productPrice}.\n`;
+            variantsInstruction += `- يجب تحديث "السعر الإجمالي" تلقائياً عند تغيير الكمية (السعر × الكمية).\n`;
         }
 
-        // --- CSS المدمج (فيسبوك + السلايدر الجديد) ---
+        // --- CSS المدمج ---
         const fbStyles = `
         <style>
             :root { --bg-color: #ffffff; --comment-bg: #f0f2f5; --text-primary: #050505; --text-secondary: #65676b; --blue-link: #216fdb; --line-color: #eaebef; }
@@ -106,9 +112,23 @@ export default async function handler(req, res) {
             .react-count { font-size: 11px; color: var(--text-secondary); margin-left: 4px; margin-right: 2px; }
             .view-replies { display: flex; align-items: center; font-weight: 600; font-size: 14px; color: var(--text-primary); margin: 10px 0; padding-right: 50px; position: relative; cursor: pointer; }
             .view-replies::before { content: ''; position: absolute; right: 25px; top: 50%; width: 20px; height: 2px; background-color: var(--line-color); border-bottom-left-radius: 10px; }
-            
-            /* أيقونة القلب فقط */
             .icon-love { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%23f02849"/><path d="M16 26c-0.6 0-1.2-0.2-1.6-0.6 -5.2-4.6-9.4-8.4-9.4-13.4 0-3 2.4-5.4 5.4-5.4 2.1 0 3.9 1.1 4.9 2.9l0.7 1.2 0.7-1.2c1-1.8 2.8-2.9 4.9-2.9 3 0 5.4 2.4 5.4 5.4 0 5-4.2 8.8-9.4 13.4 -0.4 0.4-1 0.6-1.6 0.6z" fill="white"/></svg>') no-repeat center/cover; }
+            
+            /* --- 3. ستايل المتغيرات (Variants Styles) --- */
+            .variants-section { margin-bottom: 20px; padding: 15px; border: 1px solid #eee; border-radius: 8px; background: #fff; }
+            .variant-title { font-weight: bold; margin-bottom: 8px; display: block; }
+            .color-options { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+            .color-swatch { width: 35px; height: 35px; border-radius: 50%; cursor: pointer; border: 2px solid #ddd; transition: all 0.2s; position: relative; }
+            .color-swatch.active { border-color: #333; transform: scale(1.1); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+            .color-swatch.active::after { content: '✔'; color: white; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; text-shadow: 0 0 2px rgba(0,0,0,0.5); }
+            .size-options { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+            .size-btn { padding: 8px 16px; border: 1px solid #ddd; background: white; cursor: pointer; border-radius: 4px; transition: all 0.2s; }
+            .size-btn.active { background: #000; color: white; border-color: #000; }
+            .quantity-selector { display: flex; align-items: center; gap: 0; border: 1px solid #ddd; border-radius: 4px; width: fit-content; }
+            .qty-btn { padding: 8px 15px; background: #f9f9f9; border: none; cursor: pointer; font-size: 18px; }
+            .qty-btn:hover { background: #eee; }
+            .qty-input { width: 50px; text-align: center; border: none; border-left: 1px solid #ddd; border-right: 1px solid #ddd; height: 100%; font-weight: bold; }
+            .total-price-box { margin-top: 15px; padding: 10px; background: #f0fdf4; border: 1px solid #dcfce7; border-radius: 6px; text-align: center; font-weight: bold; color: #166534; font-size: 1.1em; }
         </style>
         `;
 
@@ -118,10 +138,10 @@ Analyze this product: ${productName}.
 Category: ${productCategory}. 
 Target Audience: ${targetAudience}.
 Context/Features: ${productFeatures}.
-Price: ${productPrice} (Base Price). ${shippingText}. ${offerText}.
+Price: ${productPrice}. ${shippingText}. ${offerText}.
 User Design Request: ${designDescription}.
 
-${variantsPrompt}
+${variantsInstruction}
 
 ## 🖼️ **تعليمات عرض الصور (السلايدر التفاعلي):**
 لقد تم تزويدك بصور للمنتج (${productImageArray.length} صور).
@@ -150,9 +170,9 @@ ${variantsPrompt}
     let currentSlide = 1; const totalSlides = ${totalSlidesCount};
     function changeSlide(d) { currentSlide += d; if (currentSlide > totalSlides) currentSlide = 1; if (currentSlide < 1) currentSlide = totalSlides; updateSlider(); }
     
-    // دالة لتغيير الشريحة مباشرة (تستخدم عند اختيار لون معين)
-    function jumpToSlide(index) {
-        if(index > 0 && index <= totalSlides) {
+    // دالة جديدة للانتقال المباشر لشريحة محددة (لربط الألوان بالصور)
+    function goToSlide(index) {
+        if(index >= 1 && index <= totalSlides) {
             currentSlide = index;
             updateSlider();
         }
@@ -170,32 +190,36 @@ ${variantsPrompt}
 ### **2. الشعار:**
 - استخدم هذا النص بالضبط كمصدر للشعار: \`${LOGO_PLACEHOLDER}\`
 
-## 🎛️ **نظام المتغيرات (Variants Logic) - مهم جداً:**
-لقد تم تزويدك ببيانات الألوان والمقاسات أعلاه (إن وجدت). يجب عليك إنشاء واجهة مستخدم تفاعلية (Selectors) للعميل لاختيار اللون والحجم.
+## ⚠️ **متطلبات إلزامية لاستمارة الطلب (Order Form):**
+يجب أن تحتوي الاستمارة على هذا الهيكل الدقيق للحقول باللغة العربية، **مع دمج خيارات المتغيرات الجديدة (Variants) بداخلها**:
 
-**المتطلبات الوظيفية (يجب كتابة كود JavaScript لها داخل الصفحة):**
-1. **واجهة الاختيار:** أنشئ أزرار (Radio Buttons) أو مربعات اختيار أنيقة للألوان والمقاسات.
-2. **تحديث السعر:** عند اختيار لون أو مقاس له (ExtraPrice)، يجب تحديث سعر المنتج المعروض فورياً (Base Price + Extra Color + Extra Size).
-3. **تغيير الصورة (Linked Image):** عند اختيار لون أو مقاس له (LinkedSlideIndex)، يجب استدعاء دالة \`jumpToSlide(index)\` فورياً لعرض الصورة المناسبة في السلايدر.
-4. **استمارة الطلب:** يجب إضافة حقول مخفية (Hidden Inputs) داخل استمارة الطلب باسم \`selected_color\` و \`selected_size\` ويتم تحديث قيمتها تلقائياً عند الاختيار، لكي يتم إرسالها مع الطلب.
-
-## 🎯 **الهدف:**
-إنشاء صفحة هبوط فريدة ومبدعة وتحقق أعلى معدلات التحويل.
-
-## ⚠️ **متطلبات إلزامية:**
-
-### **1. قسم الهيرو:**
-- يتضمن الشعار والسلايدر أعلاه.
-- بجانب أو أسفل السلايدر، ضع **خيارات المنتج (Colors & Sizes)** والسعر الديناميكي.
-
-### **2. استمارة الطلب (مباشرة بعد الهيرو):**
-يجب أن تحتوي على هذا الهيكل الدقيق للحقول باللغة العربية:
+\`\`\`html
 <div class="customer-info-box">
   <h3>استمارة الطلب</h3>
   <p>المرجو إدخال معلوماتك الخاصة بك</p>
   
-  <input type="hidden" id="hidden_color" name="color" value="">
-  <input type="hidden" id="hidden_size" name="size" value="">
+  <div class="variants-section">
+    ${variants && variants.colors.enabled ? `
+    <label class="variant-title">اختر اللون:</label>
+    <div class="color-options" id="color-selector">
+        </div>
+    <input type="hidden" id="selected-color" name="color">
+    ` : ''}
+
+    ${variants && variants.sizes.enabled ? `
+    <label class="variant-title">اختر المقاس:</label>
+    <div class="size-options" id="size-selector">
+        </div>
+    <input type="hidden" id="selected-size" name="size">
+    ` : ''}
+
+    <label class="variant-title">الكمية:</label>
+    <div class="quantity-selector">
+        <button type="button" class="qty-btn" onclick="updateQty(-1)">-</button>
+        <input type="text" id="quantity-input" value="1" readonly class="qty-input">
+        <button type="button" class="qty-btn" onclick="updateQty(1)">+</button>
+    </div>
+  </div>
 
   <div class="form-group">
     <label>الإسم الكامل</label>
@@ -222,15 +246,45 @@ ${variantsPrompt}
     <input type="text" placeholder="أدخل عنوانك بالتفصيل" required>
   </div>
   
-  <div class="price-display">
-    <p>سعر المنتج: <span id="display-price">${productPrice}</span> دينار</p>
+  <div class="total-price-box">
+    المجموع: <span id="total-price-display">${productPrice}</span> دينار
   </div>
   
   <button type="submit" class="submit-btn">تأكيد الطلب</button>
 </div>
 
+<script>
+    let basePrice = ${parseFloat(productPrice) || 0};
+    let currentQty = 1;
+
+    function updateQty(change) {
+        let newQty = currentQty + change;
+        if(newQty < 1) newQty = 1;
+        currentQty = newQty;
+        document.getElementById('quantity-input').value = currentQty;
+        updateTotalPrice();
+    }
+
+    function updateTotalPrice() {
+        let total = basePrice * currentQty;
+        document.getElementById('total-price-display').innerText = total.toFixed(2);
+    }
+
+    // دوال اختيار اللون والمقاس (يرجى كتابتها بالكامل)
+    // عند اختيار لون له صورة مرتبطة، استدعِ goToSlide(index)
+</script>
+\`\`\`
+
 ### **3. قسم آراء العملاء (Facebook Style):**
-استخدم نفس الستايل السابق (Facebook Style) مع التفاعل بالقلب فقط.
+يجب أن يبدو القسم كأنه مأخوذ (Screenshot) من نقاش حقيقي على فيسبوك حول المنتج.
+1. **التصميم:** استخدم أكواد CSS المرفقة في المتغير \`fbStyles\`.
+2. **المحتوى:** أنشئ 3-5 تعليقات واقعية جداً.
+   - امزج بين **الدارجة الجزائرية** و **العربية الفصحى البسيطة**.
+3. **الصور والأسماء:**
+   - **للذكور:** استخدم الرمز \`[[MALE_IMG]]\` في \`src\`.
+   - **للإناث:** استخدم الرمز \`[[FEMALE_IMG]]\` في \`src\`.
+4. **التفاعل (القلب فقط ❤️):**
+   - استخدم حصراً أيقونة القلب (\`icon-love\`).
 
 ### **4. تنسيق الإخراج:**
 أعد كائن JSON فقط:
@@ -239,6 +293,11 @@ ${variantsPrompt}
   "liquid_code": "كود Shopify Liquid",
   "schema": { "name": "Landing Page", "settings": [] }
 }
+
+## 🚀 **تعليمات نهائية:**
+- صمم باقي الصفحة بحرية تامة.
+- أضف عد تنازلي.
+- **مهم:** قم بتضمين كود CSS (\`fbStyles\`) الذي سأزودك به في بداية الـ HTML الناتج.
 
 قم بدمج هذا الـ CSS في بداية الـ HTML الناتج:
 ${fbStyles}
