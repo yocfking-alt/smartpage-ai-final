@@ -187,7 +187,44 @@
                         <label for="product-price" class="block text-sm font-medium mb-2 text-gray-700">💰 Product Price:</label> 
                         <input type="text" id="product-price" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="Enter the product price (e.g. $29.99)"/> 
                     </div> 
-                    
+
+                    <div class="mb-6 pt-4 border-t border-gray-200">
+                        <label class="block text-sm font-bold mb-4 text-gray-800">🔢 خيارات المنتج (Product Variants):</label>
+                        
+                        <div class="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-sm font-medium text-gray-700">🎨 تفعيل خيار الألوان (Enable Colors):</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="enable-colors-toggle" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-200 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                            
+                            <div id="colors-container" class="hidden">
+                                <div id="colors-list" class="space-y-2 mb-3"></div>
+                                <button type="button" id="add-color-btn" class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center transition-colors">
+                                    <i class="fas fa-plus-circle mr-2"></i> إضافة لون جديد (Add Color)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mb-2 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-sm font-medium text-gray-700">📏 تفعيل خيار الأحجام (Enable Sizes):</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="enable-sizes-toggle" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-200 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                            
+                            <div id="sizes-container" class="hidden">
+                                <div id="sizes-list" class="space-y-2 mb-3"></div>
+                                <button type="button" id="add-size-btn" class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center transition-colors">
+                                    <i class="fas fa-plus-circle mr-2"></i> إضافة حجم جديد (Add Size)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                     <div class="mb-6"> 
                         <label for="shipping-select" class="block text-sm font-medium mb-2 text-gray-700">🚚 Shipping Options:</label> 
                         <select id="shipping-select" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"> 
@@ -285,6 +322,69 @@
         let generatedLiquidCode = null;
         let generatedSchema = null;
         
+        // --- NEW VARIANT VARIABLES AND LOGIC ---
+        const colorToggle = document.getElementById('enable-colors-toggle');
+        const colorContainer = document.getElementById('colors-container');
+        const colorsList = document.getElementById('colors-list');
+        const addColorBtn = document.getElementById('add-color-btn');
+
+        const sizeToggle = document.getElementById('enable-sizes-toggle');
+        const sizeContainer = document.getElementById('sizes-container');
+        const sizesList = document.getElementById('sizes-list');
+        const addSizeBtn = document.getElementById('add-size-btn');
+
+        // Toggle Listeners
+        if (colorToggle && colorContainer) {
+            colorToggle.addEventListener('change', () => {
+                if (colorToggle.checked) {
+                    colorContainer.classList.remove('hidden');
+                    if (colorsList.children.length === 0) addColorRow(); // Add first row automatically
+                } else {
+                    colorContainer.classList.add('hidden');
+                }
+            });
+        }
+
+        if (sizeToggle && sizeContainer) {
+            sizeToggle.addEventListener('change', () => {
+                if (sizeToggle.checked) {
+                    sizeContainer.classList.remove('hidden');
+                    if (sizesList.children.length === 0) addSizeRow(); // Add first row automatically
+                } else {
+                    sizeContainer.classList.add('hidden');
+                }
+            });
+        }
+
+        // Add Row Functions
+        function addColorRow() {
+            const div = document.createElement('div');
+            div.className = 'flex gap-2 items-center';
+            div.innerHTML = `
+                <input type="text" placeholder="اللون (Ex: أحمر)" class="color-name flex-1 bg-white border border-gray-300 rounded px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
+                <input type="number" placeholder="سعر إضافي" class="color-price w-28 bg-white border border-gray-300 rounded px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" title="سعر إضافي لهذا اللون (اختياري)">
+                <button type="button" class="remove-variant text-red-500 hover:text-red-700 px-2"><i class="fas fa-trash-alt"></i></button>
+            `;
+            div.querySelector('.remove-variant').addEventListener('click', () => div.remove());
+            colorsList.appendChild(div);
+        }
+
+        function addSizeRow() {
+            const div = document.createElement('div');
+            div.className = 'flex gap-2 items-center';
+            div.innerHTML = `
+                <input type="text" placeholder="الحجم (Ex: XL)" class="size-name flex-1 bg-white border border-gray-300 rounded px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
+                <input type="number" placeholder="سعر إضافي" class="size-price w-28 bg-white border border-gray-300 rounded px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" title="سعر إضافي لهذا الحجم (اختياري)">
+                <button type="button" class="remove-variant text-red-500 hover:text-red-700 px-2"><i class="fas fa-trash-alt"></i></button>
+            `;
+            div.querySelector('.remove-variant').addEventListener('click', () => div.remove());
+            sizesList.appendChild(div);
+        }
+
+        if (addColorBtn) addColorBtn.addEventListener('click', addColorRow);
+        if (addSizeBtn) addSizeBtn.addEventListener('click', addSizeRow);
+        // --- END OF NEW VARIANT LOGIC ---
+
         function showLoading() {
             loadingIndicator.classList.remove('hidden');
             errorMessageDiv.classList.add('hidden');
@@ -338,6 +438,30 @@
             const useOffer = document.getElementById("use-offer-toggle").checked;
             const customOffer = document.getElementById("custom-offer-input").value;
 
+            // --- COLLECT NEW VARIANT DATA ---
+            let productColors = [];
+            if (colorToggle.checked) {
+                document.querySelectorAll('#colors-list > div').forEach(row => {
+                    const colorName = row.querySelector('.color-name').value;
+                    const colorPrice = row.querySelector('.color-price').value;
+                    if (colorName) {
+                        productColors.push({ name: colorName, price: colorPrice || 0 });
+                    }
+                });
+            }
+
+            let productSizes = [];
+            if (sizeToggle.checked) {
+                document.querySelectorAll('#sizes-list > div').forEach(row => {
+                    const sizeName = row.querySelector('.size-name').value;
+                    const sizePrice = row.querySelector('.size-price').value;
+                    if (sizeName) {
+                        productSizes.push({ name: sizeName, price: sizePrice || 0 });
+                    }
+                });
+            }
+            // --- END COLLECT DATA ---
+
             if (!name || !features || !price) {
                 showError("Please fill in all required fields (Name, Features, Price)!");
                 return;
@@ -378,7 +502,10 @@
                         customShippingPrice: shippingOption === 'custom' ? customShippingPrice : null,
                         customOffer: useOffer ? customOffer : null,
                         productImages: productImagesBase64, // إرسال مصفوفة الصور
-                        brandLogo: logoBase64
+                        brandLogo: logoBase64,
+                        // NEW FIELDS
+                        productColors: productColors,
+                        productSizes: productSizes
                     })
                 });
 
