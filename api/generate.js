@@ -14,11 +14,12 @@ export default async function handler(req, res) {
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
         if (!GEMINI_API_KEY) throw new Error('API Key is missing');
 
-        // استقبال البيانات بما في ذلك الصور المتعددة
+        // استقبال البيانات بما في ذلك المتغيرات الجديدة (الألوان والأحجام)
         const { 
             productName, productFeatures, productPrice, productCategory,
             targetAudience, designDescription, shippingOption, customShippingPrice, 
-            customOffer, productImages, brandLogo 
+            customOffer, productImages, brandLogo,
+            productColors, productSizes // <-- استقبال المتغيرات الجديدة
         } = req.body;
 
         // التعامل مع الصور المتعددة
@@ -31,11 +32,15 @@ export default async function handler(req, res) {
         const shippingText = shippingOption === 'free' ? "شحن مجاني" : `الشحن: ${customShippingPrice}`;
         const offerText = customOffer ? `عرض خاص: ${customOffer}` : "";
 
+        // تحويل المتغيرات الجديدة إلى نصوص لإرسالها للذكاء الاصطناعي
+        const colorsData = productColors && productColors.length > 0 ? JSON.stringify(productColors) : "[]";
+        const sizesData = productSizes && productSizes.length > 0 ? JSON.stringify(productSizes) : "[]";
+
         // تعريف المتغيرات البديلة للصور
         const MAIN_IMG_PLACEHOLDER = "[[PRODUCT_IMAGE_MAIN_SRC]]";
         const LOGO_PLACEHOLDER = "[[BRAND_LOGO_SRC]]";
         
-        // --- تعديل: تحضير شرائح السلايدر للبرومبت بدلاً من النصوص البديلة فقط ---
+        // --- تحضير شرائح السلايدر للبرومبت ---
         let sliderSlidesHTML = `   <img src="${MAIN_IMG_PLACEHOLDER}" class="slider-img active" data-index="1">`;
         for (let i = 1; i < productImageArray.length && i <= 6; i++) {
             sliderSlidesHTML += `\n   <img src="[[PRODUCT_IMAGE_${i + 1}_SRC]]" class="slider-img" data-index="${i + 1}">`;
@@ -43,7 +48,6 @@ export default async function handler(req, res) {
         const totalSlidesCount = Math.max(productImageArray.length, 1);
 
         // --- CSS المدمج (فيسبوك + السلايدر الجديد) ---
-        // تم إضافة ستايل السلايدر هنا لضمان عدم تغيير طريقة استدعاء المتغير لاحقاً
         const fbStyles = `
         <style>
             :root { --bg-color: #ffffff; --comment-bg: #f0f2f5; --text-primary: #050505; --text-secondary: #65676b; --blue-link: #216fdb; --line-color: #eaebef; }
@@ -98,6 +102,10 @@ Context/Features: ${productFeatures}.
 Price: ${productPrice}. ${shippingText}. ${offerText}.
 User Design Request: ${designDescription}.
 
+**Variant Data (JSON):**
+Colors: ${colorsData}
+Sizes: ${sizesData}
+
 ## 🖼️ **تعليمات عرض الصور (السلايدر التفاعلي):**
 لقد تم تزويدك بصور للمنتج (${productImageArray.length} صور).
 **بدلاً من عرض صور ثابتة، يجب عليك بناء "عارض منتج" (Slider) تفاعلي يطابق الكود التالي بدقة:**
@@ -135,7 +143,6 @@ User Design Request: ${designDescription}.
 
 ### **2. الشعار:**
 - استخدم هذا النص بالضبط كمصدر للشعار: \`${LOGO_PLACEHOLDER}\`
-- مثال: <img src="${LOGO_PLACEHOLDER}" alt="شعار العلامة التجارية" class="logo">
 
 ## 🎯 **الهدف:**
 إنشاء صفحة هبوط فريدة ومبدعة تحتوي على السلايدر أعلاه وتحقق أعلى معدلات التحويل.
@@ -145,13 +152,16 @@ User Design Request: ${designDescription}.
 ### **1. قسم الهيرو:**
 - يتضمن الشعار في الهيدر.
 - **مهم جداً:** استبدل صورة المنتج التقليدية بكود "السلايدر التفاعلي" المذكور أعلاه بالكامل.
-- لا تضف معرض صور منفصل في الأسفل، السلايدر يكفي.
 
-### **2. استمارة الطلب (مباشرة بعد الهيرو):**
-يجب أن تحتوي على هذا الهيكل الدقيق للحقول باللغة العربية:
+### **2. استمارة الطلب (استمارة ذكية وديناميكية):**
+يجب أن تحتوي على هيكل JavaScript ذكي لحساب السعر بناءً على المتغيرات (الألوان والأحجام).
+استخدم بيانات المتغيرات المرفقة (Colors & Sizes JSON) لإنشاء حقول الاختيار.
+
+الكود المطلوب للاستمارة (قم بتكييفه ليشمل المتغيرات المتوفرة فقط):
+\`\`\`html
 <div class="customer-info-box">
   <h3>استمارة الطلب</h3>
-  <p>المرجو إدخال معلوماتك الخاصة بك</p>
+  <p>المرجو إدخال معلوماتك وتحديد خيارات المنتج</p>
   
   <div class="form-group">
     <label>الإسم الكامل</label>
@@ -161,6 +171,15 @@ User Design Request: ${designDescription}.
   <div class="form-group">
     <label>رقم الهاتف</label>
     <input type="tel" placeholder="Nombre" required>
+  </div>
+
+  <div class="form-group quantity-group">
+      <label>الكمية</label>
+      <div class="qty-controls">
+          <button type="button" onclick="changeQty(-1)">-</button>
+          <input type="number" id="qty-input" value="1" min="1" onchange="updateTotal()" readonly>
+          <button type="button" onclick="changeQty(1)">+</button>
+      </div>
   </div>
   
   <div class="form-group">
@@ -173,53 +192,62 @@ User Design Request: ${designDescription}.
     <input type="text" placeholder="أدخل بلديتك" required>
   </div>
   
-  <div class="form-group">
-    <label>الموقع / العنوان</label>
-    <input type="text" placeholder="أدخل عنوانك بالتفصيل" required>
-  </div>
-  
   <div class="price-display">
-    <p>سعر المنتج: ${productPrice} دينار</p>
+    <p>المجموع: <span id="total-price">${productPrice}</span> دينار</p>
   </div>
   
   <button type="submit" class="submit-btn">تأكيد الطلب</button>
 </div>
 
+<script>
+    // متغيرات الأسعار من الخادم
+    const basePrice = ${productPrice};
+    
+    function changeQty(delta) {
+        const input = document.getElementById('qty-input');
+        let val = parseInt(input.value) + delta;
+        if (val < 1) val = 1;
+        input.value = val;
+        updateTotal();
+    }
+
+    function updateTotal() {
+        let total = basePrice;
+        
+        // حساب سعر اللون الإضافي إن وجد
+        const colorSelect = document.getElementById('color-select');
+        if (colorSelect) {
+            const selectedOption = colorSelect.options[colorSelect.selectedIndex];
+            const extra = parseFloat(selectedOption.getAttribute('data-price')) || 0;
+            total += extra;
+        }
+
+        // حساب سعر الحجم الإضافي إن وجد
+        const sizeSelect = document.getElementById('size-select');
+        if (sizeSelect) {
+            const selectedOption = sizeSelect.options[sizeSelect.selectedIndex];
+            const extra = parseFloat(selectedOption.getAttribute('data-price')) || 0;
+            total += extra;
+        }
+
+        // ضرب في الكمية
+        const qty = parseInt(document.getElementById('qty-input').value) || 1;
+        total = total * qty;
+
+        document.getElementById('total-price').innerText = total;
+    }
+</script>
+\`\`\`
+
+**ملاحظة للموديل:** قم ببناء حقول الـ HTML الخاصة بالألوان (`<select id="color-select">`) والأحجام (`<select id="size-select">`) **فقط إذا كانت البيانات المرسلة (colorsData/sizesData) تحتوي على عناصر**. تأكد من وضع السعر الإضافي داخل `data-price`.
+
 ### **3. قسم آراء العملاء (Facebook Style):**
 يجب أن يبدو القسم كأنه مأخوذ (Screenshot) من نقاش حقيقي على فيسبوك حول المنتج.
 1. **التصميم:** استخدم أكواد CSS المرفقة في المتغير \`fbStyles\`.
 2. **المحتوى:** أنشئ 3-5 تعليقات واقعية جداً.
-   - امزج بين **الدارجة الجزائرية** (مثل: "الله يبارك"، "سلعة شابة"، "وصلتني في وقتها") و **العربية الفصحى البسيطة**.
-   - التعليقات يجب أن تمدح المنتج وتؤكد المصداقية.
-3. **الصور والأسماء:**
-   - **للذكور:** استخدم الاسم العربي المناسب واستخدم الرمز \`[[MALE_IMG]]\` في مصدر الصورة \`src\`.
-   - **للإناث:** استخدم الاسم العربي المناسب واستخدم الرمز \`[[FEMALE_IMG]]\` في مصدر الصورة \`src\`.
-4. **التفاعل (القلب فقط ❤️):**
-   - **هام جداً:** استخدم حصراً أيقونة القلب (\`icon-love\`) لجميع التفاعلات.
-   - **لا تستخدم أيقونة اللايك أبداً.**
-   - ضع أرقاماً عشوائية منطقية لعدد ساعات لعدد القلوب بجانب كل تعليق.
-   - أضف "عرض الردود السابقة" بين بعض التعليقات لزيادة الواقعية.
-
-### نموذج HTML لتعليق واحد (استخدم القلب فقط):
-\`\`\`html
-<div class="comment-row">
-    <div class="avatar"><img src="[[FEMALE_IMG]]" alt="User"></div>
-    <div class="comment-content">
-        <div class="bubble">
-            <span class="username">اسم المستخدم</span>
-            <span class="text">نص التعليق هنا...</span>
-            <div class="reactions-container">
-                <div class="react-icon icon-love"></div> <span class="react-count">15</span>
-            </div>
-        </div>
-        <div class="actions">
-            <span class="time">منذ ساعتين</span>
-            <span class="action-link">أعجبني</span>
-            <span class="action-link">رد</span>
-        </div>
-    </div>
-</div>
-\`\`\`
+   - امزج بين **الدارجة الجزائرية** و **العربية الفصحى البسيطة**.
+3. **الصور والأسماء:** استخدم الرموز \`[[MALE_IMG]]\` و \`[[FEMALE_IMG]]\`.
+4. **التفاعل:** استخدم حصراً أيقونة القلب (\`icon-love\`) لجميع التفاعلات.
 
 ### **4. تنسيق الإخراج:**
 أعد كائن JSON فقط:
@@ -230,12 +258,9 @@ User Design Request: ${designDescription}.
 }
 
 ## 🚀 **حرية إبداعية كاملة لباقي الأقسام:**
-- صمم باقي الصفحة بحرية تامة باستخدام CSS حديث وجذاب
-- استخدم تأثيرات hover، transitions، وanimations لجعل الصفحة تفاعلية
-- تأكد من أن الصفحة سريعة الاستجابة وتعمل على جميع الأجهزة
-- أضف عد تنازلي أقل من ساعتان أنيق يحفز الزائر على الشراء بلون مناسب لصفحة و للمنتج
-- أضف أقسام إضافية مثل: مميزات المنتج، الأسئلة الشائعة، إلخ
-- **مهم:** قم بتضمين كود CSS (\`fbStyles\`) الذي سأزودك به في بداية الـ HTML الناتج.
+- صمم باقي الصفحة بحرية تامة.
+- أضف عد تنازلي أقل من ساعتان.
+- **مهم:** قم بتضمين كود CSS (\`fbStyles\`) في بداية الـ HTML الناتج.
 
 قم بدمج هذا الـ CSS في بداية الـ HTML الناتج:
 ${fbStyles}
