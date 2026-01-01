@@ -14,27 +14,21 @@ export default async function handler(req, res) {
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
         if (!GEMINI_API_KEY) throw new Error('API Key is missing');
 
-        // استقبال البيانات بما في ذلك المتغيرات الجديدة (الألوان والأحجام)
+        // استقبال البيانات بما في ذلك المتغيرات الجديدة (variants)
         const { 
             productName, productFeatures, productPrice, productCategory,
             targetAudience, designDescription, shippingOption, customShippingPrice, 
-            customOffer, productImages, brandLogo,
-            productColors, productSizes // <-- استقبال المتغيرات الجديدة
+            customOffer, productImages, brandLogo, variants 
         } = req.body;
 
         // التعامل مع الصور المتعددة
         const productImageArray = productImages || [];
-        const mainProductImage = productImageArray.length > 0 ? productImageArray[0] : null;
-
+        
         const GEMINI_MODEL = 'gemini-2.5-flash'; 
         const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
         
         const shippingText = shippingOption === 'free' ? "شحن مجاني" : `الشحن: ${customShippingPrice}`;
         const offerText = customOffer ? `عرض خاص: ${customOffer}` : "";
-
-        // تحويل المتغيرات الجديدة إلى نصوص لإرسالها للذكاء الاصطناعي
-        const colorsData = productColors && productColors.length > 0 ? JSON.stringify(productColors) : "[]";
-        const sizesData = productSizes && productSizes.length > 0 ? JSON.stringify(productSizes) : "[]";
 
         // تعريف المتغيرات البديلة للصور
         const MAIN_IMG_PLACEHOLDER = "[[PRODUCT_IMAGE_MAIN_SRC]]";
@@ -46,6 +40,31 @@ export default async function handler(req, res) {
             sliderSlidesHTML += `\n   <img src="[[PRODUCT_IMAGE_${i + 1}_SRC]]" class="slider-img" data-index="${i + 1}">`;
         }
         const totalSlidesCount = Math.max(productImageArray.length, 1);
+
+        // --- تحضير وصف المتغيرات (Variants Description) ---
+        // هذا الجزء يجهز البيانات ليقرأها الذكاء الاصطناعي ويبني المنطق بناء عليها
+        let variantsPrompt = "";
+        
+        if (variants) {
+            if (variants.colors && variants.colors.length > 0) {
+                variantsPrompt += "\n\n### بيانات الألوان المتاحة (Colors):\n";
+                variants.colors.forEach((col, idx) => {
+                    // imageIndex + 1 because slider starts at 1 (index 0 is image 1)
+                    // If imageIndex is null/undefined, pass null
+                    let imgTarget = col.imageIndex !== null && col.imageIndex !== "" ? parseInt(col.imageIndex) + 1 : "null";
+                    let priceAdd = col.price ? col.price : "0";
+                    variantsPrompt += `- Color ${idx+1}: Name="${col.name}", Hex="${col.hex}", ExtraPrice=${priceAdd}, LinkedSlideIndex=${imgTarget}\n`;
+                });
+            }
+            if (variants.sizes && variants.sizes.length > 0) {
+                variantsPrompt += "\n\n### بيانات المقاسات المتاحة (Sizes):\n";
+                variants.sizes.forEach((sz, idx) => {
+                    let imgTarget = sz.imageIndex !== null && sz.imageIndex !== "" ? parseInt(sz.imageIndex) + 1 : "null";
+                    let priceAdd = sz.price ? sz.price : "0";
+                    variantsPrompt += `- Size ${idx+1}: Name="${sz.name}", ExtraPrice=${priceAdd}, LinkedSlideIndex=${imgTarget}\n`;
+                });
+            }
+        }
 
         // --- CSS المدمج (فيسبوك + السلايدر الجديد) ---
         const fbStyles = `
@@ -99,12 +118,10 @@ Analyze this product: ${productName}.
 Category: ${productCategory}. 
 Target Audience: ${targetAudience}.
 Context/Features: ${productFeatures}.
-Price: ${productPrice}. ${shippingText}. ${offerText}.
+Price: ${productPrice} (Base Price). ${shippingText}. ${offerText}.
 User Design Request: ${designDescription}.
 
-**Variant Data (JSON):**
-Colors: ${colorsData}
-Sizes: ${sizesData}
+${variantsPrompt}
 
 ## 🖼️ **تعليمات عرض الصور (السلايدر التفاعلي):**
 لقد تم تزويدك بصور للمنتج (${productImageArray.length} صور).
@@ -132,6 +149,15 @@ Sizes: ${sizesData}
 <script>
     let currentSlide = 1; const totalSlides = ${totalSlidesCount};
     function changeSlide(d) { currentSlide += d; if (currentSlide > totalSlides) currentSlide = 1; if (currentSlide < 1) currentSlide = totalSlides; updateSlider(); }
+    
+    // دالة لتغيير الشريحة مباشرة (تستخدم عند اختيار لون معين)
+    function jumpToSlide(index) {
+        if(index > 0 && index <= totalSlides) {
+            currentSlide = index;
+            updateSlider();
+        }
+    }
+
     function updateSlider() { 
         document.querySelectorAll('.slider-img').forEach(img => { img.classList.remove('active'); if(parseInt(img.dataset.index) === currentSlide) img.classList.add('active'); });
         document.getElementById('slideCounter').innerText = currentSlide + ' / ' + totalSlides; 
@@ -144,25 +170,33 @@ Sizes: ${sizesData}
 ### **2. الشعار:**
 - استخدم هذا النص بالضبط كمصدر للشعار: \`${LOGO_PLACEHOLDER}\`
 
+## 🎛️ **نظام المتغيرات (Variants Logic) - مهم جداً:**
+لقد تم تزويدك ببيانات الألوان والمقاسات أعلاه (إن وجدت). يجب عليك إنشاء واجهة مستخدم تفاعلية (Selectors) للعميل لاختيار اللون والحجم.
+
+**المتطلبات الوظيفية (يجب كتابة كود JavaScript لها داخل الصفحة):**
+1. **واجهة الاختيار:** أنشئ أزرار (Radio Buttons) أو مربعات اختيار أنيقة للألوان والمقاسات.
+2. **تحديث السعر:** عند اختيار لون أو مقاس له (ExtraPrice)، يجب تحديث سعر المنتج المعروض فورياً (Base Price + Extra Color + Extra Size).
+3. **تغيير الصورة (Linked Image):** عند اختيار لون أو مقاس له (LinkedSlideIndex)، يجب استدعاء دالة \`jumpToSlide(index)\` فورياً لعرض الصورة المناسبة في السلايدر.
+4. **استمارة الطلب:** يجب إضافة حقول مخفية (Hidden Inputs) داخل استمارة الطلب باسم \`selected_color\` و \`selected_size\` ويتم تحديث قيمتها تلقائياً عند الاختيار، لكي يتم إرسالها مع الطلب.
+
 ## 🎯 **الهدف:**
-إنشاء صفحة هبوط فريدة ومبدعة تحتوي على السلايدر أعلاه وتحقق أعلى معدلات التحويل.
+إنشاء صفحة هبوط فريدة ومبدعة وتحقق أعلى معدلات التحويل.
 
 ## ⚠️ **متطلبات إلزامية:**
 
 ### **1. قسم الهيرو:**
-- يتضمن الشعار في الهيدر.
-- **مهم جداً:** استبدل صورة المنتج التقليدية بكود "السلايدر التفاعلي" المذكور أعلاه بالكامل.
+- يتضمن الشعار والسلايدر أعلاه.
+- بجانب أو أسفل السلايدر، ضع **خيارات المنتج (Colors & Sizes)** والسعر الديناميكي.
 
-### **2. استمارة الطلب (استمارة ذكية وديناميكية):**
-يجب أن تحتوي على هيكل JavaScript ذكي لحساب السعر بناءً على المتغيرات (الألوان والأحجام).
-استخدم بيانات المتغيرات المرفقة (Colors & Sizes JSON) لإنشاء حقول الاختيار.
-
-الكود المطلوب للاستمارة (قم بتكييفه ليشمل المتغيرات المتوفرة فقط):
-\`\`\`html
+### **2. استمارة الطلب (مباشرة بعد الهيرو):**
+يجب أن تحتوي على هذا الهيكل الدقيق للحقول باللغة العربية:
 <div class="customer-info-box">
   <h3>استمارة الطلب</h3>
-  <p>المرجو إدخال معلوماتك وتحديد خيارات المنتج</p>
+  <p>المرجو إدخال معلوماتك الخاصة بك</p>
   
+  <input type="hidden" id="hidden_color" name="color" value="">
+  <input type="hidden" id="hidden_size" name="size" value="">
+
   <div class="form-group">
     <label>الإسم الكامل</label>
     <input type="text" placeholder="Nom et prénom" required>
@@ -171,15 +205,6 @@ Sizes: ${sizesData}
   <div class="form-group">
     <label>رقم الهاتف</label>
     <input type="tel" placeholder="Nombre" required>
-  </div>
-
-  <div class="form-group quantity-group">
-      <label>الكمية</label>
-      <div class="qty-controls">
-          <button type="button" onclick="changeQty(-1)">-</button>
-          <input type="number" id="qty-input" value="1" min="1" onchange="updateTotal()" readonly>
-          <button type="button" onclick="changeQty(1)">+</button>
-      </div>
   </div>
   
   <div class="form-group">
@@ -192,62 +217,20 @@ Sizes: ${sizesData}
     <input type="text" placeholder="أدخل بلديتك" required>
   </div>
   
+  <div class="form-group">
+    <label>الموقع / العنوان</label>
+    <input type="text" placeholder="أدخل عنوانك بالتفصيل" required>
+  </div>
+  
   <div class="price-display">
-    <p>المجموع: <span id="total-price">${productPrice}</span> دينار</p>
+    <p>سعر المنتج: <span id="display-price">${productPrice}</span> دينار</p>
   </div>
   
   <button type="submit" class="submit-btn">تأكيد الطلب</button>
 </div>
 
-<script>
-    // متغيرات الأسعار من الخادم
-    const basePrice = ${productPrice};
-    
-    function changeQty(delta) {
-        const input = document.getElementById('qty-input');
-        let val = parseInt(input.value) + delta;
-        if (val < 1) val = 1;
-        input.value = val;
-        updateTotal();
-    }
-
-    function updateTotal() {
-        let total = basePrice;
-        
-        // حساب سعر اللون الإضافي إن وجد
-        const colorSelect = document.getElementById('color-select');
-        if (colorSelect) {
-            const selectedOption = colorSelect.options[colorSelect.selectedIndex];
-            const extra = parseFloat(selectedOption.getAttribute('data-price')) || 0;
-            total += extra;
-        }
-
-        // حساب سعر الحجم الإضافي إن وجد
-        const sizeSelect = document.getElementById('size-select');
-        if (sizeSelect) {
-            const selectedOption = sizeSelect.options[sizeSelect.selectedIndex];
-            const extra = parseFloat(selectedOption.getAttribute('data-price')) || 0;
-            total += extra;
-        }
-
-        // ضرب في الكمية
-        const qty = parseInt(document.getElementById('qty-input').value) || 1;
-        total = total * qty;
-
-        document.getElementById('total-price').innerText = total;
-    }
-</script>
-\`\`\`
-
-**ملاحظة للموديل:** قم ببناء حقول الـ HTML الخاصة بالألوان (`<select id="color-select">`) والأحجام (`<select id="size-select">`) **فقط إذا كانت البيانات المرسلة (colorsData/sizesData) تحتوي على عناصر**. تأكد من وضع السعر الإضافي داخل `data-price`.
-
 ### **3. قسم آراء العملاء (Facebook Style):**
-يجب أن يبدو القسم كأنه مأخوذ (Screenshot) من نقاش حقيقي على فيسبوك حول المنتج.
-1. **التصميم:** استخدم أكواد CSS المرفقة في المتغير \`fbStyles\`.
-2. **المحتوى:** أنشئ 3-5 تعليقات واقعية جداً.
-   - امزج بين **الدارجة الجزائرية** و **العربية الفصحى البسيطة**.
-3. **الصور والأسماء:** استخدم الرموز \`[[MALE_IMG]]\` و \`[[FEMALE_IMG]]\`.
-4. **التفاعل:** استخدم حصراً أيقونة القلب (\`icon-love\`) لجميع التفاعلات.
+استخدم نفس الستايل السابق (Facebook Style) مع التفاعل بالقلب فقط.
 
 ### **4. تنسيق الإخراج:**
 أعد كائن JSON فقط:
@@ -256,11 +239,6 @@ Sizes: ${sizesData}
   "liquid_code": "كود Shopify Liquid",
   "schema": { "name": "Landing Page", "settings": [] }
 }
-
-## 🚀 **حرية إبداعية كاملة لباقي الأقسام:**
-- صمم باقي الصفحة بحرية تامة.
-- أضف عد تنازلي أقل من ساعتان.
-- **مهم:** قم بتضمين كود CSS (\`fbStyles\`) في بداية الـ HTML الناتج.
 
 قم بدمج هذا الـ CSS في بداية الـ HTML الناتج:
 ${fbStyles}
