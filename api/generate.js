@@ -14,11 +14,11 @@ export default async function handler(req, res) {
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
         if (!GEMINI_API_KEY) throw new Error('API Key is missing');
 
-        // استقبال البيانات بما في ذلك الصور المتعددة والمتغيرات الجديدة
+        // استقبال البيانات بما في ذلك الصور المتعددة والمتغيرات (Variants)
         const { 
             productName, productFeatures, productPrice, productCategory,
             targetAudience, designDescription, shippingOption, customShippingPrice, 
-            customOffer, productImages, brandLogo, variants // <-- تم إضافة variants هنا
+            customOffer, productImages, brandLogo, variants 
         } = req.body;
 
         // التعامل مع الصور المتعددة
@@ -42,40 +42,54 @@ export default async function handler(req, res) {
         }
         const totalSlidesCount = Math.max(productImageArray.length, 1);
 
-        // --- تحضير وصف المتغيرات (Variants) للبرومبت ---
-        let variantsInstruction = "";
-        let hasVariants = false;
+        // --- تحضير منطق المتغيرات (الألوان والمقاسات) ---
+        // سنقوم ببناء كود HTML الخاص بالأزرار مسبقاً لحقنه في البرومبت لضمان الدقة
+        let variantsHTML = "";
+        let variantsScriptLogic = "";
 
-        if (variants && (variants.colors.enabled || variants.sizes.enabled)) {
-            hasVariants = true;
-            variantsInstruction += `\n### **تعليمات المتغيرات (Variants Logic):**\n`;
-            variantsInstruction += `يحتوي هذا المنتج على خيارات متقدمة. يجب عليك إنشاء منطق JS و HTML للتعامل معها بدقة:\n`;
+        // 1. معالجة الألوان
+        if (variants && variants.colors && variants.colors.enabled && variants.colors.items.length > 0) {
+            variantsHTML += `<div class="form-group variant-group"><label class="variant-label">اللون المفضل:</label><div class="variants-wrapper colors-wrapper">`;
             
-            if (variants.colors.enabled) {
-                variantsInstruction += `**1. الألوان (Colors):**\n`;
-                variantsInstruction += `أنشئ "Color Swatches" (دوائر ملونة) للاختيارات التالية:\n`;
-                variants.colors.items.forEach((col, idx) => {
-                    // تحديد مؤشر الصورة المرتبطة (مع مراعاة أن الصورة الرئيسية هي 1)
-                    let targetSlide = col.imgIndex !== "" ? parseInt(col.imgIndex) + 1 : null; 
-                    variantsInstruction += `- لون: ${col.name} (Hex: ${col.hex}) ${targetSlide ? `-> عند النقر عليه، يجب أن ينتقل السلايدر فوراً للشريحة رقم ${targetSlide}` : ""}\n`;
-                });
-            }
-
-            if (variants.sizes.enabled) {
-                variantsInstruction += `**2. المقاسات (Sizes):**\n`;
-                variantsInstruction += `أنشئ أزرار اختيار للمقاسات التالية: ${variants.sizes.items.map(s => s.name).join(', ')}\n`;
-            }
-
-            variantsInstruction += `**3. السعر والكمية:**\n`;
-            variantsInstruction += `- أضف عداد للكمية (+/-).\n`;
-            variantsInstruction += `- السعر الأساسي هو: ${productPrice}.\n`;
-            variantsInstruction += `- يجب تحديث "السعر الإجمالي" تلقائياً عند تغيير الكمية (السعر × الكمية).\n`;
+            variants.colors.items.forEach((color) => {
+                // حساب رقم الشريحة المرتبطة (1-based index)
+                // المصفوفة 0-based، والسلايدر يبدأ من 1. إذا كان imgIndex فارغاً نرسل null
+                let slideTarget = 'null';
+                if (color.imgIndex !== "" && color.imgIndex !== null && color.imgIndex !== undefined) {
+                    slideTarget = parseInt(color.imgIndex) + 1;
+                }
+                
+                variantsHTML += `
+                <div class="variant-option color-option" 
+                     style="background-color: ${color.hex};" 
+                     data-name="${color.name}" 
+                     data-slide="${slideTarget}"
+                     onclick="selectColor(this, '${color.name}', ${slideTarget})"
+                     title="${color.name}">
+                </div>`;
+            });
+            variantsHTML += `</div><input type="hidden" id="selected-color" name="color" required> <span id="color-name-display" style="font-size:12px; color:#666;"></span></div>`;
         }
 
-        // --- CSS المدمج ---
+        // 2. معالجة المقاسات
+        if (variants && variants.sizes && variants.sizes.enabled && variants.sizes.items.length > 0) {
+            variantsHTML += `<div class="form-group variant-group"><label class="variant-label">المقاس:</label><div class="variants-wrapper sizes-wrapper">`;
+            
+            variants.sizes.items.forEach((size) => {
+                variantsHTML += `
+                <div class="variant-option size-option" 
+                     data-name="${size.name}" 
+                     onclick="selectSize(this, '${size.name}')">
+                     ${size.name}
+                </div>`;
+            });
+            variantsHTML += `</div><input type="hidden" id="selected-size" name="size" required></div>`;
+        }
+
+        // --- CSS المدمج (فيسبوك + السلايدر الجديد + ستايل المتغيرات) ---
         const fbStyles = `
         <style>
-            :root { --bg-color: #ffffff; --comment-bg: #f0f2f5; --text-primary: #050505; --text-secondary: #65676b; --blue-link: #216fdb; --line-color: #eaebef; }
+            :root { --bg-color: #ffffff; --comment-bg: #f0f2f5; --text-primary: #050505; --text-secondary: #65676b; --blue-link: #216fdb; --line-color: #eaebef; --primary-color: #216fdb; }
             
             /* --- 1. ستايل السلايدر الجديد (Lazzwood Style) --- */
             .product-viewer-container { position: relative; width: 100%; max-width: 500px; margin: 0 auto 30px auto; background-color: #f9f9f9; overflow: hidden; border-radius: 8px; }
@@ -93,7 +107,33 @@ export default async function handler(req, res) {
             .lightbox-img { max-width: 90%; max-height: 90%; object-fit: contain; }
             .close-lightbox { position: absolute; top: 20px; right: 20px; font-size: 35px; cursor: pointer; color: #333; }
 
-            /* --- 2. ستايل تعليقات الفيسبوك الأصلي --- */
+            /* --- 2. ستايل خيارات المنتج (الألوان والمقاسات) والكمية --- */
+            .variant-group { margin-bottom: 15px; }
+            .variant-label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 14px; }
+            .variants-wrapper { display: flex; gap: 10px; flex-wrap: wrap; }
+            .variant-option { cursor: pointer; border: 2px solid #ddd; transition: all 0.2s; }
+            
+            /* ستايل الألوان */
+            .color-option { width: 35px; height: 35px; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+            .color-option:hover { transform: scale(1.1); }
+            .color-option.selected { border-color: var(--text-primary); transform: scale(1.15); box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--text-primary); }
+            
+            /* ستايل المقاسات */
+            .size-option { padding: 8px 15px; border-radius: 4px; background: #fff; font-size: 14px; font-weight: 600; min-width: 40px; text-align: center; }
+            .size-option:hover { border-color: #999; }
+            .size-option.selected { background-color: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+
+            /* ستايل الكمية والسعر */
+            .qty-price-wrapper { display: flex; align-items: center; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd; }
+            .qty-control { display: flex; align-items: center; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
+            .qty-btn { width: 35px; height: 35px; background: #f4f4f4; border: none; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+            .qty-btn:hover { background: #e0e0e0; }
+            .qty-input { width: 40px; height: 35px; border: none; text-align: center; font-weight: bold; outline: none; }
+            .total-price-box { text-align: left; }
+            .total-label { font-size: 12px; color: #666; display: block; }
+            .total-value { font-size: 18px; font-weight: bold; color: #d32f2f; }
+
+            /* --- 3. ستايل تعليقات الفيسبوك الأصلي --- */
             .fb-reviews-section { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; direction: rtl; padding: 20px; background: #fff; margin-top: 30px; border-top: 1px solid #ddd; }
             .comment-thread { max-width: 600px; margin: 0 auto; position: relative; }
             .thread-line-container { position: absolute; right: 25px; top: 50px; bottom: 30px; width: 2px; background-color: var(--line-color); z-index: 0; }
@@ -112,23 +152,9 @@ export default async function handler(req, res) {
             .react-count { font-size: 11px; color: var(--text-secondary); margin-left: 4px; margin-right: 2px; }
             .view-replies { display: flex; align-items: center; font-weight: 600; font-size: 14px; color: var(--text-primary); margin: 10px 0; padding-right: 50px; position: relative; cursor: pointer; }
             .view-replies::before { content: ''; position: absolute; right: 25px; top: 50%; width: 20px; height: 2px; background-color: var(--line-color); border-bottom-left-radius: 10px; }
-            .icon-love { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%23f02849"/><path d="M16 26c-0.6 0-1.2-0.2-1.6-0.6 -5.2-4.6-9.4-8.4-9.4-13.4 0-3 2.4-5.4 5.4-5.4 2.1 0 3.9 1.1 4.9 2.9l0.7 1.2 0.7-1.2c1-1.8 2.8-2.9 4.9-2.9 3 0 5.4 2.4 5.4 5.4 0 5-4.2 8.8-9.4 13.4 -0.4 0.4-1 0.6-1.6 0.6z" fill="white"/></svg>') no-repeat center/cover; }
             
-            /* --- 3. ستايل المتغيرات (Variants Styles) --- */
-            .variants-section { margin-bottom: 20px; padding: 15px; border: 1px solid #eee; border-radius: 8px; background: #fff; }
-            .variant-title { font-weight: bold; margin-bottom: 8px; display: block; }
-            .color-options { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
-            .color-swatch { width: 35px; height: 35px; border-radius: 50%; cursor: pointer; border: 2px solid #ddd; transition: all 0.2s; position: relative; }
-            .color-swatch.active { border-color: #333; transform: scale(1.1); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-            .color-swatch.active::after { content: '✔'; color: white; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; text-shadow: 0 0 2px rgba(0,0,0,0.5); }
-            .size-options { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
-            .size-btn { padding: 8px 16px; border: 1px solid #ddd; background: white; cursor: pointer; border-radius: 4px; transition: all 0.2s; }
-            .size-btn.active { background: #000; color: white; border-color: #000; }
-            .quantity-selector { display: flex; align-items: center; gap: 0; border: 1px solid #ddd; border-radius: 4px; width: fit-content; }
-            .qty-btn { padding: 8px 15px; background: #f9f9f9; border: none; cursor: pointer; font-size: 18px; }
-            .qty-btn:hover { background: #eee; }
-            .qty-input { width: 50px; text-align: center; border: none; border-left: 1px solid #ddd; border-right: 1px solid #ddd; height: 100%; font-weight: bold; }
-            .total-price-box { margin-top: 15px; padding: 10px; background: #f0fdf4; border: 1px solid #dcfce7; border-radius: 6px; text-align: center; font-weight: bold; color: #166534; font-size: 1.1em; }
+            /* أيقونة القلب فقط */
+            .icon-love { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%23f02849"/><path d="M16 26c-0.6 0-1.2-0.2-1.6-0.6 -5.2-4.6-9.4-8.4-9.4-13.4 0-3 2.4-5.4 5.4-5.4 2.1 0 3.9 1.1 4.9 2.9l0.7 1.2 0.7-1.2c1-1.8 2.8-2.9 4.9-2.9 3 0 5.4 2.4 5.4 5.4 0 5-4.2 8.8-9.4 13.4 -0.4 0.4-1 0.6-1.6 0.6z" fill="white"/></svg>') no-repeat center/cover; }
         </style>
         `;
 
@@ -140,8 +166,6 @@ Target Audience: ${targetAudience}.
 Context/Features: ${productFeatures}.
 Price: ${productPrice}. ${shippingText}. ${offerText}.
 User Design Request: ${designDescription}.
-
-${variantsInstruction}
 
 ## 🖼️ **تعليمات عرض الصور (السلايدر التفاعلي):**
 لقد تم تزويدك بصور للمنتج (${productImageArray.length} صور).
@@ -165,62 +189,27 @@ ${variantsInstruction}
 </div>
 
 <div id="lightbox" class="lightbox-modal" onclick="closeLightbox()"><span class="close-lightbox">&times;</span><img id="lightbox-img" class="lightbox-img" src=""></div>
-
-<script>
-    let currentSlide = 1; const totalSlides = ${totalSlidesCount};
-    function changeSlide(d) { currentSlide += d; if (currentSlide > totalSlides) currentSlide = 1; if (currentSlide < 1) currentSlide = totalSlides; updateSlider(); }
-    
-    // دالة جديدة للانتقال المباشر لشريحة محددة (لربط الألوان بالصور)
-    function goToSlide(index) {
-        if(index >= 1 && index <= totalSlides) {
-            currentSlide = index;
-            updateSlider();
-        }
-    }
-
-    function updateSlider() { 
-        document.querySelectorAll('.slider-img').forEach(img => { img.classList.remove('active'); if(parseInt(img.dataset.index) === currentSlide) img.classList.add('active'); });
-        document.getElementById('slideCounter').innerText = currentSlide + ' / ' + totalSlides; 
-    }
-    function openLightbox() { document.getElementById('lightbox-img').src = document.querySelector('.slider-img.active').src; document.getElementById('lightbox').classList.add('open'); }
-    function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
-</script>
 \`\`\`
 
 ### **2. الشعار:**
 - استخدم هذا النص بالضبط كمصدر للشعار: \`${LOGO_PLACEHOLDER}\`
 
-## ⚠️ **متطلبات إلزامية لاستمارة الطلب (Order Form):**
-يجب أن تحتوي الاستمارة على هذا الهيكل الدقيق للحقول باللغة العربية، **مع دمج خيارات المتغيرات الجديدة (Variants) بداخلها**:
+## 🎯 **الهدف:**
+إنشاء صفحة هبوط فريدة ومبدعة تحتوي على السلايدر أعلاه، وقسم آراء عملاء واقعي، واستمارة طلب ذكية.
 
-\`\`\`html
+## ⚠️ **متطلبات إلزامية:**
+
+### **1. قسم الهيرو:**
+- يتضمن الشعار في الهيدر.
+- استبدل صورة المنتج التقليدية بكود "السلايدر التفاعلي" المذكور أعلاه بالكامل.
+
+### **2. استمارة الطلب الذكية (مباشرة بعد الهيرو):**
+يجب أن تحتوي على هذا الهيكل الدقيق للحقول باللغة العربية، بما في ذلك خيارات الألوان والمقاسات التي سأزودك بها:
+
 <div class="customer-info-box">
   <h3>استمارة الطلب</h3>
   <p>المرجو إدخال معلوماتك الخاصة بك</p>
   
-  <div class="variants-section">
-    ${variants && variants.colors.enabled ? `
-    <label class="variant-title">اختر اللون:</label>
-    <div class="color-options" id="color-selector">
-        </div>
-    <input type="hidden" id="selected-color" name="color">
-    ` : ''}
-
-    ${variants && variants.sizes.enabled ? `
-    <label class="variant-title">اختر المقاس:</label>
-    <div class="size-options" id="size-selector">
-        </div>
-    <input type="hidden" id="selected-size" name="size">
-    ` : ''}
-
-    <label class="variant-title">الكمية:</label>
-    <div class="quantity-selector">
-        <button type="button" class="qty-btn" onclick="updateQty(-1)">-</button>
-        <input type="text" id="quantity-input" value="1" readonly class="qty-input">
-        <button type="button" class="qty-btn" onclick="updateQty(1)">+</button>
-    </div>
-  </div>
-
   <div class="form-group">
     <label>الإسم الكامل</label>
     <input type="text" placeholder="Nom et prénom" required>
@@ -228,7 +217,7 @@ ${variantsInstruction}
   
   <div class="form-group">
     <label>رقم الهاتف</label>
-    <input type="tel" placeholder="Nombre" required>
+    <input type="tel" placeholder="0XXXXXXXXX" required>
   </div>
   
   <div class="form-group">
@@ -240,53 +229,124 @@ ${variantsInstruction}
     <label>البلدية</label>
     <input type="text" placeholder="أدخل بلديتك" required>
   </div>
-  
-  <div class="form-group">
-    <label>الموقع / العنوان</label>
-    <input type="text" placeholder="أدخل عنوانك بالتفصيل" required>
+  ${variantsHTML}
+  <div class="qty-price-wrapper">
+      <div class="qty-control">
+          <button type="button" class="qty-btn" onclick="updateQty(-1)">-</button>
+          <input type="number" id="product-qty" class="qty-input" value="1" min="1" readonly>
+          <button type="button" class="qty-btn" onclick="updateQty(1)">+</button>
+      </div>
+      <div class="total-price-box">
+          <span class="total-label">المجموع:</span>
+          <span class="total-value" id="total-price-display">${productPrice} دينار</span>
+          <input type="hidden" id="final-total" name="total_price" value="${productPrice}">
+      </div>
   </div>
-  
-  <div class="total-price-box">
-    المجموع: <span id="total-price-display">${productPrice}</span> دينار
-  </div>
-  
-  <button type="submit" class="submit-btn">تأكيد الطلب</button>
+  <button type="submit" class="submit-btn" style="margin-top: 20px;">تأكيد الطلب</button>
 </div>
 
+### **3. سكريبت التفاعل (Logic):**
+يجب عليك إضافة كود JavaScript التالي بالضبط لتفعيل السلايدر، وتبديل الصور عند اختيار اللون، وحساب السعر:
+\`\`\`html
 <script>
+    // --- منطق السلايدر ---
+    let currentSlide = 1; const totalSlides = ${totalSlidesCount};
+    function changeSlide(d) { currentSlide += d; if (currentSlide > totalSlides) currentSlide = 1; if (currentSlide < 1) currentSlide = totalSlides; updateSlider(); }
+    
+    // دالة تحديث السلايدر العامة
+    function updateSlider() { 
+        document.querySelectorAll('.slider-img').forEach(img => { 
+            img.classList.remove('active'); 
+            if(parseInt(img.dataset.index) === currentSlide) img.classList.add('active'); 
+        });
+        document.getElementById('slideCounter').innerText = currentSlide + ' / ' + totalSlides; 
+    }
+    
+    // دالة الانتقال المباشر لشريحة معينة (تستخدم عند اختيار لون)
+    function goToSlide(index) {
+        if(index && index >= 1 && index <= totalSlides) {
+            currentSlide = index;
+            updateSlider();
+        }
+    }
+
+    function openLightbox() { document.getElementById('lightbox-img').src = document.querySelector('.slider-img.active').src; document.getElementById('lightbox').classList.add('open'); }
+    function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
+
+    // --- منطق خيارات المنتج (الألوان والمقاسات) ---
+    function selectColor(element, name, slideIndex) {
+        // إزالة التحديد عن الكل
+        document.querySelectorAll('.color-option').forEach(el => el.classList.remove('selected'));
+        // تحديد العنصر الحالي
+        element.classList.add('selected');
+        // تحديث الحقل المخفي
+        document.getElementById('selected-color').value = name;
+        document.getElementById('color-name-display').innerText = name;
+        
+        // تغيير صورة المنتج إذا كان هناك صورة مرتبطة بهذا اللون
+        if(slideIndex !== null && slideIndex !== 'null') {
+            goToSlide(slideIndex);
+        }
+    }
+
+    function selectSize(element, name) {
+        document.querySelectorAll('.size-option').forEach(el => el.classList.remove('selected'));
+        element.classList.add('selected');
+        document.getElementById('selected-size').value = name;
+    }
+
+    // --- منطق حساب السعر والكمية ---
     let basePrice = ${parseFloat(productPrice) || 0};
     let currentQty = 1;
 
     function updateQty(change) {
-        let newQty = currentQty + change;
-        if(newQty < 1) newQty = 1;
-        currentQty = newQty;
-        document.getElementById('quantity-input').value = currentQty;
-        updateTotalPrice();
+        currentQty += change;
+        if(currentQty < 1) currentQty = 1;
+        document.getElementById('product-qty').value = currentQty;
+        updateTotal();
     }
 
-    function updateTotalPrice() {
-        let total = basePrice * currentQty;
-        document.getElementById('total-price-display').innerText = total.toFixed(2);
+    function updateTotal() {
+        let total = (basePrice * currentQty).toFixed(2);
+        // إزالة الكسور العشرية إذا كانت .00 لجمالية العرض
+        if(total.endsWith('.00')) total = parseInt(total);
+        
+        document.getElementById('total-price-display').innerText = total + ' دينار';
+        document.getElementById('final-total').value = total;
     }
-
-    // دوال اختيار اللون والمقاس (يرجى كتابتها بالكامل)
-    // عند اختيار لون له صورة مرتبطة، استدعِ goToSlide(index)
 </script>
 \`\`\`
 
-### **3. قسم آراء العملاء (Facebook Style):**
+### **4. قسم آراء العملاء (Facebook Style):**
 يجب أن يبدو القسم كأنه مأخوذ (Screenshot) من نقاش حقيقي على فيسبوك حول المنتج.
 1. **التصميم:** استخدم أكواد CSS المرفقة في المتغير \`fbStyles\`.
 2. **المحتوى:** أنشئ 3-5 تعليقات واقعية جداً.
    - امزج بين **الدارجة الجزائرية** و **العربية الفصحى البسيطة**.
-3. **الصور والأسماء:**
-   - **للذكور:** استخدم الرمز \`[[MALE_IMG]]\` في \`src\`.
-   - **للإناث:** استخدم الرمز \`[[FEMALE_IMG]]\` في \`src\`.
-4. **التفاعل (القلب فقط ❤️):**
-   - استخدم حصراً أيقونة القلب (\`icon-love\`).
+3. **الصور والأسماء:** استخدم \`[[MALE_IMG]]\` أو \`[[FEMALE_IMG]]\`.
+4. **التفاعل:** استخدم أيقونة القلب (\`icon-love\`) فقط.
 
-### **4. تنسيق الإخراج:**
+### نموذج HTML لتعليق واحد:
+\`\`\`html
+<div class="comment-row">
+    <div class="avatar"><img src="[[FEMALE_IMG]]" alt="User"></div>
+    <div class="comment-content">
+        <div class="bubble">
+            <span class="username">اسم المستخدم</span>
+            <span class="text">نص التعليق...</span>
+            <div class="reactions-container">
+                <div class="react-icon icon-love"></div> <span class="react-count">15</span>
+            </div>
+        </div>
+        <div class="actions">
+            <span class="time">منذ ساعتين</span>
+            <span class="action-link">أعجبني</span>
+            <span class="action-link">رد</span>
+        </div>
+    </div>
+</div>
+\`\`\`
+
+### **5. تنسيق الإخراج:**
 أعد كائن JSON فقط:
 {
   "html": "سلسلة HTML كاملة",
@@ -294,10 +354,9 @@ ${variantsInstruction}
   "schema": { "name": "Landing Page", "settings": [] }
 }
 
-## 🚀 **تعليمات نهائية:**
-- صمم باقي الصفحة بحرية تامة.
-- أضف عد تنازلي.
-- **مهم:** قم بتضمين كود CSS (\`fbStyles\`) الذي سأزودك به في بداية الـ HTML الناتج.
+## 🚀 **حرية إبداعية كاملة لباقي الأقسام:**
+- صمم باقي الصفحة بحرية تامة باستخدام CSS حديث وجذاب.
+- تأكد من إضافة الـ CSS (\`fbStyles\`) في بداية الـ HTML الناتج.
 
 قم بدمج هذا الـ CSS في بداية الـ HTML الناتج:
 ${fbStyles}
