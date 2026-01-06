@@ -14,7 +14,7 @@ export default async function handler(req, res) {
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
         if (!GEMINI_API_KEY) throw new Error('API Key is missing');
 
-        // استقبال البيانات بما في ذلك الصور المتعددة والمتغيرات (variants)
+        // استقبال البيانات بما في ذلك الصور المتعددة والمتغيرات (Variants) - تم التحديث
         const { 
             productName, productFeatures, productPrice, productCategory,
             targetAudience, designDescription, shippingOption, customShippingPrice, 
@@ -42,9 +42,11 @@ export default async function handler(req, res) {
         }
         const totalSlidesCount = Math.max(productImageArray.length, 1);
 
-        // =================================================================================
-        // --- تحضير منطق المتغيرات (الألوان والمقاسات) - تم النقل من te.js ---
-        // =================================================================================
+        // ============================================================
+        // بداية كود النظام المنقول (Variants Logic)
+        // ============================================================
+        
+        // سنقوم ببناء كود HTML الخاص بالأزرار مسبقاً لحقنه في البرومبت لضمان الدقة
         let variantsHTML = "";
 
         // 1. معالجة الألوان
@@ -84,9 +86,11 @@ export default async function handler(req, res) {
             });
             variantsHTML += `</div><input type="hidden" id="selected-size" name="size" required></div>`;
         }
-        // =================================================================================
+        // ============================================================
+        // نهاية كود النظام المنقول
+        // ============================================================
 
-        // --- CSS المدمج (فيسبوك + السلايدر الجديد + ستايل المتغيرات) ---
+        // --- CSS المدمج (فيسبوك + السلايدر + المتغيرات الجديدة) ---
         const fbStyles = `
         <style>
             :root { --bg-color: #ffffff; --comment-bg: #f0f2f5; --text-primary: #050505; --text-secondary: #65676b; --blue-link: #216fdb; --line-color: #eaebef; }
@@ -107,30 +111,7 @@ export default async function handler(req, res) {
             .lightbox-img { max-width: 90%; max-height: 90%; object-fit: contain; }
             .close-lightbox { position: absolute; top: 20px; right: 20px; font-size: 35px; cursor: pointer; color: #333; }
 
-            /* --- 2. ستايل تعليقات الفيسبوك الأصلي --- */
-            .fb-reviews-section { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; direction: rtl; padding: 20px; background: #fff; margin-top: 30px; border-top: 1px solid #ddd; }
-            .comment-thread { max-width: 600px; margin: 0 auto; position: relative; }
-            .thread-line-container { position: absolute; right: 25px; top: 50px; bottom: 30px; width: 2px; background-color: var(--line-color); z-index: 0; }
-            .comment-row { display: flex; align-items: flex-start; margin-bottom: 15px; position: relative; z-index: 1; }
-            .avatar { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; margin-left: 8px; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.1); }
-            .avatar img { width: 100%; height: 100%; object-fit: cover; }
-            .comment-content { display: flex; flex-direction: column; max-width: 85%; }
-            .bubble { background-color: var(--comment-bg); padding: 8px 12px; border-radius: 18px; display: inline-block; position: relative; }
-            .username { font-weight: 600; font-size: 13px; color: var(--text-primary); display: block; margin-bottom: 2px; cursor: pointer; }
-            .text { font-size: 15px; color: var(--text-primary); line-height: 1.3; white-space: pre-wrap; }
-            .actions { display: flex; gap: 15px; margin-right: 12px; margin-top: 3px; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
-            .action-link { cursor: pointer; text-decoration: none; color: var(--text-secondary); }
-            .time { font-weight: 400; }
-            .reactions-container { position: absolute; bottom: -8px; left: -15px; background-color: white; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); padding: 2px 4px; display: flex; align-items: center; height: 18px; z-index: 10; }
-            .react-icon { width: 16px; height: 16px; border: 2px solid #fff; border-radius: 50%; }
-            .react-count { font-size: 11px; color: var(--text-secondary); margin-left: 4px; margin-right: 2px; }
-            .view-replies { display: flex; align-items: center; font-weight: 600; font-size: 14px; color: var(--text-primary); margin: 10px 0; padding-right: 50px; position: relative; cursor: pointer; }
-            .view-replies::before { content: ''; position: absolute; right: 25px; top: 50%; width: 20px; height: 2px; background-color: var(--line-color); border-bottom-left-radius: 10px; }
-            
-            /* أيقونة القلب فقط */
-            .icon-love { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%23f02849"/><path d="M16 26c-0.6 0-1.2-0.2-1.6-0.6 -5.2-4.6-9.4-8.4-9.4-13.4 0-3 2.4-5.4 5.4-5.4 2.1 0 3.9 1.1 4.9 2.9l0.7 1.2 0.7-1.2c1-1.8 2.8-2.9 4.9-2.9 3 0 5.4 2.4 5.4 5.4 0 5-4.2 8.8-9.4 13.4 -0.4 0.4-1 0.6-1.6 0.6z" fill="white"/></svg>') no-repeat center/cover; }
-
-            /* --- 3. ستايل خيارات المنتج (الألوان والمقاسات) والكمية - مضاف من te.js --- */
+            /* --- 2. ستايل خيارات المنتج (الألوان والمقاسات) والكمية - منقول من te.js --- */
             .variant-group { margin-bottom: 15px; }
             .variant-label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 14px; }
             .variants-wrapper { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -155,6 +136,29 @@ export default async function handler(req, res) {
             .total-price-box { text-align: left; }
             .total-label { font-size: 12px; color: #666; display: block; }
             .total-value { font-size: 18px; font-weight: bold; color: #d32f2f; }
+
+            /* --- 3. ستايل تعليقات الفيسبوك الأصلي --- */
+            .fb-reviews-section { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; direction: rtl; padding: 20px; background: #fff; margin-top: 30px; border-top: 1px solid #ddd; }
+            .comment-thread { max-width: 600px; margin: 0 auto; position: relative; }
+            .thread-line-container { position: absolute; right: 25px; top: 50px; bottom: 30px; width: 2px; background-color: var(--line-color); z-index: 0; }
+            .comment-row { display: flex; align-items: flex-start; margin-bottom: 15px; position: relative; z-index: 1; }
+            .avatar { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; margin-left: 8px; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.1); }
+            .avatar img { width: 100%; height: 100%; object-fit: cover; }
+            .comment-content { display: flex; flex-direction: column; max-width: 85%; }
+            .bubble { background-color: var(--comment-bg); padding: 8px 12px; border-radius: 18px; display: inline-block; position: relative; }
+            .username { font-weight: 600; font-size: 13px; color: var(--text-primary); display: block; margin-bottom: 2px; cursor: pointer; }
+            .text { font-size: 15px; color: var(--text-primary); line-height: 1.3; white-space: pre-wrap; }
+            .actions { display: flex; gap: 15px; margin-right: 12px; margin-top: 3px; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+            .action-link { cursor: pointer; text-decoration: none; color: var(--text-secondary); }
+            .time { font-weight: 400; }
+            .reactions-container { position: absolute; bottom: -8px; left: -15px; background-color: white; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); padding: 2px 4px; display: flex; align-items: center; height: 18px; z-index: 10; }
+            .react-icon { width: 16px; height: 16px; border: 2px solid #fff; border-radius: 50%; }
+            .react-count { font-size: 11px; color: var(--text-secondary); margin-left: 4px; margin-right: 2px; }
+            .view-replies { display: flex; align-items: center; font-weight: 600; font-size: 14px; color: var(--text-primary); margin: 10px 0; padding-right: 50px; position: relative; cursor: pointer; }
+            .view-replies::before { content: ''; position: absolute; right: 25px; top: 50%; width: 20px; height: 2px; background-color: var(--line-color); border-bottom-left-radius: 10px; }
+            
+            /* أيقونة القلب فقط */
+            .icon-love { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%23f02849"/><path d="M16 26c-0.6 0-1.2-0.2-1.6-0.6 -5.2-4.6-9.4-8.4-9.4-13.4 0-3 2.4-5.4 5.4-5.4 2.1 0 3.9 1.1 4.9 2.9l0.7 1.2 0.7-1.2c1-1.8 2.8-2.9 4.9-2.9 3 0 5.4 2.4 5.4 5.4 0 5-4.2 8.8-9.4 13.4 -0.4 0.4-1 0.6-1.6 0.6z" fill="white"/></svg>') no-repeat center/cover; }
         </style>
         `;
 
@@ -205,8 +209,9 @@ User Design Request: ${designDescription}.
 - **مهم جداً:** استبدل صورة المنتج التقليدية بكود "السلايدر التفاعلي" المذكور أعلاه بالكامل.
 - لا تضف معرض صور منفصل في الأسفل، السلايدر يكفي.
 
-### **2. استمارة الطلب (مباشرة بعد الهيرو):**
-يجب أن تحتوي على هذا الهيكل الدقيق للحقول باللغة العربية، بما في ذلك خيارات الألوان والمقاسات:
+### **2. استمارة الطلب الذكية (مباشرة بعد الهيرو):**
+يجب أن تحتوي على هذا الهيكل الدقيق للحقول باللغة العربية، بما في ذلك خيارات الألوان والمقاسات (تم دمجها مسبقاً):
+
 <div class="customer-info-box">
   <h3>استمارة الطلب</h3>
   <p>المرجو إدخال معلوماتك الخاصة بك</p>
@@ -235,8 +240,9 @@ User Design Request: ${designDescription}.
     <label>الموقع / العنوان</label>
     <input type="text" placeholder="أدخل عنوانك بالتفصيل" required>
   </div>
-  
+
   ${variantsHTML}
+  
   <div class="qty-price-wrapper">
       <div class="qty-control">
           <button type="button" class="qty-btn" onclick="updateQty(-1)">-</button>
@@ -269,7 +275,7 @@ User Design Request: ${designDescription}.
         });
         document.getElementById('slideCounter').innerText = currentSlide + ' / ' + totalSlides; 
     }
-
+    
     // دالة الانتقال المباشر لشريحة معينة (تستخدم عند اختيار لون)
     function goToSlide(index) {
         if(index && index >= 1 && index <= totalSlides) {
@@ -277,7 +283,7 @@ User Design Request: ${designDescription}.
             updateSlider();
         }
     }
-    
+
     function openLightbox() { document.getElementById('lightbox-img').src = document.querySelector('.slider-img.active').src; document.getElementById('lightbox').classList.add('open'); }
     function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
 
