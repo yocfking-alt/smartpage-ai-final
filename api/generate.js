@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
-    // إعدادات CORS
+    // 1. إعدادات CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -11,377 +11,411 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     try {
-        const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-        if (!GEMINI_API_KEY) throw new Error('API Key is missing');
-
+        // استقبال البيانات من Builder
         const { 
             productName, productFeatures, productPrice, productCategory,
             targetAudience, designDescription, shippingOption, customShippingPrice, 
             customOffer, productImages, brandLogo, variants 
         } = req.body;
 
-        // 1. تحضير بيانات المتغيرات (Variants) للذكاء الاصطناعي
-        // نحتاج أن يعرف الذكاء الاصطناعي الألوان ليقترح تدرجات خلفية مناسبة
-        let variantsPromptInfo = "";
-        if (variants && variants.colors && variants.colors.items.length > 0) {
-            variantsPromptInfo = `The product has these color variants: ${variants.colors.items.map(c => c.name).join(', ')}.`;
-        }
+        // التعامل مع الصور
+        const images = productImages || [];
+        const mainImage = images.length > 0 ? images[0] : 'https://via.placeholder.com/500x500?text=Product';
+        const logoSrc = brandLogo || '';
 
-        // 2. هندسة البرومبت (Prompt Engineering) المتقدمة
-        // نطلب من الذكاء الاصطناعي أن يتصرف كمصمم UI/UX ويعطينا JSON خاص بالستايل
-        const prompt = `
-        Act as a World-Class UI/UX Designer & Frontend Developer.
-        Product: ${productName} (${productCategory}).
-        Context: ${productFeatures}.
-        Price: ${productPrice}.
-        User Style Request: ${designDescription}.
-        ${variantsPromptInfo}
+        // استخراج الكلمة الأولى من اسم المنتج لاستخدامها كنص خلفية عملاق
+        const bigBackgroundText = productName ? productName.split(' ')[0].toUpperCase() : 'BRAND';
 
-        I need a JSON configuration to build a high-end, award-winning landing page (like Nike/Ridestore style).
+        // --- بناء مصفوفة المنتجات (السلايدات) بناءً على المدخلات ---
+        // سنحاول دمج الصور مع الألوان المختارة لإنشاء تجربة مثل قالب Nike
+        let slidesData = [];
         
-        **CRITICAL TASK**: You must generate a "Color Theme" for EACH product variant color provided (or 1 default if none).
+        // التحقق مما إذا كان هناك متغيرات ألوان
+        const hasColors = variants && variants.colors && variants.colors.enabled && variants.colors.items.length > 0;
         
-        Return ONLY a raw JSON object (no markdown, no code blocks) with this exact structure:
-        {
-            "headlines": {
-                "main": "Short punchy 2-3 words title (e.g. AIR MAX)",
-                "sub": "Compelling one-liner description",
-                "bg_text": "One giant word for background (e.g. JUMP)"
-            },
-            "features_short": ["Feature 1", "Feature 2", "Feature 3"],
-            "marketing": {
-                "offer_text": "${customOffer || 'Special Launch Offer'}",
-                "cta_text": "Add to Cart"
-            },
-            "themes": [
-                // Generate one object per color variant. If no variants, generate 1 main theme.
-                {
-                    "variant_name": "Color Name (e.g., Red)",
-                    "primary_color": "Hex code matching the variant (e.g., #ff0000)",
-                    "bg_gradient": "CSS linear-gradient or radial-gradient string that matches this color (e.g., radial-gradient(circle at center, #ff0000, #000))",
-                    "text_color": "#ffffff",
-                    "accent_color": "Contrast color for buttons"
-                }
-            ]
-        }
-        `;
-
-        const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-
-        const response = await fetch(GEMINI_ENDPOINT, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { responseMimeType: "application/json" }
-            })
-        });
-
-        const data = await response.json();
-        const aiJson = JSON.parse(data.candidates[0].content.parts[0].text);
-
-        // 3. دمج بيانات الصور والمتغيرات
-        // هنا نقوم بدمج بيانات الذكاء الاصطناعي مع الصور التي رفعها المستخدم
-        
-        const finalImages = productImages && productImages.length > 0 ? productImages : ["https://via.placeholder.com/600x600?text=No+Image"];
-        const mainLogo = brandLogo || "https://via.placeholder.com/100x50?text=Logo";
-
-        // مطابقة الثيمات مع الصور (Logic Matcher)
-        // نحاول ربط كل لون اختاره المستخدم بالثيم الذي اقترحه الذكاء الاصطناعي
-        let themesData = [];
-        if (variants && variants.colors && variants.colors.items.length > 0) {
-            themesData = variants.colors.items.map((colorItem, index) => {
-                // البحث عن اقتراح AI لهذا اللون أو استخدام الافتراضي
-                const aiTheme = aiJson.themes.find(t => t.variant_name.toLowerCase().includes(colorItem.name.toLowerCase())) || aiJson.themes[index] || aiJson.themes[0];
+        if (hasColors) {
+            // إذا اختار المستخدم ألواناً، ننشئ شريحة لكل لون
+            slidesData = variants.colors.items.map((color, index) => {
+                // محاولة ربط الصورة باللون إذا تم تحديدها، وإلا نستخدم الصورة المرتبطة بالترتيب
+                const imgIndex = color.imgIndex !== "" && color.imgIndex !== null ? parseInt(color.imgIndex) : (index % images.length);
+                const slideImg = images[imgIndex] || mainImage;
                 
-                // تحديد الصورة: إذا حدد المستخدم صورة للون نستخدمها، وإلا نستخدم الصورة حسب الترتيب
-                let imgUrl = finalImages[0];
-                if (colorItem.imgIndex !== "" && colorItem.imgIndex !== undefined) {
-                    imgUrl = finalImages[colorItem.imgIndex] || finalImages[0];
-                }
-
+                // توليد تدرج لوني بناءً على لون المستخدم
+                // نقوم بتفتيح وتغميق اللون المختار لعمل Radial Gradient
                 return {
-                    name: colorItem.name,
-                    hex: colorItem.hex, // لون الدائرة
-                    bg_gradient: aiTheme.bg_gradient,
-                    primary_color: aiTheme.primary_color,
-                    image: imgUrl
+                    id: index + 1,
+                    title: `${productName} - ${color.name}`,
+                    price: productPrice,
+                    color: color.hex, // لون الأزرار
+                    // تدرج لوني ذكي يعتمد على لون الهيكس المختار
+                    gradient: `radial-gradient(circle, ${lightenColor(color.hex, 20)} 0%, ${darkenColor(color.hex, 40)} 100%)`, 
+                    image: slideImg,
+                    desc: productFeatures
                 };
             });
         } else {
-            // حالة عدم وجود متغيرات (منتج واحد)
-            themesData = [{
-                name: "Standard",
-                hex: "#333",
-                bg_gradient: aiJson.themes[0].bg_gradient,
-                primary_color: aiJson.themes[0].primary_color,
-                image: finalImages[0]
-            }];
+            // إذا لم يحدد ألوان، نستخدم الصور المرفوعة فقط ونولد ألوان افتراضية (أزرق داكن احترافي)
+            slidesData = images.map((img, index) => {
+                return {
+                    id: index + 1,
+                    title: productName,
+                    price: productPrice,
+                    color: "#0c4da2",
+                    gradient: `radial-gradient(circle, #1a60c7 0%, #002b66 100%)`,
+                    image: img,
+                    desc: productFeatures
+                };
+            });
         }
 
-        // 4. بناء كود HTML "الخارق" (The Super Template)
-        // هذا القالب مبني على Ridestore + Nike Style ومجهز بـ GSAP
+        // إذا لم يكن هناك صور أو بيانات كافية، نضع شريحة افتراضية واحدة
+        if (slidesData.length === 0) {
+            slidesData.push({
+                id: 1,
+                title: productName,
+                price: productPrice,
+                color: "#0c4da2",
+                gradient: `radial-gradient(circle, #1a60c7 0%, #002b66 100%)`,
+                image: mainImage,
+                desc: productFeatures
+            });
+        }
+
+        // تحويل مصفوفة البيانات إلى سلسلة JSON لزرعها في الجافاسكريبت
+        const slidesJson = JSON.stringify(slidesData);
+
+        // --- بناء كود HTML ---
+        // سنستخدم القالب الذي قدمته بالضبط مع حقن المتغيرات
         
         const generatedHTML = `
 <!DOCTYPE html>
-<html lang="en">
-<head>
+<html lang="ar" dir="ltr"> <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${productName} - Official Page</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700;900&display=swap" rel="stylesheet">
+    <title>${productName} - Official Store</title>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
     <style>
         :root {
-            --bg-gradient: ${themesData[0].bg_gradient};
-            --primary-color: ${themesData[0].primary_color};
+            --primary-color: ${slidesData[0].color};
             --text-color: #ffffff;
-            --glass-bg: rgba(255, 255, 255, 0.1);
-            --glass-border: rgba(255, 255, 255, 0.2);
+            --bg-gradient: ${slidesData[0].gradient};
+            --transition-speed: 0.5s;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
         
+        /* دعم العربية في النصوص */
+        .ar-text { font-family: 'Cairo', sans-serif !important; direction: rtl; }
+
         body {
             background: var(--bg-gradient);
             color: var(--text-color);
-            height: 100vh;
-            overflow: hidden;
-            transition: background 1s ease;
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: background 0.8s ease;
         }
 
-        /* Nav */
-        nav {
+        /* Navbar */
+        header {
             display: flex; justify-content: space-between; align-items: center;
             padding: 20px 5%; z-index: 100; position: relative;
         }
-        .logo img { height: 40px; object-fit: contain; }
-        .nav-right { display: flex; gap: 20px; align-items: center; }
-        .cart-btn {
-            background: var(--glass-bg); padding: 10px 25px; border-radius: 30px;
-            border: 1px solid var(--glass-border); backdrop-filter: blur(10px);
+        .logo img { height: 40px; object-fit: contain; filter: brightness(0) invert(1); }
+        .logo-text { font-size: 1.5rem; font-weight: bold; font-style: italic; }
+        .nav-links ul { display: flex; list-style: none; gap: 30px; }
+        .nav-links a { text-decoration: none; color: rgba(255, 255, 255, 0.7); font-weight: 500; text-transform: uppercase; font-size: 0.9rem; transition: 0.3s; }
+        .nav-links a:hover { color: #fff; }
+
+        /* Layout */
+        .container {
+            position: relative; width: 100%; min-height: calc(100vh - 80px);
+            display: flex; align-items: center; justify-content: center;
+            padding-bottom: 50px;
+        }
+        @media (max-width: 900px) { .container { flex-direction: column; text-align: center; height: auto; padding-top: 50px; } }
+
+        /* Big Text */
+        .big-text {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-family: 'Anton', sans-serif; font-size: 20vw;
+            color: rgba(255, 255, 255, 0.05); z-index: 1;
+            letter-spacing: 10px; pointer-events: none; white-space: nowrap;
+        }
+
+        .content-wrapper {
+            display: flex; justify-content: space-between; align-items: center;
+            width: 90%; max-width: 1400px; z-index: 10;
+        }
+        @media (max-width: 900px) { .content-wrapper { flex-direction: column-reverse; gap: 40px; } }
+
+        /* Info Sections */
+        .left-info, .right-info { width: 25%; }
+        @media (max-width: 900px) { .left-info, .right-info { width: 100%; text-align: center; } }
+
+        .product-title { font-size: 3rem; font-weight: 600; line-height: 1.1; margin-bottom: 10px; text-transform: capitalize; text-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .product-price { font-size: 2rem; font-weight: 300; margin-bottom: 30px; opacity: 0.9; }
+        
+        .btn {
+            padding: 12px 35px; background: rgba(255,255,255,0.1); backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.5); color: #fff; font-weight: 600;
+            text-transform: uppercase; cursor: pointer; border-radius: 30px;
+            transition: 0.3s; display: inline-flex; align-items: center; gap: 10px;
+            font-size: 1rem;
+        }
+        .btn:hover { background: #fff; color: var(--primary-color); transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+
+        /* Center Image */
+        .center-image { width: 45%; position: relative; display: flex; justify-content: center; align-items: center; }
+        @media (max-width: 900px) { .center-image { width: 100%; height: 350px; } }
+
+        .circle-bg {
+            position: absolute; width: 450px; height: 450px; border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1); z-index: -1;
+            box-shadow: 0 0 50px rgba(0,0,0,0.2); transition: 0.5s;
+        }
+        @media (max-width: 600px) { .circle-bg { width: 300px; height: 300px; } }
+
+        .product-img {
+            width: 110%; max-width: 650px; filter: drop-shadow(0 20px 30px rgba(0,0,0,0.5));
+            transform: rotate(-15deg); transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            object-fit: contain;
+        }
+        .product-img.animate { animation: floatShoe 0.6s ease-out forwards; }
+
+        @keyframes floatShoe {
+            0% { transform: rotate(-15deg) scale(0.8) translateY(50px); opacity: 0; }
+            100% { transform: rotate(-15deg) scale(1) translateY(0); opacity: 1; }
+        }
+
+        .description { font-size: 0.95rem; line-height: 1.7; opacity: 0.9; margin-bottom: 25px; max-width: 400px; }
+
+        /* Controls */
+        .controls {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 20px; z-index: 20;
+        }
+        .control-btn {
+            width: 50px; height: 50px; border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.1);
+            color: #fff; display: flex; justify-content: center; align-items: center;
             cursor: pointer; transition: 0.3s;
         }
-        .cart-btn:hover { background: rgba(255,255,255,0.2); }
+        .control-btn:hover { background: #fff; color: var(--primary-color); }
 
-        /* Main Layout */
-        .container {
-            display: grid;
-            grid-template-columns: 1.2fr 1.5fr 0.5fr;
-            height: calc(100vh - 80px);
-            padding: 0 5%;
-            align-items: center;
-            position: relative;
+        /* --- Modal Checkout Form --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 999; display: none;
+            justify-content: center; align-items: center; opacity: 0; transition: 0.3s;
         }
-
-        /* Left: Details */
-        .details { z-index: 10; padding-right: 20px; }
-        .badge {
-            background: var(--primary-color); color: white; padding: 5px 15px;
-            border-radius: 20px; font-size: 0.8rem; font-weight: bold;
-            display: inline-block; margin-bottom: 20px; text-transform: uppercase;
-        }
-        h1 {
-            font-size: clamp(3rem, 5vw, 5rem); line-height: 1; text-transform: uppercase;
-            margin-bottom: 10px; text-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-        .sub-title { font-size: 1.2rem; opacity: 0.8; margin-bottom: 30px; font-weight: 300; }
+        .modal-overlay.open { display: flex; opacity: 1; }
         
-        /* Interactive Controls */
-        .controls-area {
-            background: var(--glass-bg); backdrop-filter: blur(15px);
-            padding: 25px; border-radius: 20px; border: 1px solid var(--glass-border);
-            max-width: 400px;
+        .order-card {
+            background: white; color: #333; width: 90%; max-width: 500px;
+            border-radius: 20px; padding: 30px; position: relative;
+            transform: translateY(50px); transition: 0.4s;
         }
+        .modal-overlay.open .order-card { transform: translateY(0); }
         
-        .variant-selector { margin-bottom: 20px; }
-        .selector-label { font-size: 0.8rem; opacity: 0.7; display: block; margin-bottom: 10px; }
-        .colors-row { display: flex; gap: 15px; }
-        .color-dot {
-            width: 35px; height: 35px; border-radius: 50%; cursor: pointer;
-            border: 2px solid rgba(255,255,255,0.3); transition: 0.3s; position: relative;
+        .close-modal { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #555; }
+        .order-title { text-align: center; font-size: 1.5rem; margin-bottom: 20px; color: var(--primary-color); font-family: 'Cairo', sans-serif; }
+        
+        .form-group { margin-bottom: 15px; text-align: right; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-family: 'Cairo'; font-size: 0.9rem; }
+        .form-group input { 
+            width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;
+            font-family: 'Cairo'; outline: none; transition: 0.3s;
         }
-        .color-dot.active { border-color: white; transform: scale(1.2); box-shadow: 0 0 15px var(--primary-color); }
+        .form-group input:focus { border-color: var(--primary-color); }
+        
+        .submit-btn {
+            width: 100%; padding: 15px; background: var(--primary-color); color: white;
+            border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold;
+            cursor: pointer; font-family: 'Cairo'; transition: 0.3s;
+        }
+        .submit-btn:hover { filter: brightness(1.1); }
 
-        .price-action { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; }
-        .price { font-size: 2rem; font-weight: 700; }
-        .buy-btn {
-            background: white; color: black; padding: 15px 40px; border: none;
-            border-radius: 30px; font-weight: 700; font-size: 1rem; cursor: pointer;
-            transition: 0.3s; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-        }
-        .buy-btn:hover { transform: translateY(-3px); box-shadow: 0 15px 35px rgba(0,0,0,0.3); }
-
-        /* Center: Hero Image */
-        .hero-section {
-            position: relative; display: flex; justify-content: center; align-items: center; height: 100%;
-        }
-        .bg-text {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            font-size: 18vw; font-weight: 900; color: rgba(255,255,255,0.03);
-            white-space: nowrap; z-index: 1; pointer-events: none;
-        }
-        .hero-img {
-            max-width: 120%; max-height: 80vh; z-index: 5;
-            filter: drop-shadow(0 30px 50px rgba(0,0,0,0.4));
-            transition: transform 0.5s ease;
-        }
-
-        /* Right: Sidebar */
-        .sidebar {
-            display: flex; flex-direction: column; justify-content: center; align-items: flex-end; gap: 20px;
-        }
-        .feature-item {
-            text-align: right; background: var(--glass-bg); padding: 15px;
-            border-radius: 15px; border: 1px solid var(--glass-border);
-            width: 100%; max-width: 200px;
-            transform: translateX(50px); opacity: 0; /* For Animation */
-        }
-        .feature-item i { color: var(--primary-color); font-size: 1.5rem; margin-bottom: 5px; }
-        .feature-item h4 { font-size: 0.9rem; }
-
-        /* Mobile Responsive */
-        @media (max-width: 1024px) {
-            body { overflow-y: auto; height: auto; padding-bottom: 50px; }
-            .container { grid-template-columns: 1fr; text-align: center; height: auto; margin-top: 40px; }
-            .details { padding: 0; order: 2; display: flex; flex-direction: column; align-items: center; }
-            .hero-section { order: 1; height: 50vh; margin-bottom: 20px; }
-            .hero-img { max-width: 80%; max-height: 400px; }
-            .sidebar { display: none; }
-            .controls-area { width: 100%; }
-            .price-action { width: 100%; }
-        }
     </style>
 </head>
 <body>
 
-    <nav>
+    <header>
         <div class="logo">
-            <img src="${mainLogo}" alt="Brand Logo">
+            ${logoSrc ? `<img src="${logoSrc}" alt="Brand Logo">` : `<div class="logo-text">${productName.split(' ')[0]}</div>`}
         </div>
-        <div class="nav-right">
-            <div class="cart-btn">
-                <i class="fas fa-shopping-bag"></i> <span id="cart-count">0</span>
-            </div>
+        <nav class="nav-links">
+            <ul>
+                <li><a href="#" class="active">Product</a></li>
+                <li><a href="#details">Details</a></li>
+                <li><a href="#reviews">Reviews</a></li>
+            </ul>
+        </nav>
+        <div class="nav-icons" onclick="openOrderForm()">
+            <i class="fa-solid fa-bag-shopping"></i>
         </div>
-    </nav>
+    </header>
 
-    <main class="container">
+    <div class="container">
         
-        <div class="details">
-            <span class="badge">${aiJson.marketing.offer_text}</span>
-            <h1 class="split-text">${aiJson.headlines.main}</h1>
-            <p class="sub-title">${aiJson.headlines.sub}</p>
+        <div class="big-text">${bigBackgroundText}</div>
 
-            <div class="controls-area">
-                <div class="variant-selector">
-                    <span class="selector-label">SELECT STYLE</span>
-                    <div class="colors-row" id="colors-container">
-                        </div>
-                </div>
+        <div class="content-wrapper">
+            
+            <div class="left-info">
+                <h1 class="product-title fade-in" id="title">${slidesData[0].title}</h1>
+                <h2 class="product-price fade-in" id="price">${productPrice}</h2>
+                <button class="btn fade-in" onclick="openOrderForm()">
+                    ORDER NOW <i class="fa-solid fa-cart-arrow-down"></i>
+                </button>
+                ${customOffer ? `<div style="margin-top:15px; color:#ffdd57; font-weight:bold;">${customOffer}</div>` : ''}
+            </div>
 
-                ${variants.sizes.enabled ? `
-                <div class="variant-selector">
-                    <span class="selector-label">SIZE</span>
-                    <div style="display:flex; gap:10px; justify-content: ${variants.colors.items.length > 0 ? 'flex-start' : 'center'}">
-                         ${variants.sizes.items.map(s => `<div style="padding:8px 15px; background:rgba(255,255,255,0.1); border-radius:5px; cursor:pointer; font-size:0.8rem;">${s.name}</div>`).join('')}
-                    </div>
-                </div>` : ''}
+            <div class="center-image">
+                <div class="circle-bg" id="circleBg"></div>
+                <img src="${slidesData[0].image}" class="product-img img-animate" id="productImage" alt="${productName}">
+            </div>
 
-                <div class="price-action">
-                    <div class="price">${productPrice}</div>
-                    <button class="buy-btn">${aiJson.marketing.cta_text}</button>
+            <div class="right-info">
+                <p class="description fade-in ar-text" id="desc">
+                    ${productFeatures.substring(0, 150)}...
+                </p>
+                <div class="btn" onclick="openOrderForm()" style="width: auto; font-size: 0.8rem; padding: 10px 20px;">
+                    <i class="fa-solid fa-bolt"></i> FAST SHIPPING
                 </div>
             </div>
+
         </div>
 
-        <div class="hero-section">
-            <div class="bg-text">${aiJson.headlines.bg_text}</div>
-            <img src="${themesData[0].image}" alt="Product" class="hero-img" id="main-image">
+        <div class="controls">
+            <div class="control-btn" onclick="prevSlide()"><i class="fa-solid fa-arrow-left"></i></div>
+            <div class="control-btn" onclick="nextSlide()"><i class="fa-solid fa-arrow-right"></i></div>
         </div>
 
-        <div class="sidebar">
-            ${aiJson.features_short.map((f, i) => `
-            <div class="feature-item">
-                <i class="fas fa-star"></i>
-                <h4>${f}</h4>
-            </div>`).join('')}
-        </div>
+    </div>
 
-    </main>
+    <div class="modal-overlay" id="orderModal">
+        <div class="order-card">
+            <span class="close-modal" onclick="closeOrderForm()">&times;</span>
+            <h3 class="order-title">إتمام الطلب</h3>
+            <form id="checkoutForm">
+                <div class="form-group">
+                    <label>الاسم الكامل</label>
+                    <input type="text" placeholder="أدخل اسمك" required>
+                </div>
+                <div class="form-group">
+                    <label>رقم الهاتف</label>
+                    <input type="tel" placeholder="0XXXXXXXXX" required>
+                </div>
+                <div class="form-group">
+                    <label>العنوان / الولاية</label>
+                    <input type="text" placeholder="عنوان التوصيل" required>
+                </div>
+                
+                <input type="hidden" id="selected_variant" name="variant" value="${slidesData[0].title}">
+                
+                <div class="form-group" style="display:flex; justify-content:space-between; margin-top:10px;">
+                    <span>السعر:</span>
+                    <strong style="color:var(--primary-color)">${productPrice}</strong>
+                </div>
+
+                <button type="submit" class="submit-btn">تأكيد الطلب</button>
+            </form>
+        </div>
+    </div>
 
     <script>
-        // Data passed from Backend
-        const themes = ${JSON.stringify(themesData)};
+        // === حقن البيانات من السيرفر ===
+        const products = ${slidesJson};
+        let currentIndex = 0;
 
-        // Initialize Animation
-        document.addEventListener('DOMContentLoaded', () => {
-            // GSAP Animations
-            gsap.from(".hero-img", { duration: 1.5, y: -100, opacity: 0, ease: "elastic.out(1, 0.3)" });
-            gsap.from(".bg-text", { duration: 1, scale: 0.5, opacity: 0, delay: 0.5 });
-            gsap.from(".details > *", { duration: 0.8, x: -50, opacity: 0, stagger: 0.1, delay: 0.2 });
-            gsap.to(".feature-item", { duration: 0.8, x: 0, opacity: 1, stagger: 0.2, delay: 1 });
+        // Elements
+        const body = document.querySelector('body');
+        const root = document.documentElement;
+        const titleEl = document.getElementById('title');
+        const priceEl = document.getElementById('price');
+        const imgEl = document.getElementById('productImage');
+        const descEl = document.getElementById('desc');
+        const circleBg = document.getElementById('circleBg');
+        const variantInput = document.getElementById('selected_variant');
 
-            renderColors();
+        function updateSlide() {
+            const product = products[currentIndex];
+
+            // 1. Background & Colors
+            body.style.background = product.gradient;
+            root.style.setProperty('--primary-color', product.color);
+            
+            // 2. Text Content
+            titleEl.innerText = product.title;
+            imgEl.src = product.image;
+            variantInput.value = product.title; // Update hidden input for form
+            
+            // 3. Animation Reset
+            imgEl.classList.remove('img-animate');
+            void imgEl.offsetWidth; // Trigger reflow
+            imgEl.classList.add('img-animate');
+
+            // 4. Circle Animation
+            circleBg.style.transform = 'scale(0.8)';
+            setTimeout(() => circleBg.style.transform = 'scale(1)', 300);
+        }
+
+        function nextSlide() {
+            currentIndex++;
+            if (currentIndex >= products.length) currentIndex = 0;
+            updateSlide();
+        }
+
+        function prevSlide() {
+            currentIndex--;
+            if (currentIndex < 0) currentIndex = products.length - 1;
+            updateSlide();
+        }
+
+        // Modal Logic
+        function openOrderForm() {
+            document.getElementById('orderModal').classList.add('open');
+        }
+        function closeOrderForm() {
+            document.getElementById('orderModal').classList.remove('open');
+        }
+        
+        // Close modal on outside click
+        document.getElementById('orderModal').addEventListener('click', function(e) {
+            if (e.target === this) closeOrderForm();
         });
 
-        function renderColors() {
-            const container = document.getElementById('colors-container');
-            if(themes.length <= 1) {
-                container.innerHTML = '<span style="font-size:0.9rem; opacity:0.6">Standard Edition</span>';
-                return;
-            }
-
-            themes.forEach((theme, index) => {
-                const dot = document.createElement('div');
-                dot.className = \`color-dot \${index === 0 ? 'active' : ''}\`;
-                dot.style.backgroundColor = theme.hex;
-                dot.title = theme.name;
-                dot.onclick = () => changeVariant(index);
-                container.appendChild(dot);
-            });
-        }
-
-        function changeVariant(index) {
-            const theme = themes[index];
-            const img = document.getElementById('main-image');
-            const dots = document.querySelectorAll('.color-dot');
+        // Form Submit Simulation
+        document.getElementById('checkoutForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = this.querySelector('.submit-btn');
+            const originalText = btn.innerText;
+            btn.innerText = 'جاري الطلب...';
+            btn.style.opacity = '0.7';
             
-            // 1. Animate Out
-            gsap.to(img, { 
-                duration: 0.3, 
-                scale: 0.8, 
-                opacity: 0, 
-                rotation: 15,
-                onComplete: () => {
-                    // 2. Change State
-                    img.src = theme.image;
-                    document.body.style.background = theme.bg_gradient;
-                    document.documentElement.style.setProperty('--primary-color', theme.primary_color);
-                    
-                    // 3. Animate In
-                    gsap.to(img, { duration: 0.6, scale: 1, opacity: 1, rotation: 0, ease: "back.out(1.7)" });
-                } 
-            });
-
-            // Update Active Dot
-            dots.forEach((d, i) => {
-                if(i === index) d.classList.add('active');
-                else d.classList.remove('active');
-            });
-            
-            // Text Animation effect
-            gsap.fromTo(".bg-text", {opacity: 0}, {opacity: 0.03, duration: 1});
-        }
+            setTimeout(() => {
+                btn.innerText = 'تم الطلب بنجاح!';
+                btn.style.background = '#27ae60';
+                setTimeout(() => {
+                    closeOrderForm();
+                    btn.innerText = originalText;
+                    btn.style.background = 'var(--primary-color)';
+                    alert('شكراً لك! سيتم الاتصال بك قريباً.');
+                }, 1500);
+            }, 1000);
+        });
     </script>
 </body>
 </html>
         `;
 
+        // إرسال الرد
         res.status(200).json({
-            liquid_code: "N/A for HTML download mode", // يمكن إضافة كود Liquid لاحقاً
-            schema: {},
+            liquid_code: "", // لا نحتاج ليكويد حالياً لأننا نولد HTML كامل
+            schema: { "name": "Nike Style Landing", "settings": [] },
             html: generatedHTML
         });
 
@@ -389,4 +423,33 @@ export default async function handler(req, res) {
         console.error("Server Error:", error);
         res.status(500).json({ error: error.message || 'Internal Server Error' });
     }
+}
+
+// --- دوال مساعدة لتوليد الألوان (Gradient Generation) ---
+
+function lightenColor(col, amt) {
+    return changeColorAmt(col, amt);
+}
+
+function darkenColor(col, amt) {
+    return changeColorAmt(col, -amt);
+}
+
+function changeColorAmt(col, amt) {
+    let usePound = false;
+    if (col[0] == "#") {
+        col = col.slice(1);
+        usePound = true;
+    }
+    let num = parseInt(col, 16);
+    let r = (num >> 16) + amt;
+    if (r > 255) r = 255;
+    else if (r < 0) r = 0;
+    let b = ((num >> 8) & 0x00FF) + amt;
+    if (b > 255) b = 255;
+    else if (b < 0) b = 0;
+    let g = (num & 0x0000FF) + amt;
+    if (g > 255) g = 255;
+    else if (g < 0) g = 0;
+    return (usePound ? "#" : "") + (g | (b << 8) | (r << 16)).toString(16).padStart(6, '0');
 }
