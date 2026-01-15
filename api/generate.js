@@ -14,321 +14,448 @@ export default async function handler(req, res) {
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
         if (!GEMINI_API_KEY) throw new Error('API Key is missing');
 
-        // استقبال البيانات
+        // استقبال البيانات بما في ذلك الصور المتعددة والمتغيرات (variants)
         const { 
             productName, productFeatures, productPrice, productCategory,
             targetAudience, designDescription, shippingOption, customShippingPrice, 
-            customOffer, productImages, brandLogo
+            customOffer, productImages, brandLogo, variants 
         } = req.body;
 
+        // التعامل مع الصور المتعددة
         const productImageArray = productImages || [];
+        const mainProductImage = productImageArray.length > 0 ? productImageArray[0] : null;
+
+        const GEMINI_MODEL = 'gemini-2.5-flash'; 
+        const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
         
-        // القالب الأصلي الذي تريد الحفاظ عليه (t.html)
-        // ملاحظة: سنطلب من الذكاء الاصطناعي الالتزام بهذا الهيكل
-        const TEMPLATE_STRUCTURE = `
-<!DOCTYPE html>
-<html lang="ar" dir="rtl"> <head>
-<meta charset="UTF-8" />
-<title>Product Landing Page</title>
-<link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Cairo:wght@400;600;700&display=swap');
+        const shippingText = shippingOption === 'free' ? "شحن مجاني" : `الشحن: ${customShippingPrice}`;
+        const offerText = customOffer ? `عرض خاص: ${customOffer}` : "";
 
-* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', 'Orbitron', sans-serif; }
-body { width: 100vw; height: 100vh; background: #0a0a0a; overflow: hidden; color: white; }
-.hero { position: relative; width: 100%; height: 100%; background: radial-gradient(circle at center, rgba(255,255,255,0.1), transparent 55%), linear-gradient(180deg, #0b0b0b, #050505); transition: background 0.8s ease; }
-.hero::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.85) 75%); pointer-events: none; }
-nav { position: absolute; top: 0; width: 100%; padding: 2rem 4rem; display: flex; justify-content: space-between; align-items: center; z-index: 100; }
-.logo { font-size: 1.5rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
-.nav-links { display: flex; gap: 3rem; }
-.nav-links a { text-decoration: none; color: rgba(255,255,255,0.7); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; cursor: pointer; }
-.nav-links a:hover, .nav-links a.active { color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
-.content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; height: 80%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; z-index: 10; }
-.big-text-bg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 12vw; font-weight: 700; color: rgba(255,255,255,0.03); white-space: nowrap; z-index: 1; pointer-events: none; transition: color 0.5s ease; }
-.shoe-container { position: relative; width: 100%; height: 50vh; display: flex; justify-content: center; align-items: center; z-index: 5; perspective: 1000px; }
-.shoe-img { width: auto; height: 120%; object-fit: contain; filter: drop-shadow(0 20px 30px rgba(0,0,0,0.5)); transform: rotate(-15deg) translateY(0); transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1); opacity: 0; position: absolute; }
-.shoe-img.active { opacity: 1; transform: rotate(-15deg) translateY(-20px) scale(1.1); }
-.info-box { margin-top: 2rem; z-index: 10; }
-.shoe-name { font-size: 3rem; font-weight: 700; letter-spacing: 2px; margin-bottom: 0.5rem; opacity: 0; transform: translateY(20px); transition: all 0.6s ease; text-transform: uppercase; }
-.price-tag { font-size: 1.5rem; color: rgba(255,255,255,0.8); margin-bottom: 1.5rem; font-family: 'Orbitron', sans-serif; }
-.btn { padding: 1rem 2.5rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 1rem; text-transform: uppercase; letter-spacing: 2px; cursor: pointer; transition: 0.4s; backdrop-filter: blur(5px); border-radius: 4px; text-decoration: none; display: inline-block; }
-.btn:hover { background: #fff; color: #000; box-shadow: 0 0 20px rgba(255,255,255,0.4); }
-.slider-controls { position: absolute; bottom: 3rem; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0 4rem; z-index: 20; }
-.dots { display: flex; gap: 1rem; }
-.dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.2); cursor: pointer; transition: 0.3s; }
-.dot.active { background: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.5); transform: scale(1.2); }
-.pagination { display: flex; gap: 2rem; font-family: 'Orbitron', sans-serif; font-size: 0.9rem; color: rgba(255,255,255,0.4); }
-.page-num { cursor: pointer; transition: 0.3s; position: relative; }
-.page-num::after { content: ''; position: absolute; bottom: -5px; left: 0; width: 0; height: 2px; background: #fff; transition: 0.3s; }
-.page-num.active { color: #fff; }
-.page-num.active::after { width: 100%; }
-.progress-bar { position: absolute; bottom: 0; left: 0; height: 4px; background: rgba(255,255,255,0.1); width: 100%; z-index: 100; }
-.progress { height: 100%; background: #fff; width: 0%; transition: width 0.5s ease; position: relative; }
-.progress::after { content: ''; position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; background: #fff; border-radius: 50%; box-shadow: 0 0 15px rgba(255,255,255,0.8); }
-.arrow-btn { background: none; border: none; color: rgba(255,255,255,0.5); font-size: 1.5rem; cursor: pointer; transition: 0.3s; }
-.arrow-btn:hover { color: #fff; transform: scale(1.1); }
-.hidden { display: none; }
-</style>
-</head>
-<body>
+        // تعريف المتغيرات البديلة للصور
+        const MAIN_IMG_PLACEHOLDER = "[[PRODUCT_IMAGE_MAIN_SRC]]";
+        const LOGO_PLACEHOLDER = "[[BRAND_LOGO_SRC]]";
+        
+        // --- تحضير شرائح السلايدر للبرومبت ---
+        let sliderSlidesHTML = `   <img src="${MAIN_IMG_PLACEHOLDER}" class="slider-img active" data-index="1">`;
+        for (let i = 1; i < productImageArray.length && i <= 6; i++) {
+            sliderSlidesHTML += `\n   <img src="[[PRODUCT_IMAGE_${i + 1}_SRC]]" class="slider-img" data-index="${i + 1}">`;
+        }
+        const totalSlidesCount = Math.max(productImageArray.length, 1);
 
-<div class="hero">
-    <nav>
-        <div class="logo">[[BRAND_LOGO]]</div> <div class="nav-links">
-            <a href="#" class="active">الرئيسية</a>
-            <a href="#">المميزات</a>
-            <a href="#">اطلب الآن</a>
-        </div>
-        <a href="#order" class="btn">شراء الآن</a>
-    </nav>
+        // --- تحضير منطق المتغيرات (الألوان والمقاسات) - مضاف من te.js ---
+        // سنقوم ببناء كود HTML الخاص بالأزرار مسبقاً لحقنه في البرومبت لضمان الدقة
+        let variantsHTML = "";
 
-    <div class="big-text-bg">[[PRODUCT_NAME_SHORT]]</div>
+        // 1. معالجة الألوان
+        if (variants && variants.colors && variants.colors.enabled && variants.colors.items.length > 0) {
+            variantsHTML += `<div class="form-group variant-group"><label class="variant-label">اللون المفضل:</label><div class="variants-wrapper colors-wrapper">`;
+            
+            variants.colors.items.forEach((color) => {
+                // حساب رقم الشريحة المرتبطة (1-based index)
+                let slideTarget = 'null';
+                if (color.imgIndex !== "" && color.imgIndex !== null && color.imgIndex !== undefined) {
+                    slideTarget = parseInt(color.imgIndex) + 1;
+                }
+                
+                variantsHTML += `
+                <div class="variant-option color-option" 
+                     style="background-color: ${color.hex};" 
+                     data-name="${color.name}" 
+                     data-slide="${slideTarget}"
+                     onclick="selectColor(this, '${color.name}', ${slideTarget})"
+                     title="${color.name}">
+                </div>`;
+            });
+            variantsHTML += `</div><input type="hidden" id="selected-color" name="color" required> <span id="color-name-display" style="font-size:12px; color:#666;"></span></div>`;
+        }
 
-    <div class="content">
-        <div class="shoe-container" id="shoeContainer">
-            </div>
+        // 2. معالجة المقاسات
+        if (variants && variants.sizes && variants.sizes.enabled && variants.sizes.items.length > 0) {
+            variantsHTML += `<div class="form-group variant-group"><label class="variant-label">المقاس:</label><div class="variants-wrapper sizes-wrapper">`;
+            
+            variants.sizes.items.forEach((size) => {
+                variantsHTML += `
+                <div class="variant-option size-option" 
+                     data-name="${size.name}" 
+                     onclick="selectSize(this, '${size.name}')">
+                     ${size.name}
+                </div>`;
+            });
+            variantsHTML += `</div><input type="hidden" id="selected-size" name="size" required></div>`;
+        }
 
-        <div class="info-box">
-            <h1 class="shoe-name" id="shoeName">...</h1>
-            <div class="price-tag" id="shoePrice">...</div>
-            <p id="shoeDesc" style="color:rgba(255,255,255,0.6); margin-bottom:20px; max-width:500px; font-size:0.9rem; line-height:1.6;"></p>
-            <a href="#order" class="btn">أضف للسلة <i class="ri-shopping-bag-3-line"></i></a>
-        </div>
+        // --- CSS المدمج (فيسبوك + السلايدر الجديد + ستايل المتغيرات الجديد) ---
+        const fbStyles = `
+        <style>
+            :root { --bg-color: #ffffff; --comment-bg: #f0f2f5; --text-primary: #050505; --text-secondary: #65676b; --blue-link: #216fdb; --line-color: #eaebef; }
+            
+            /* --- 1. ستايل السلايدر الجديد (Lazzwood Style) --- */
+            .product-viewer-container { position: relative; width: 100%; max-width: 500px; margin: 0 auto 30px auto; background-color: #f9f9f9; overflow: hidden; border-radius: 8px; }
+            .slider-wrapper { position: relative; width: 100%; min-height: 400px; display: flex; align-items: center; justify-content: center; overflow: hidden; background-color: #f4f4f4; }
+            .slider-img { display: none; width: 100%; height: auto; object-fit: contain; transition: opacity 0.3s ease; cursor: zoom-in; }
+            .slider-img.active { display: block; animation: fadeIn 0.4s; }
+            @keyframes fadeIn { from { opacity: 0.5; } to { opacity: 1; } }
+            .zoom-btn { position: absolute; top: 20px; left: 20px; width: 40px; height: 40px; background: white; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; border: none; color: #333; }
+            .slider-controls { display: flex; align-items: center; justify-content: center; padding: 15px 0; gap: 20px; background: transparent; font-family: 'Times New Roman', serif; }
+            .nav-btn { background: none; border: none; cursor: pointer; font-size: 22px; color: #666; padding: 0 10px; transition: color 0.2s; }
+            .nav-btn:hover { color: #000; }
+            .slide-counter { font-size: 16px; font-style: italic; color: #333; letter-spacing: 2px; }
+            .lightbox-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.98); z-index: 9999; justify-content: center; align-items: center; }
+            .lightbox-modal.open { display: flex; }
+            .lightbox-img { max-width: 90%; max-height: 90%; object-fit: contain; }
+            .close-lightbox { position: absolute; top: 20px; right: 20px; font-size: 35px; cursor: pointer; color: #333; }
+
+            /* --- 2. ستايل خيارات المنتج (الألوان والمقاسات) والكمية - مضاف من te.js --- */
+            .variant-group { margin-bottom: 15px; }
+            .variant-label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 14px; }
+            .variants-wrapper { display: flex; gap: 10px; flex-wrap: wrap; }
+            .variant-option { cursor: pointer; border: 2px solid #ddd; transition: all 0.2s; }
+            
+            /* ستايل الألوان */
+            .color-option { width: 35px; height: 35px; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+            .color-option:hover { transform: scale(1.1); }
+            .color-option.selected { border-color: var(--text-primary); transform: scale(1.15); box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--text-primary); }
+            
+            /* ستايل المقاسات */
+            .size-option { padding: 8px 15px; border-radius: 4px; background: #fff; font-size: 14px; font-weight: 600; min-width: 40px; text-align: center; }
+            .size-option:hover { border-color: #999; }
+            .size-option.selected { background-color: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+
+            /* ستايل الكمية والسعر */
+            .qty-price-wrapper { display: flex; align-items: center; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd; }
+            .qty-control { display: flex; align-items: center; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
+            .qty-btn { width: 35px; height: 35px; background: #f4f4f4; border: none; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+            .qty-btn:hover { background: #e0e0e0; }
+            .qty-input { width: 40px; height: 35px; border: none; text-align: center; font-weight: bold; outline: none; }
+            .total-price-box { text-align: left; }
+            .total-label { font-size: 12px; color: #666; display: block; }
+            .total-value { font-size: 18px; font-weight: bold; color: #d32f2f; }
+
+            /* --- 3. ستايل تعليقات الفيسبوك الأصلي --- */
+            .fb-reviews-section { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; direction: rtl; padding: 20px; background: #fff; margin-top: 30px; border-top: 1px solid #ddd; }
+            .comment-thread { max-width: 600px; margin: 0 auto; position: relative; }
+            .thread-line-container { position: absolute; right: 25px; top: 50px; bottom: 30px; width: 2px; background-color: var(--line-color); z-index: 0; }
+            .comment-row { display: flex; align-items: flex-start; margin-bottom: 15px; position: relative; z-index: 1; }
+            .avatar { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; margin-left: 8px; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.1); }
+            .avatar img { width: 100%; height: 100%; object-fit: cover; }
+            .comment-content { display: flex; flex-direction: column; max-width: 85%; }
+            .bubble { background-color: var(--comment-bg); padding: 8px 12px; border-radius: 18px; display: inline-block; position: relative; }
+            .username { font-weight: 600; font-size: 13px; color: var(--text-primary); display: block; margin-bottom: 2px; cursor: pointer; }
+            .text { font-size: 15px; color: var(--text-primary); line-height: 1.3; white-space: pre-wrap; }
+            .actions { display: flex; gap: 15px; margin-right: 12px; margin-top: 3px; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+            .action-link { cursor: pointer; text-decoration: none; color: var(--text-secondary); }
+            .time { font-weight: 400; }
+            .reactions-container { position: absolute; bottom: -8px; left: -15px; background-color: white; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); padding: 2px 4px; display: flex; align-items: center; height: 18px; z-index: 10; }
+            .react-icon { width: 16px; height: 16px; border: 2px solid #fff; border-radius: 50%; }
+            .react-count { font-size: 11px; color: var(--text-secondary); margin-left: 4px; margin-right: 2px; }
+            .view-replies { display: flex; align-items: center; font-weight: 600; font-size: 14px; color: var(--text-primary); margin: 10px 0; padding-right: 50px; position: relative; cursor: pointer; }
+            .view-replies::before { content: ''; position: absolute; right: 25px; top: 50%; width: 20px; height: 2px; background-color: var(--line-color); border-bottom-left-radius: 10px; }
+            
+            /* أيقونة القلب فقط */
+            .icon-love { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%23f02849"/><path d="M16 26c-0.6 0-1.2-0.2-1.6-0.6 -5.2-4.6-9.4-8.4-9.4-13.4 0-3 2.4-5.4 5.4-5.4 2.1 0 3.9 1.1 4.9 2.9l0.7 1.2 0.7-1.2c1-1.8 2.8-2.9 4.9-2.9 3 0 5.4 2.4 5.4 5.4 0 5-4.2 8.8-9.4 13.4 -0.4 0.4-1 0.6-1.6 0.6z" fill="white"/></svg>') no-repeat center/cover; }
+        </style>
+        `;
+
+        const prompt = `
+Act as a Senior Creative Director and Conversion Expert. 
+Analyze this product: ${productName}. 
+Category: ${productCategory}. 
+Target Audience: ${targetAudience}.
+Context/Features: ${productFeatures}.
+Price: ${productPrice}. ${shippingText}. ${offerText}.
+User Design Request: ${designDescription}.
+
+## 🖼️ **تعليمات عرض الصور (السلايدر التفاعلي):**
+لقد تم تزويدك بصور للمنتج (${productImageArray.length} صور).
+**بدلاً من عرض صور ثابتة، يجب عليك بناء "عارض منتج" (Slider) تفاعلي يطابق الكود التالي بدقة:**
+
+### **1. كود HTML للسلايدر (يجب وضعه في مكان الصورة الرئيسية):**
+استخدم هذا الهيكل بالضبط مع تضمين الصور المجهزة:
+\`\`\`html
+<div class="product-viewer-container">
+    <button class="zoom-btn" onclick="openLightbox()" aria-label="Zoom"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg></button>
+    
+    <div class="slider-wrapper">
+        ${sliderSlidesHTML}
     </div>
 
     <div class="slider-controls">
-        <button class="arrow-btn" id="prevBtn"><i class="ri-arrow-left-s-line"></i></button>
-        <div class="dots" id="dotsContainer"></div>
-        <button class="arrow-btn" id="nextBtn"><i class="ri-arrow-right-s-line"></i></button>
+        <button class="nav-btn prev" onclick="changeSlide(-1)">&#10094;</button>
+        <span class="slide-counter" id="slideCounter">1 / ${totalSlidesCount}</span>
+        <button class="nav-btn next" onclick="changeSlide(1)">&#10095;</button>
     </div>
-    
-    <div class="slider-controls" style="bottom: 7rem; justify-content: center; pointer-events: none;">
-         <div class="pagination" id="pagesContainer" style="pointer-events: auto;"></div>
-    </div>
-
-    <div class="progress-bar"><div class="progress"></div></div>
 </div>
 
+<div id="lightbox" class="lightbox-modal" onclick="closeLightbox()"><span class="close-lightbox">&times;</span><img id="lightbox-img" class="lightbox-img" src=""></div>
+\`\`\`
+
+### **2. الشعار:**
+- استخدم هذا النص بالضبط كمصدر للشعار: \`${LOGO_PLACEHOLDER}\`
+- مثال: <img src="${LOGO_PLACEHOLDER}" alt="شعار العلامة التجارية" class="logo">
+
+## 🎯 **الهدف:**
+إنشاء صفحة هبوط فريدة ومبدعة تحتوي على السلايدر أعلاه وتحقق أعلى معدلات التحويل.
+
+## ⚠️ **متطلبات إلزامية:**
+
+### **1. قسم الهيرو:**
+- يتضمن الشعار في الهيدر.
+- **مهم جداً:** استبدل صورة المنتج التقليدية بكود "السلايدر التفاعلي" المذكور أعلاه بالكامل.
+- لا تضف معرض صور منفصل في الأسفل، السلايدر يكفي.
+
+### **2. استمارة الطلب الذكية (مباشرة بعد الهيرو):**
+يجب أن تحتوي على هذا الهيكل الدقيق للحقول باللغة العربية، بما في ذلك خيارات الألوان والمقاسات:
+
+<div class="customer-info-box">
+  <h3>استمارة الطلب</h3>
+  <p>المرجو إدخال معلوماتك الخاصة بك</p>
+  
+  <div class="form-group">
+    <label>الإسم الكامل</label>
+    <input type="text" placeholder="Nom et prénom" required>
+  </div>
+  
+  <div class="form-group">
+    <label>رقم الهاتف</label>
+    <input type="tel" placeholder="Nombre" required>
+  </div>
+  
+  <div class="form-group">
+    <label>الولاية</label>
+    <input type="text" placeholder="Wilaya" required>
+  </div>
+  
+  <div class="form-group">
+    <label>البلدية</label>
+    <input type="text" placeholder="أدخل بلديتك" required>
+  </div>
+  
+  <div class="form-group">
+    <label>الموقع / العنوان</label>
+    <input type="text" placeholder="أدخل عنوانك بالتفصيل" required>
+  </div>
+  
+  ${variantsHTML}
+  <div class="qty-price-wrapper">
+      <div class="qty-control">
+          <button type="button" class="qty-btn" onclick="updateQty(-1)">-</button>
+          <input type="number" id="product-qty" class="qty-input" value="1" min="1" readonly>
+          <button type="button" class="qty-btn" onclick="updateQty(1)">+</button>
+      </div>
+      <div class="total-price-box">
+          <span class="total-label">المجموع:</span>
+          <span class="total-value" id="total-price-display">${productPrice} دينار</span>
+          <input type="hidden" id="final-total" name="total_price" value="${productPrice}">
+      </div>
+  </div>
+  
+  <button type="submit" class="submit-btn" style="margin-top: 20px;">تأكيد الطلب</button>
+</div>
+
+### **3. سكريبت التفاعل (Logic):**
+يجب عليك إضافة كود JavaScript التالي بالضبط لتفعيل السلايدر، وتبديل الصور عند اختيار اللون، وحساب السعر:
+\`\`\`html
 <script>
-    // DATA INJECTION POINT
-    // The AI will generate this array based on user input
-    const productData = [
-        /* {
-            name: "Product Variant 1",
-            color: "#HEXCODE", // Muted color derived from image
-            price: "$199",
-            desc: "Short description...",
-            img: "URL"
-        }
-        */
-    ];
-
-    let currentIndex = 0;
-    const hero = document.querySelector('.hero');
-    const shoeName = document.getElementById('shoeName');
-    const bigText = document.querySelector('.big-text-bg');
-    const shoeContainer = document.getElementById('shoeContainer');
-    const dotsContainer = document.getElementById('dotsContainer');
-    const pagesContainer = document.getElementById('pagesContainer');
-    const progressBar = document.querySelector('.progress');
-    const shoeDesc = document.getElementById('shoeDesc');
-    const shoePrice = document.getElementById('shoePrice');
-
-    function init() {
-        // Create Images
-        productData.forEach((item, index) => {
-            const img = document.createElement('img');
-            img.src = item.img;
-            img.classList.add('shoe-img');
-            if(index === 0) img.classList.add('active');
-            shoeContainer.appendChild(img);
-
-            // Dots
-            const dot = document.createElement('div');
-            dot.classList.add('dot');
-            if(index === 0) dot.classList.add('active');
-            dot.dataset.index = index;
-            dot.onclick = () => updateSlider(index);
-            dotsContainer.appendChild(dot);
-
-            // Pagination Numbers
-            const page = document.createElement('div');
-            page.classList.add('page-num');
-            page.textContent = (index + 1).toString().padStart(2, '0');
-            if(index === 0) page.classList.add('active');
-            page.dataset.index = index;
-            page.onclick = () => updateSlider(index);
-            pagesContainer.appendChild(page);
+    // --- منطق السلايدر ---
+    let currentSlide = 1; const totalSlides = ${totalSlidesCount};
+    function changeSlide(d) { currentSlide += d; if (currentSlide > totalSlides) currentSlide = 1; if (currentSlide < 1) currentSlide = totalSlides; updateSlider(); }
+    
+    // دالة تحديث السلايدر العامة
+    function updateSlider() { 
+        document.querySelectorAll('.slider-img').forEach(img => { 
+            img.classList.remove('active'); 
+            if(parseInt(img.dataset.index) === currentSlide) img.classList.add('active'); 
         });
-
-        updateSlider(0);
+        document.getElementById('slideCounter').innerText = currentSlide + ' / ' + totalSlides; 
+    }
+    
+    // دالة الانتقال المباشر لشريحة معينة (تستخدم عند اختيار لون)
+    function goToSlide(index) {
+        if(index && index >= 1 && index <= totalSlides) {
+            currentSlide = index;
+            updateSlider();
+        }
     }
 
-    function updateSlider(index) {
-        // Reset
-        document.querySelectorAll('.shoe-img').forEach(img => img.classList.remove('active'));
-        document.querySelectorAll('.dot').forEach(dot => dot.classList.remove('active'));
-        document.querySelectorAll('.page-num').forEach(page => page.classList.remove('active'));
+    function openLightbox() { document.getElementById('lightbox-img').src = document.querySelector('.slider-img.active').src; document.getElementById('lightbox').classList.add('open'); }
+    function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
 
-        // Set Active
-        const images = document.querySelectorAll('.shoe-img');
-        if(images[index]) images[index].classList.add('active');
+    // --- منطق خيارات المنتج (الألوان والمقاسات) ---
+    function selectColor(element, name, slideIndex) {
+        // إزالة التحديد عن الكل
+        document.querySelectorAll('.color-option').forEach(el => el.classList.remove('selected'));
+        // تحديد العنصر الحالي
+        element.classList.add('selected');
+        // تحديث الحقل المخفي
+        document.getElementById('selected-color').value = name;
+        document.getElementById('color-name-display').innerText = name;
         
-        const dots = document.querySelectorAll('.dot');
-        if(dots[index]) dots[index].classList.add('active');
-
-        const pages = document.querySelectorAll('.page-num');
-        if(pages[index]) pages[index].classList.add('active');
-
-        // Update Text Content with Animation
-        shoeName.style.opacity = 0;
-        shoeName.style.transform = 'translateY(20px)';
-        
-        setTimeout(() => {
-            shoeName.textContent = productData[index].name;
-            shoeDesc.textContent = productData[index].desc;
-            shoePrice.textContent = productData[index].price;
-            
-            shoeName.style.opacity = 1;
-            shoeName.style.transform = 'translateY(0)';
-        }, 300);
-
-        // Update Colors (Muted/Dark Theme Logic)
-        // We only use the color for subtle tints, keeping the background dark
-        const color = productData[index].color;
-        
-        // Very subtle background tint
-        hero.style.background = \`
-            radial-gradient(circle at center, \${color}20, transparent 60%),
-            linear-gradient(180deg, #0b0b0b, #050505)
-        \`;
-        
-        // Tint the big text slightly
-        bigText.style.color = \`\${color}15\`; // very low opacity
-
-        // Progress Bar
-        const progress = ((index + 1) / productData.length) * 100;
-        progressBar.style.width = \`\${progress}%\`;
-        progressBar.style.background = color; // Accent color on progress
-
-        currentIndex = index;
+        // تغيير صورة المنتج إذا كان هناك صورة مرتبطة بهذا اللون
+        if(slideIndex !== null && slideIndex !== 'null') {
+            goToSlide(slideIndex);
+        }
     }
 
-    document.getElementById('prevBtn').onclick = () => {
-        let newIndex = currentIndex - 1;
-        if(newIndex < 0) newIndex = productData.length - 1;
-        updateSlider(newIndex);
-    };
+    function selectSize(element, name) {
+        document.querySelectorAll('.size-option').forEach(el => el.classList.remove('selected'));
+        element.classList.add('selected');
+        document.getElementById('selected-size').value = name;
+    }
 
-    document.getElementById('nextBtn').onclick = () => {
-        let newIndex = currentIndex + 1;
-        if(newIndex >= productData.length) newIndex = 0;
-        updateSlider(newIndex);
-    };
+    // --- منطق حساب السعر والكمية ---
+    let basePrice = ${parseFloat(productPrice) || 0};
+    let currentQty = 1;
 
-    // Auto rotate if desired
-    // setInterval(() => document.getElementById('nextBtn').click(), 5000);
+    function updateQty(change) {
+        currentQty += change;
+        if(currentQty < 1) currentQty = 1;
+        document.getElementById('product-qty').value = currentQty;
+        updateTotal();
+    }
 
-    init();
+    function updateTotal() {
+        let total = (basePrice * currentQty).toFixed(2);
+        // إزالة الكسور العشرية إذا كانت .00 لجمالية العرض
+        if(total.endsWith('.00')) total = parseInt(total);
+        
+        document.getElementById('total-price-display').innerText = total + ' دينار';
+        document.getElementById('final-total').value = total;
+    }
 </script>
-</body>
-</html>
+\`\`\`
+
+### **4. قسم آراء العملاء (Facebook Style):**
+يجب أن يبدو القسم كأنه مأخوذ (Screenshot) من نقاش حقيقي على فيسبوك حول المنتج.
+1. **التصميم:** استخدم أكواد CSS المرفقة في المتغير \`fbStyles\`.
+2. **المحتوى:** أنشئ 3-5 تعليقات واقعية جداً.
+   - امزج بين **الدارجة الجزائرية** (مثل: "الله يبارك"، "سلعة شابة"، "وصلتني في وقتها") و **العربية الفصحى البسيطة**.
+   - التعليقات يجب أن تمدح المنتج وتؤكد المصداقية.
+3. **الصور والأسماء:**
+   - **للذكور:** استخدم الاسم العربي المناسب واستخدم الرمز \`[[MALE_IMG]]\` في مصدر الصورة \`src\`.
+   - **للإناث:** استخدم الاسم العربي المناسب واستخدم الرمز \`[[FEMALE_IMG]]\` في مصدر الصورة \`src\`.
+4. **التفاعل (القلب فقط ❤️):**
+   - **هام جداً:** استخدم حصراً أيقونة القلب (\`icon-love\`) لجميع التفاعلات.
+   - **لا تستخدم أيقونة اللايك أبداً.**
+   - ضع أرقاماً عشوائية منطقية لعدد ساعات لعدد القلوب بجانب كل تعليق.
+   - أضف "عرض الردود السابقة" بين بعض التعليقات لزيادة الواقعية.
+
+### نموذج HTML لتعليق واحد (استخدم القلب فقط):
+\`\`\`html
+<div class="comment-row">
+    <div class="avatar"><img src="[[FEMALE_IMG]]" alt="User"></div>
+    <div class="comment-content">
+        <div class="bubble">
+            <span class="username">اسم المستخدم</span>
+            <span class="text">نص التعليق هنا...</span>
+            <div class="reactions-container">
+                <div class="react-icon icon-love"></div> <span class="react-count">15</span>
+            </div>
+        </div>
+        <div class="actions">
+            <span class="time">منذ ساعتين</span>
+            <span class="action-link">أعجبني</span>
+            <span class="action-link">رد</span>
+        </div>
+    </div>
+</div>
+\`\`\`
+
+### **5. تنسيق الإخراج:**
+أعد كائن JSON فقط:
+{
+  "html": "سلسلة HTML كاملة",
+  "liquid_code": "كود Shopify Liquid",
+  "schema": { "name": "Landing Page", "settings": [] }
+}
+
+## 🚀 **حرية إبداعية كاملة لباقي الأقسام:**
+- صمم باقي الصفحة بحرية تامة باستخدام CSS حديث وجذاب
+- استخدم تأثيرات hover، transitions، وanimations لجعل الصفحة تفاعلية
+- تأكد من أن الصفحة سريعة الاستجابة وتعمل على جميع الأجهزة
+- أضف عد تنازلي أقل من ساعتان أنيق يحفز الزائر على الشراء بلون مناسب لصفحة و للمنتج
+- أضف أقسام إضافية مثل: مميزات المنتج، الأسئلة الشائعة، إلخ
+- **مهم:** قم بتضمين كود CSS (\`fbStyles\`) الذي سأزودك به في بداية الـ HTML الناتج.
+
+قم بدمج هذا الـ CSS في بداية الـ HTML الناتج:
+${fbStyles}
         `;
 
-        const GEMINI_MODEL = 'gemini-2.5-flash'; 
-
-        const prompt = `
-        You are a world-class Frontend Developer and UI/UX Designer specialized in high-end, dark-themed luxury landing pages.
-        
-        YOUR TASK:
-        Take the HTML/CSS/JS template provided below and inject the user's product data into it.
-        You must NOT change the CSS structure or the layout.
-        You MUST output the full valid HTML file.
-
-        USER PRODUCT DATA:
-        - Product Name: ${productName}
-        - Features: ${productFeatures}
-        - Description: ${designDescription || productCategory}
-        - Price: ${productPrice}
-        - Target Audience: ${targetAudience}
-        - Images Available: ${productImageArray.length}
-
-        INSTRUCTIONS:
-        1. **HTML Structure**: Use the 'TEMPLATE_STRUCTURE' provided below exactly. Do not strip the <style> or <script> tags.
-        2. **Content Injection**:
-           - Replace '[[BRAND_LOGO]]' with the text "${productName}" (or an img tag if a logo URL is provided).
-           - Replace '[[PRODUCT_NAME_SHORT]]' with a very short 1-2 word version of the product name for the background.
-           - Locate the 'const productData = [...]' array in the script section. You MUST populate this array based on the user's images.
-        3. **The 'productData' Logic**:
-           - If the user provided multiple images, create an object for each image in the array.
-           - 'name': Use the product name (you can add variation names like "Red Edition" if you detect colors, otherwise keep it standard).
-           - 'desc': A short, punchy 1-sentence description in ARABIC (since the template is RTL).
-           - 'price': "${productPrice}".
-           - 'img': Use the placeholders [[PRODUCT_IMAGE_1_SRC]], [[PRODUCT_IMAGE_2_SRC]], etc. strictly.
-           - 'color': Pick a HEX color that matches the product image but keep it muted/pastel (e.g., #ff5500 for orange, #4488ff for blue). DO NOT use neon colors. If unsure, use #ffffff.
-        4. **Theme Preservation**:
-           - Do NOT change the body background form #0a0a0a.
-           - Ensure the gradients use the 'color' variable with low opacity (10% to 20%) as defined in the script template.
-        
-        TEMPLATE_STRUCTURE (Copy and Fill this):
-        ${TEMPLATE_STRUCTURE}
-        `;
-
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`, {
+        const response = await fetch(GEMINI_ENDPOINT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }]
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { 
+                    responseMimeType: "application/json",
+                    temperature: 0.95
+                }
             })
         });
 
         const data = await response.json();
-        
-        if (!data.candidates || data.candidates.length === 0) {
-            throw new Error('Gemini API returned no candidates');
+
+        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+            throw new Error('Failed to generate content from AI');
         }
 
-        let content = data.candidates[0].content.parts[0].text;
+        const aiResponseText = data.candidates[0].content.parts[0].text;
+        const cleanedText = aiResponseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        let aiResponse = JSON.parse(cleanedText);
+
+        // ***************************************************************
+        // عملية الحقن: استبدال الرموز (صور المنتج + صور الأشخاص)
+        // ***************************************************************
         
-        // تنظيف الكود من علامات Markdown
-        content = content.replace(/```html/g, '').replace(/```/g, '');
+        // صور افتراضية
+        const defaultImg = "https://via.placeholder.com/600x600?text=Product+Image";
+        const defaultLogo = "https://via.placeholder.com/150x50?text=Logo";
+        const finalProductImages = productImageArray.length > 0 ? productImageArray : [defaultImg];
+        const finalBrandLogo = brandLogo || defaultLogo;
 
-        // === دوال استبدال الصور ===
-        const replaceImages = (htmlContent) => {
-            let result = htmlContent;
-            
-            // استبدال الشعار إذا وجد
-            if (brandLogo) {
-               result = result.replace('[[BRAND_LOGO]]', `<img src="${brandLogo}" style="height:40px;">`);
-            } else {
-               // إذا لم يوجد شعار نضع الاسم كنص
-               // (يتم التعامل معه داخل Gemini عادة، لكن كاحتياط)
+        // دالة الصور العشوائية (أشخاص حقيقيين)
+        const getRandomAvatar = (gender) => {
+            const randomId = Math.floor(Math.random() * 50); 
+            const genderPath = gender === 'male' ? 'men' : 'women';
+            return `https://randomuser.me/api/portraits/${genderPath}/${randomId}.jpg`;
+        };
+
+        // دالة حقن صور الأشخاص
+        const injectAvatars = (htmlContent) => {
+            if (!htmlContent) return htmlContent;
+            let content = htmlContent;
+            while (content.includes('[[MALE_IMG]]')) {
+                content = content.replace('[[MALE_IMG]]', getRandomAvatar('male'));
             }
+            while (content.includes('[[FEMALE_IMG]]')) {
+                content = content.replace('[[FEMALE_IMG]]', getRandomAvatar('female'));
+            }
+            return content;
+        };
 
-            // استبدال صور المنتج
-            // ملاحظة: الـ Prompt أعلاه طلب من Gemini وضع Placeholders
-            // [[PRODUCT_IMAGE_1_SRC]], [[PRODUCT_IMAGE_2_SRC]]
-            
-            productImageArray.forEach((imgUrl, index) => {
-                const placeholder = `[[PRODUCT_IMAGE_${index + 1}_SRC]]`;
-                // استبدال كل حالات الظهور
-                result = result.split(placeholder).join(imgUrl);
-            });
-
-            // تنظيف أي placeholders متبقية لم يتم استبدالها (في حال وضع Gemini صوراً أكثر من الموجود)
-            result = result.replace(/\[\[PRODUCT_IMAGE_\d+_SRC\]\]/g, 'https://via.placeholder.com/500x500/333/fff?text=No+Image');
-
+        // دالة للاستبدال الآمن لصور المنتج
+        const replaceImages = (content) => {
+            if (!content) return content;
+            let result = content;
+            // استبدال الصورة الرئيسية
+            result = result.split(MAIN_IMG_PLACEHOLDER).join(finalProductImages[0]);
+            // استبدال الشعار
+            result = result.split(LOGO_PLACEHOLDER).join(finalBrandLogo);
+            // استبدال الصور الإضافية
+            for (let i = 1; i < finalProductImages.length && i <= 6; i++) {
+                const placeholder = `[[PRODUCT_IMAGE_${i + 1}_SRC]]`;
+                result = result.split(placeholder).join(finalProductImages[i]);
+            }
             return result;
         };
 
-        const finalHtml = replaceImages(content);
+        // تطبيق الاستبدال وحقن الأفاتار على HTML و Liquid Code
+        aiResponse.html = injectAvatars(replaceImages(aiResponse.html));
+        aiResponse.liquid_code = injectAvatars(replaceImages(aiResponse.liquid_code));
 
-        // إرجاع النتيجة
         res.status(200).json({
-            // بما أن القالب هو صفحة واحدة كاملة، نضعها في liquid_code و html
-            liquid_code: finalHtml, 
-            html: finalHtml,
-            schema: "{}" // يمكن توليده إذا لزم الأمر
+            liquid_code: aiResponse.liquid_code,
+            schema: aiResponse.schema,
+            html: aiResponse.html
         });
 
     } catch (error) {
