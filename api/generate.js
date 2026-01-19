@@ -24,7 +24,7 @@ export default async function handler(req, res) {
         const productImageArray = productImages || [];
         const mainProductImage = productImageArray.length > 0 ? productImageArray[0] : null;
 
-        const GEMINI_MODEL = 'gemini-2.0-flash'; // استخدام موديل سريع
+        const GEMINI_MODEL = 'gemini-2.5-flash'; // استخدام موديل سريع
         const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
         
         const shippingText = shippingOption === 'free' ? "شحن مجاني" : `الشحن: ${customShippingPrice}`;
