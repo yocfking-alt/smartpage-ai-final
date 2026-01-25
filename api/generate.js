@@ -1,5 +1,3 @@
---- START OF FILE generate.js ---
-
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
@@ -37,23 +35,10 @@ export default async function handler(req, res) {
         const MAIN_IMG_PLACEHOLDER = "[[PRODUCT_IMAGE_MAIN_SRC]]";
         const LOGO_PLACEHOLDER = "[[BRAND_LOGO_SRC]]";
         
-        // --- تحضير شرائح السلايدر (نظام البطاقات الجديد ZEVANA 3D) ---
-        // البطاقة الأولى (نشطة افتراضياً)
-        let sliderSlidesHTML = `
-        <div class="card active" data-index="1">
-            <div class="img-container">
-                <img src="${MAIN_IMG_PLACEHOLDER}" alt="Product 1">
-            </div>
-        </div>`;
-        
-        // باقي البطاقات
+        // --- تحضير شرائح السلايدر للبرومبت ---
+        let sliderSlidesHTML = `   <img src="${MAIN_IMG_PLACEHOLDER}" class="slider-img active" data-index="1">`;
         for (let i = 1; i < productImageArray.length && i <= 6; i++) {
-            sliderSlidesHTML += `
-            <div class="card" data-index="${i + 1}">
-                <div class="img-container">
-                    <img src="[[PRODUCT_IMAGE_${i + 1}_SRC]]" alt="Product ${i + 1}">
-                </div>
-            </div>`;
+            sliderSlidesHTML += `\n   <img src="[[PRODUCT_IMAGE_${i + 1}_SRC]]" class="slider-img" data-index="${i + 1}">`;
         }
         const totalSlidesCount = Math.max(productImageArray.length, 1);
 
@@ -65,7 +50,6 @@ export default async function handler(req, res) {
             variantsHTML += `<div class="form-group variant-group"><label class="variant-label">اللون المفضل:</label><div class="variants-wrapper colors-wrapper">`;
             
             variants.colors.items.forEach((color) => {
-                // حساب رقم الشريحة المرتبطة (1-based index)
                 let slideTarget = 'null';
                 if (color.imgIndex !== "" && color.imgIndex !== null && color.imgIndex !== undefined) {
                     slideTarget = parseInt(color.imgIndex) + 1;
@@ -98,129 +82,38 @@ export default async function handler(req, res) {
             variantsHTML += `</div><input type="hidden" id="selected-size" name="size" required></div>`;
         }
 
-        // --- CSS المدمج (فيسبوك + ستايل السلايدر الجديد ZEVANA 3D) ---
+        // --- CSS المدمج (فيسبوك + السلايدر الجديد + ستايل المتغيرات) ---
         const fbStyles = `
         <style>
             :root { --bg-color: #ffffff; --comment-bg: #f0f2f5; --text-primary: #050505; --text-secondary: #65676b; --blue-link: #216fdb; --line-color: #eaebef; }
             
-            /* --- 1. ستايل السلايدر الحر المتجاوب (ZEVANA 3D) --- */
-            .product-viewer-container { 
-                position: relative; 
-                width: 100%; 
-                height: 450px; /* ارتفاع الكمبيوتر */
-                margin: 0 auto 30px auto; 
-                overflow: hidden; 
-                background: transparent; 
-            }
+            /* --- 1. ستايل السلايدر الجديد --- */
+            .product-viewer-container { position: relative; width: 100%; max-width: 500px; margin: 0 auto 30px auto; background-color: #f9f9f9; overflow: hidden; border-radius: 8px; }
+            .slider-wrapper { position: relative; width: 100%; min-height: 400px; display: flex; align-items: center; justify-content: center; overflow: hidden; background-color: #f4f4f4; }
+            .slider-img { display: none; width: 100%; height: auto; object-fit: contain; transition: opacity 0.3s ease; cursor: zoom-in; }
+            .slider-img.active { display: block; animation: fadeIn 0.4s; }
+            @keyframes fadeIn { from { opacity: 0.5; } to { opacity: 1; } }
+            .zoom-btn { position: absolute; top: 20px; left: 20px; width: 40px; height: 40px; background: white; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; border: none; color: #333; }
+            .slider-controls { display: flex; align-items: center; justify-content: center; padding: 15px 0; gap: 20px; background: transparent; font-family: 'Times New Roman', serif; }
+            .nav-btn { background: none; border: none; cursor: pointer; font-size: 22px; color: #666; padding: 0 10px; transition: color 0.2s; }
+            .nav-btn:hover { color: #000; }
+            .slide-counter { font-size: 16px; font-style: italic; color: #333; letter-spacing: 2px; }
+            .lightbox-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.98); z-index: 9999; justify-content: center; align-items: center; }
+            .lightbox-modal.open { display: flex; }
+            .lightbox-img { max-width: 90%; max-height: 90%; object-fit: contain; }
+            .close-lightbox { position: absolute; top: 20px; right: 20px; font-size: 35px; cursor: pointer; color: #333; }
 
-            .gallery-stage {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                perspective: 1200px;
-                overflow: hidden;
-                touch-action: pan-y;
-                z-index: 10;
-            }
-
-            .card {
-                position: absolute;
-                width: 260px; /* عرض البطاقة للكمبيوتر */
-                height: 380px; /* ارتفاع البطاقة للكمبيوتر */
-                border-radius: 12px; 
-                background-color: #ffffff; 
-                overflow: hidden;
-                box-shadow: 0 20px 50px rgba(0,0,0,0.15);
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%) scale(0.6);
-                transition: all 1.2s cubic-bezier(0.2, 1, 0.3, 1); 
-                cursor: grab;
-                opacity: 0;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                border: 1px solid rgba(0,0,0,0.05);
-            }
-
-            /* --- تصحيح حجم الصور للموبايل --- */
-            @media (max-width: 768px) {
-                .product-viewer-container {
-                    height: 350px; /* تقليل ارتفاع السلايدر في الموبايل */
-                    margin-bottom: 10px;
-                }
-                .card {
-                    width: 190px; /* عرض أصغر للبطاقة في الموبايل ليسمح بظهور الجوانب */
-                    height: 280px; /* ارتفاع أصغر */
-                }
-            }
-
-            .img-container {
-                width: 100%;
-                height: 100%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: #fff;
-            }
-
-            .img-container img {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-                display: block;
-            }
-            
-            /* أزرار التحكم */
-            .controls {
-                position: absolute;
-                bottom: 10px;
-                left: 50%;
-                transform: translateX(-50%);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                gap: 40px;
-                z-index: 100;
-            }
-
-            .nav-btn {
-                width: 40px; height: 40px;
-                border: 1px solid rgba(0,0,0,0.1);
-                border-radius: 50%;
-                display: flex; justify-content: center; align-items: center;
-                cursor: pointer;
-                transition: 0.3s;
-                background: rgba(255,255,255,0.8);
-                box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            }
-
-            .nav-btn:hover { border-color: #000; background: #fff; transform: scale(1.1); }
-            .nav-btn svg { width: 18px; height: 18px; fill: #333; }
-
-            /* --- 2. ستايل خيارات المنتج (الألوان والمقاسات) والكمية --- */
+            /* --- 2. ستايل خيارات المنتج --- */
             .variant-group { margin-bottom: 15px; }
             .variant-label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 14px; }
             .variants-wrapper { display: flex; gap: 10px; flex-wrap: wrap; }
             .variant-option { cursor: pointer; border: 2px solid #ddd; transition: all 0.2s; }
-            
-            /* ستايل الألوان */
             .color-option { width: 35px; height: 35px; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
             .color-option:hover { transform: scale(1.1); }
             .color-option.selected { border-color: var(--text-primary); transform: scale(1.15); box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--text-primary); }
-            
-            /* ستايل المقاسات */
             .size-option { padding: 8px 15px; border-radius: 4px; background: #fff; font-size: 14px; font-weight: 600; min-width: 40px; text-align: center; }
             .size-option:hover { border-color: #999; }
             .size-option.selected { background-color: var(--text-primary); color: #fff; border-color: var(--text-primary); }
-
-            /* ستايل الكمية والسعر */
             .qty-price-wrapper { display: flex; align-items: center; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd; }
             .qty-control { display: flex; align-items: center; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
             .qty-btn { width: 35px; height: 35px; background: #f4f4f4; border: none; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -230,7 +123,7 @@ export default async function handler(req, res) {
             .total-label { font-size: 12px; color: #666; display: block; }
             .total-value { font-size: 18px; font-weight: bold; color: #d32f2f; }
 
-            /* --- 3. ستايل تعليقات الفيسبوك الأصلي --- */
+            /* --- 3. ستايل تعليقات الفيسبوك --- */
             .fb-reviews-section { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; direction: rtl; padding: 20px; background: #fff; margin-top: 30px; border-top: 1px solid #ddd; }
             .comment-thread { max-width: 600px; margin: 0 auto; position: relative; }
             .thread-line-container { position: absolute; right: 25px; top: 50px; bottom: 30px; width: 2px; background-color: var(--line-color); z-index: 0; }
@@ -249,8 +142,6 @@ export default async function handler(req, res) {
             .react-count { font-size: 11px; color: var(--text-secondary); margin-left: 4px; margin-right: 2px; }
             .view-replies { display: flex; align-items: center; font-weight: 600; font-size: 14px; color: var(--text-primary); margin: 10px 0; padding-right: 50px; position: relative; cursor: pointer; }
             .view-replies::before { content: ''; position: absolute; right: 25px; top: 50%; width: 20px; height: 2px; background-color: var(--line-color); border-bottom-left-radius: 10px; }
-            
-            /* أيقونة القلب فقط */
             .icon-love { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%23f02849"/><path d="M16 26c-0.6 0-1.2-0.2-1.6-0.6 -5.2-4.6-9.4-8.4-9.4-13.4 0-3 2.4-5.4 5.4-5.4 2.1 0 3.9 1.1 4.9 2.9l0.7 1.2 0.7-1.2c1-1.8 2.8-2.9 4.9-2.9 3 0 5.4 2.4 5.4 5.4 0 5-4.2 8.8-9.4 13.4 -0.4 0.4-1 0.6-1.6 0.6z" fill="white"/></svg>') no-repeat center/cover; }
         </style>
         `;
@@ -264,27 +155,28 @@ Context/Features: ${productFeatures}.
 Price: ${productPrice}. ${shippingText}. ${offerText}.
 User Design Request: ${designDescription}.
 
-## 🖼️ **تعليمات عرض الصور (سلايدر 3D تفاعلي):**
+## 🖼️ **تعليمات عرض الصور (السلايدر التفاعلي):**
 لقد تم تزويدك بصور للمنتج (${productImageArray.length} صور).
-**بدلاً من عرض صور ثابتة، يجب عليك بناء "عارض منتج" (3D Slider) تفاعلي يطابق الكود التالي بدقة:**
+**بدلاً من عرض صور ثابتة، يجب عليك بناء "عارض منتج" (Slider) تفاعلي يطابق الكود التالي بدقة:**
 
 ### **1. كود HTML للسلايدر (يجب وضعه في مكان الصورة الرئيسية):**
-استخدم هذا الهيكل بالضبط مع تضمين البطاقات المجهزة:
+استخدم هذا الهيكل بالضبط مع تضمين الصور المجهزة:
 \`\`\`html
 <div class="product-viewer-container">
-    <div class="gallery-stage" id="slider-stage">
+    <button class="zoom-btn" onclick="openLightbox()" aria-label="Zoom"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg></button>
+    
+    <div class="slider-wrapper">
         ${sliderSlidesHTML}
     </div>
 
-    <div class="controls">
-        <button type="button" class="nav-btn" id="prevBtn" onclick="changeSlide(-1)">
-            <svg viewBox="0 0 24 24"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/></svg>
-        </button>
-        <button type="button" class="nav-btn" id="nextBtn" onclick="changeSlide(1)">
-            <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
-        </button>
+    <div class="slider-controls">
+        <button class="nav-btn prev" onclick="changeSlide(-1)">&#10094;</button>
+        <span class="slide-counter" id="slideCounter">1 / ${totalSlidesCount}</span>
+        <button class="nav-btn next" onclick="changeSlide(1)">&#10095;</button>
     </div>
 </div>
+
+<div id="lightbox" class="lightbox-modal" onclick="closeLightbox()"><span class="close-lightbox">&times;</span><img id="lightbox-img" class="lightbox-img" src=""></div>
 \`\`\`
 
 ### **2. الشعار:**
@@ -302,7 +194,7 @@ User Design Request: ${designDescription}.
 - لا تضف معرض صور منفصل في الأسفل، السلايدر يكفي.
 
 ### **2. استمارة الطلب الذكية (مباشرة بعد الهيرو):**
-يجب أن تحتوي على هذا الهيكل الدقيق للحقول باللغة العربية، بما في ذلك خيارات الألوان والمقاسات:
+يجب أن تحتوي على هذا الهيكل الدقيق للحقول باللغة العربية:
 
 <div class="customer-info-box">
   <h3>استمارة الطلب</h3>
@@ -351,125 +243,40 @@ User Design Request: ${designDescription}.
 </div>
 
 ### **3. سكريبت التفاعل (Logic):**
-يجب عليك إضافة كود JavaScript التالي بالضبط لتفعيل السلايدر الجديد (ZEVANA 3D Logic)، وتبديل الصور عند اختيار اللون، وحساب السعر:
+يجب عليك إضافة كود JavaScript التالي بالضبط لتفعيل السلايدر والمتغيرات وحساب السعر:
 \`\`\`html
 <script>
-    // --- منطق السلايدر (ZEVANA 3D Logic - With Slow Intro & Responsive Gap) ---
-    const stage = document.getElementById('slider-stage');
-    let cards = [];
-    let currentIndex = 0; // البدء من البطاقة الأولى (Index 0)
-    let isDragging = false;
-    let startX = 0;
-
-    function initSlider() {
-        cards = Array.from(document.querySelectorAll('.card'));
-        if(cards.length > 0) {
-            updateSlider(true); // true تعني تفعيل مقدمة بطيئة
-        }
-    }
-
-    function updateSlider(isInitial = false) {
-        // حساب المسافة ديناميكياً بناءً على حجم الشاشة
-        const isMobile = window.innerWidth <= 768;
-        const gap = isMobile ? 170 : 260; // 170px للهاتف، 260px للكمبيوتر
-
-        cards.forEach((card, index) => {
-            const offset = index - currentIndex;
-            
-            let translateX = offset * gap; 
-            let rotateY = offset * -15;    
-            let scale = 1 - Math.abs(offset) * 0.15; 
-            let zIndex = 10 - Math.abs(offset);
-            
-            if (Math.abs(offset) > 2) {
-               card.style.opacity = "0";
-               card.style.pointerEvents = "none";
-            } else {
-               card.style.opacity = "1";
-               card.style.pointerEvents = offset === 0 ? 'auto' : 'none';
-            }
-
-            if (offset === 0) {
-                card.classList.add('active');
-                scale = 1.0; 
-            } else {
-                card.classList.remove('active');
-            }
-
-            if (isInitial) {
-               // مقدمة بطيئة وفخمة
-               card.style.transitionDelay = (Math.abs(offset) * 0.5) + "s";
-               card.style.transitionDuration = "2.2s"; 
-               card.style.transitionTimingFunction = "cubic-bezier(0.2, 1, 0.3, 1)";
-            } else {
-                // سرعة عادية
-                card.style.transitionDelay = "0s";
-                card.style.transitionDuration = "0.8s";
-            }
-
-            card.style.transform = \`translate(-50%, -50%) translateX(\${translateX}px) scale(\${scale}) rotateY(\${rotateY}deg)\`;
-            card.style.zIndex = zIndex;
+    // --- منطق السلايدر ---
+    let currentSlide = 1; const totalSlides = ${totalSlidesCount};
+    function changeSlide(d) { currentSlide += d; if (currentSlide > totalSlides) currentSlide = 1; if (currentSlide < 1) currentSlide = totalSlides; updateSlider(); }
+    
+    // دالة تحديث السلايدر
+    function updateSlider() { 
+        document.querySelectorAll('.slider-img').forEach(img => { 
+            img.classList.remove('active'); 
+            if(parseInt(img.dataset.index) === currentSlide) img.classList.add('active'); 
         });
-    }
-
-    // تحديث السلايدر عند تغيير حجم الشاشة لضبط المسافات
-    window.addEventListener('resize', () => {
-        updateSlider(false);
-    });
-
-    function changeSlide(dir) {
-        if (dir === 1 && currentIndex < cards.length - 1) { currentIndex++; updateSlider(); }
-        else if (dir === -1 && currentIndex > 0) { currentIndex--; updateSlider(); }
+        document.getElementById('slideCounter').innerText = currentSlide + ' / ' + totalSlides; 
     }
     
-    // دالة الانتقال المباشر لشريحة معينة (تستخدم عند اختيار لون)
+    // الانتقال المباشر لشريحة (للمتغيرات)
     function goToSlide(index) {
-        let targetIndex = index - 1; // تحويل من 1-based إلى 0-based
-        if(targetIndex >= 0 && targetIndex < cards.length) {
-            currentIndex = targetIndex;
+        if(index && index >= 1 && index <= totalSlides) {
+            currentSlide = index;
             updateSlider();
         }
     }
 
-    // تهيئة السحب (Drag/Touch)
-    if(stage) {
-        stage.addEventListener('mousedown', (e) => { isDragging = true; startX = e.pageX; });
-        window.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            const diff = startX - e.pageX;
-            if (Math.abs(diff) > 80) {
-                if (diff > 0 && currentIndex < cards.length - 1) { currentIndex++; updateSlider(); }
-                else if (diff < 0 && currentIndex > 0) { currentIndex--; updateSlider(); }
-                isDragging = false;
-            }
-        });
-        window.addEventListener('mouseup', () => isDragging = false);
+    function openLightbox() { document.getElementById('lightbox-img').src = document.querySelector('.slider-img.active').src; document.getElementById('lightbox').classList.add('open'); }
+    function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
 
-        stage.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; });
-        stage.addEventListener('touchmove', (e) => {
-            const diff = startX - e.touches[0].clientX;
-            if (Math.abs(diff) > 50) {
-                if (diff > 0 && currentIndex < cards.length - 1) { currentIndex++; updateSlider(); }
-                else if (diff < 0 && currentIndex > 0) { currentIndex--; updateSlider(); }
-                startX = e.touches[0].clientX;
-            }
-        });
-    }
-
-    // --- منطق خيارات المنتج (الألوان والمقاسات) ---
+    // --- منطق خيارات المنتج ---
     function selectColor(element, name, slideIndex) {
-        // إزالة التحديد عن الكل
         document.querySelectorAll('.color-option').forEach(el => el.classList.remove('selected'));
-        // تحديد العنصر الحالي
         element.classList.add('selected');
-        // تحديث الحقل المخفي
         document.getElementById('selected-color').value = name;
         document.getElementById('color-name-display').innerText = name;
-        
-        // تغيير صورة المنتج إذا كان هناك صورة مرتبطة بهذا اللون
-        if(slideIndex !== null && slideIndex !== 'null') {
-            goToSlide(slideIndex);
-        }
+        if(slideIndex !== null && slideIndex !== 'null') goToSlide(slideIndex);
     }
 
     function selectSize(element, name) {
@@ -491,55 +298,18 @@ User Design Request: ${designDescription}.
 
     function updateTotal() {
         let total = (basePrice * currentQty).toFixed(2);
-        // إزالة الكسور العشرية إذا كانت .00 لجمالية العرض
         if(total.endsWith('.00')) total = parseInt(total);
-        
         document.getElementById('total-price-display').innerText = total + ' دينار';
         document.getElementById('final-total').value = total;
     }
-
-    // تهيئة عند التحميل
-    document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => { initSlider(); }, 200);
-    });
 </script>
 \`\`\`
 
 ### **4. قسم آراء العملاء (Facebook Style):**
-يجب أن يبدو القسم كأنه مأخوذ (Screenshot) من نقاش حقيقي على فيسبوك حول المنتج.
-1. **التصميم:** استخدم أكواد CSS المرفقة في المتغير \`fbStyles\`.
-2. **المحتوى:** أنشئ 3-5 تعليقات واقعية جداً.
-   - امزج بين **الدارجة الجزائرية** (مثل: "الله يبارك"، "سلعة شابة"، "وصلتني في وقتها") و **العربية الفصحى البسيطة**.
-   - التعليقات يجب أن تمدح المنتج وتؤكد المصداقية.
-3. **الصور والأسماء:**
-   - **للذكور:** استخدم الاسم العربي المناسب واستخدم الرمز \`[[MALE_IMG]]\` في مصدر الصورة \`src\`.
-   - **للإناث:** استخدم الاسم العربي المناسب واستخدم الرمز \`[[FEMALE_IMG]]\` في مصدر الصورة \`src\`.
-4. **التفاعل (القلب فقط ❤️):**
-   - **هام جداً:** استخدم حصراً أيقونة القلب (\`icon-love\`) لجميع التفاعلات.
-   - **لا تستخدم أيقونة اللايك أبداً.**
-   - ضع أرقاماً عشوائية منطقية لعدد ساعات لعدد القلوب بجانب كل تعليق.
-   - أضف "عرض الردود السابقة" بين بعض التعليقات لزيادة الواقعية.
-
-### نموذج HTML لتعليق واحد (استخدم القلب فقط):
-\`\`\`html
-<div class="comment-row">
-    <div class="avatar"><img src="[[FEMALE_IMG]]" alt="User"></div>
-    <div class="comment-content">
-        <div class="bubble">
-            <span class="username">اسم المستخدم</span>
-            <span class="text">نص التعليق هنا...</span>
-            <div class="reactions-container">
-                <div class="react-icon icon-love"></div> <span class="react-count">15</span>
-            </div>
-        </div>
-        <div class="actions">
-            <span class="time">منذ ساعتين</span>
-            <span class="action-link">أعجبني</span>
-            <span class="action-link">رد</span>
-        </div>
-    </div>
-</div>
-\`\`\`
+استخدم CSS المرفق في المتغير \`fbStyles\`.
+أنشئ 3-5 تعليقات واقعية باللهجة الجزائرية والفصحى.
+استخدم الرموز \`[[MALE_IMG]]\` و \`[[FEMALE_IMG]]\` للصور.
+استخدم أيقونة القلب \`icon-love\` فقط للتفاعلات.
 
 ### **5. تنسيق الإخراج:**
 أعد كائن JSON فقط:
@@ -548,14 +318,6 @@ User Design Request: ${designDescription}.
   "liquid_code": "كود Shopify Liquid",
   "schema": { "name": "Landing Page", "settings": [] }
 }
-
-## 🚀 **حرية إبداعية كاملة لباقي الأقسام:**
-- صمم باقي الصفحة بحرية تامة باستخدام CSS حديث وجذاب
-- استخدم تأثيرات hover، transitions، وanimations لجعل الصفحة تفاعلية
-- تأكد من أن الصفحة سريعة الاستجابة وتعمل على جميع الأجهزة
-- أضف عد تنازلي أقل من ساعتان أنيق يحفز الزائر على الشراء بلون مناسب لصفحة و للمنتج
-- أضف أقسام إضافية مثل: مميزات المنتج، الأسئلة الشائعة، إلخ
-- **مهم:** قم بتضمين كود CSS (\`fbStyles\`) الذي سأزودك به في بداية الـ HTML الناتج.
 
 قم بدمج هذا الـ CSS في بداية الـ HTML الناتج:
 ${fbStyles}
@@ -586,21 +348,17 @@ ${fbStyles}
         // ***************************************************************
         // عملية الحقن: استبدال الرموز (صور المنتج + صور الأشخاص)
         // ***************************************************************
-        
-        // صور افتراضية
         const defaultImg = "https://via.placeholder.com/600x600?text=Product+Image";
         const defaultLogo = "https://via.placeholder.com/150x50?text=Logo";
         const finalProductImages = productImageArray.length > 0 ? productImageArray : [defaultImg];
         const finalBrandLogo = brandLogo || defaultLogo;
 
-        // دالة الصور العشوائية (أشخاص حقيقيين)
         const getRandomAvatar = (gender) => {
             const randomId = Math.floor(Math.random() * 50); 
             const genderPath = gender === 'male' ? 'men' : 'women';
             return `https://randomuser.me/api/portraits/${genderPath}/${randomId}.jpg`;
         };
 
-        // دالة حقن صور الأشخاص
         const injectAvatars = (htmlContent) => {
             if (!htmlContent) return htmlContent;
             let content = htmlContent;
@@ -613,15 +371,11 @@ ${fbStyles}
             return content;
         };
 
-        // دالة للاستبدال الآمن لصور المنتج
         const replaceImages = (content) => {
             if (!content) return content;
             let result = content;
-            // استبدال الصورة الرئيسية
             result = result.split(MAIN_IMG_PLACEHOLDER).join(finalProductImages[0]);
-            // استبدال الشعار
             result = result.split(LOGO_PLACEHOLDER).join(finalBrandLogo);
-            // استبدال الصور الإضافية
             for (let i = 1; i < finalProductImages.length && i <= 6; i++) {
                 const placeholder = `[[PRODUCT_IMAGE_${i + 1}_SRC]]`;
                 result = result.split(placeholder).join(finalProductImages[i]);
@@ -629,9 +383,167 @@ ${fbStyles}
             return result;
         };
 
-        // تطبيق الاستبدال وحقن الأفاتار على HTML و Liquid Code
+        // تطبيق الاستبدال وحقن الأفاتار
         aiResponse.html = injectAvatars(replaceImages(aiResponse.html));
         aiResponse.liquid_code = injectAvatars(replaceImages(aiResponse.liquid_code));
+
+        // ***************************************************************
+        // ميزة البوت الذكي (Gemini Chatbot) - مدمجة تلقائياً
+        // ***************************************************************
+        
+        // 1. تحضير سياق المنتج للبوت
+        const chatbotContext = `
+        اسم المنتج: ${productName}
+        السعر: ${productPrice}
+        المميزات: ${productFeatures}
+        التصنيف: ${productCategory}
+        العرض الحالي: ${offerText || "لا يوجد عرض حالي"}
+        الشحن: ${shippingText}
+        `;
+
+        // 2. كود واجهة الشات (CSS + HTML + JS) ليتم حقنها في الصفحة
+        const chatbotWidgetCode = `
+        <style>
+            .chatbot-toggler { position: fixed; bottom: 30px; right: 35px; outline: none; border: none; height: 50px; width: 50px; display: flex; cursor: pointer; align-items: center; justify-content: center; border-radius: 50%; background: #25D366; transition: all 0.2s ease; z-index: 9999; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+            .chatbot-toggler span { color: #fff; position: absolute; font-size: 24px; }
+            .chatbot-toggler span:last-child, body.show-chatbot .chatbot-toggler span:first-child { opacity: 0; }
+            body.show-chatbot .chatbot-toggler span:last-child { opacity: 1; }
+            .chatbot { position: fixed; right: 35px; bottom: 90px; width: 320px; background: #fff; border-radius: 15px; overflow: hidden; opacity: 0; pointer-events: none; transform: scale(0.5); transform-origin: bottom right; box-shadow: 0 0 128px 0 rgba(0,0,0,0.1), 0 32px 64px -48px rgba(0,0,0,0.5); transition: all 0.1s ease; z-index: 9998; border: 1px solid #ddd; }
+            body.show-chatbot .chatbot { opacity: 1; pointer-events: auto; transform: scale(1); }
+            .chatbot header { padding: 15px 0; text-align: center; color: #fff; background: #25D366; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .chatbot header h2 { font-size: 1.2rem; font-weight: bold; margin: 0; }
+            .chatbot .chatbox { overflow-y: auto; height: 300px; padding: 15px 20px 70px; margin: 0; list-style: none; }
+            .chatbot :where(.chatbox, textarea)::-webkit-scrollbar { width: 6px; }
+            .chatbot :where(.chatbox, textarea)::-webkit-scrollbar-thumb { background: #ccc; border-radius: 25px; }
+            .chatbox .chat { display: flex; list-style: none; margin-bottom: 15px; }
+            .chatbox .outgoing { justify-content: flex-end; }
+            .chatbox .incoming span { width: 32px; height: 32px; color: #fff; background: #25D366; text-align: center; line-height: 32px; border-radius: 4px; margin: 0 10px 7px 0; align-self: flex-end; font-size: 18px; }
+            .chatbox .chat p { white-space: pre-wrap; padding: 10px 14px; border-radius: 10px 10px 0 10px; max-width: 80%; color: #fff; font-size: 0.9rem; background: #25D366; margin: 0; }
+            .chatbox .incoming p { border-radius: 10px 10px 10px 0; color: #000; background: #f2f2f2; }
+            .chatbot .chat-input { display: flex; gap: 5px; position: absolute; bottom: 0; width: 100%; background: #fff; padding: 5px 20px; border-top: 1px solid #ddd; }
+            .chat-input textarea { height: 50px; width: 100%; border: none; outline: none; resize: none; padding: 12px 0; font-size: 0.95rem; }
+            .chat-input span { align-self: center; color: #25D366; cursor: pointer; height: 40px; width: 40px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; visibility: hidden; }
+            .chat-input textarea:valid ~ span { visibility: visible; }
+            @media (max-width: 490px) { .chatbot { right: 0; bottom: 0; height: 100%; border-radius: 0; width: 100%; } .chatbot .chatbox { height: 90%; } }
+        </style>
+
+        <button class="chatbot-toggler">
+            <span>💬</span>
+            <span>✖</span>
+        </button>
+        <div class="chatbot">
+            <header>
+                <h2>خدمة العملاء</h2>
+            </header>
+            <ul class="chatbox">
+                <li class="chat incoming">
+                    <span>🎧</span>
+                    <p>مرحباً! 👋<br>أنا المساعد الذكي، كاش ما تسحق نعاونك بخصوص ${productName}؟</p>
+                </li>
+            </ul>
+            <div class="chat-input">
+                <textarea placeholder="اكتب سؤالك هنا..." spellcheck="false" required></textarea>
+                <span id="send-btn">➤</span>
+            </div>
+        </div>
+
+        <script>
+            (function() {
+                const chatbotToggler = document.querySelector(".chatbot-toggler");
+                const chatbox = document.querySelector(".chatbox");
+                const chatInput = document.querySelector(".chat-input textarea");
+                const sendChatBtn = document.querySelector(".chat-input span");
+
+                let userMessage = null;
+                const inputInitHeight = chatInput.scrollHeight;
+                
+                // سياق المنتج (يتم حقنه من السيرفر)
+                const PRODUCT_CONTEXT = \`${chatbotContext}\`;
+                let chatHistory = [];
+
+                const createChatLi = (message, className) => {
+                    const chatLi = document.createElement("li");
+                    chatLi.classList.add("chat", className);
+                    let chatContent = className === "outgoing" ? \`<p></p>\` : \`<span>🎧</span><p></p>\`;
+                    chatLi.innerHTML = chatContent;
+                    chatLi.querySelector("p").textContent = message;
+                    return chatLi;
+                }
+
+                const generateResponse = async (chatElement) => {
+                    const API_URL = "/api/chat"; 
+                    const messageElement = chatElement.querySelector("p");
+
+                    try {
+                        const response = await fetch(API_URL, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                message: userMessage,
+                                productContext: PRODUCT_CONTEXT,
+                                history: chatHistory
+                            })
+                        });
+                        const data = await response.json();
+                        if (!response.ok) throw new Error(data.error || 'Server Error');
+
+                        messageElement.textContent = data.reply;
+                        
+                        chatHistory.push({ role: 'user', text: userMessage });
+                        chatHistory.push({ role: 'bot', text: data.reply });
+                        if(chatHistory.length > 6) chatHistory = chatHistory.slice(-6);
+
+                    } catch (error) {
+                        messageElement.textContent = "عذراً، لا يمكنني الرد حالياً. يرجى التحقق من اتصالك.";
+                        messageElement.style.color = "#721c24";
+                        messageElement.style.background = "#f8d7da";
+                    } finally {
+                        chatbox.scrollTo(0, chatbox.scrollHeight);
+                    }
+                }
+
+                const handleChat = () => {
+                    userMessage = chatInput.value.trim();
+                    if (!userMessage) return;
+
+                    chatInput.value = "";
+                    chatInput.style.height = \`\${inputInitHeight}px\`;
+
+                    chatbox.appendChild(createChatLi(userMessage, "outgoing"));
+                    chatbox.scrollTo(0, chatbox.scrollHeight);
+
+                    setTimeout(() => {
+                        const incomingChatLi = createChatLi("جاري الكتابة...", "incoming");
+                        chatbox.appendChild(incomingChatLi);
+                        chatbox.scrollTo(0, chatbox.scrollHeight);
+                        generateResponse(incomingChatLi);
+                    }, 600);
+                }
+
+                chatInput.addEventListener("input", () => {
+                    chatInput.style.height = \`\${inputInitHeight}px\`;
+                    chatInput.style.height = \`\${chatInput.scrollHeight}px\`;
+                });
+
+                chatInput.addEventListener("keydown", (e) => {
+                    if(e.key === "Enter" && !e.shiftKey && window.innerWidth > 800) {
+                        e.preventDefault();
+                        handleChat();
+                    }
+                });
+
+                sendChatBtn.addEventListener("click", handleChat);
+                chatbotToggler.addEventListener("click", () => document.body.classList.toggle("show-chatbot"));
+            })();
+        </script>
+        `;
+
+        // حقن كود البوت قبل إغلاق وسم body مباشرة
+        if (aiResponse.html.includes('</body>')) {
+            aiResponse.html = aiResponse.html.replace('</body>', `${chatbotWidgetCode}</body>`);
+        } else {
+            aiResponse.html += chatbotWidgetCode;
+        }
 
         res.status(200).json({
             liquid_code: aiResponse.liquid_code,
