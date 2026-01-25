@@ -1,10 +1,10 @@
 import fetch from 'node-fetch';
-import crypto from 'crypto'; // استيراد مكتبة التشفير
+import crypto from 'crypto';
 
 export default async function handler(req, res) {
-    // 1. إعدادات CORS
+    // إعدادات CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*'); // يفضل تغييره لاحقاً لرابط موقعك
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
     res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
@@ -17,149 +17,96 @@ export default async function handler(req, res) {
 
         const { 
             productName, productFeatures, productPrice, productCategory,
-            targetAudience, designDescription, shippingOption, customShippingPrice, 
-            customOffer, productImages, brandLogo, variants 
+            customOffer, productImages, brandLogo 
         } = req.body;
 
-        const productImageArray = productImages || [];
-        const GEMINI_MODEL = 'gemini-2.5-flash'; // تم التصحيح هنا
+        const GEMINI_MODEL = 'gemini-2.5-flash'; 
         const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
         
-        const shippingText = shippingOption === 'free' ? "شحن مجاني" : `الشحن: ${customShippingPrice}`;
-        const offerText = customOffer ? `عرض خاص: ${customOffer}` : "";
-        const MAIN_IMG_PLACEHOLDER = "[[PRODUCT_IMAGE_MAIN_SRC]]";
-        const LOGO_PLACEHOLDER = "[[BRAND_LOGO_SRC]]";
-        
-        // ... (كود السلايدر والمتغيرات يبقى كما هو لتوفير المساحة في الرد، لكن تأكد من وجوده في ملفك) ...
-        // سنفترض أن كود إعداد sliderSlidesHTML و variantsHTML و fbStyles موجود هنا كما في ملفك السابق
-        
-        let sliderSlidesHTML = `   <img src="${MAIN_IMG_PLACEHOLDER}" class="slider-img active" data-index="1">`;
-        for (let i = 1; i < productImageArray.length && i <= 6; i++) {
-            sliderSlidesHTML += `\n   <img src="[[PRODUCT_IMAGE_${i + 1}_SRC]]" class="slider-img" data-index="${i + 1}">`;
-        }
-        const totalSlidesCount = Math.max(productImageArray.length, 1);
+        // 1. طلب بناء الصفحة من الذكاء الاصطناعي
+        const prompt = `Create a high-converting landing page HTML for ${productName}. Category: ${productCategory}. Price: ${productPrice}. Features: ${productFeatures}. Return JSON: {"html": "..."}`;
 
-        let variantsHTML = "";
-        if (variants && variants.colors && variants.colors.enabled) {
-             variants.colors.items.forEach(c => { variantsHTML += `<div class="variant-option color-option" style="background-color:${c.hex}" onclick="selectColor(this, '${c.name}', ${parseInt(c.imgIndex)+1})"></div>`; });
-             variantsHTML = `<div class="form-group"><div class="variants-wrapper">${variantsHTML}</div><input type="hidden" id="selected-color" name="color"></div>`;
-        }
-
-        const fbStyles = `<style>/* نفس الستايل السابق الخاص بفيسبوك */</style>`;
-
-        const prompt = `
-        Act as a Senior Creative Director. Create a high-converting landing page for: ${productName}.
-        Category: ${productCategory}. Price: ${productPrice}. ${shippingText}.
-        
-        REQUIRED HTML STRUCTURE:
-        1. Use the provided slider HTML code exactly:
-           <div class="product-viewer-container">...${sliderSlidesHTML}...</div>
-        2. Use the exact order form structure provided previously.
-        3. Use the Facebook reviews style provided.
-        4. Return JSON only: { "html": "...", "liquid_code": "...", "schema": ... }
-        `;
-        // (ملاحظة: اختصرت البرومبت هنا للعرض، استخدم البرومبت الكامل الخاص بك من الملف السابق)
-
-        const response = await fetch(GEMINI_ENDPOINT, {
+        const aiReq = await fetch(GEMINI_ENDPOINT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }], // استخدم البرومبت الكامل هنا
-                generationConfig: { responseMimeType: "application/json", temperature: 0.95 }
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { responseMimeType: "application/json" }
             })
         });
 
-        const data = await response.json();
-        if (!data.candidates || !data.candidates[0]) throw new Error('AI Generation Failed');
+        const aiData = await aiReq.json();
+        let aiResponse = JSON.parse(aiData.candidates[0].content.parts[0].text);
 
-        let aiResponse = JSON.parse(data.candidates[0].content.parts[0].text.replace(/```json/g, '').replace(/```/g, '').trim());
+        // --- نظام الحماية (Security System) ---
+        
+        // تحضير سياق المنتج وتشفيره بـ Base64 لضمان سلامة النص العربي
+        const productContextData = `Product: ${productName}, Price: ${productPrice}, Features: ${productFeatures}, Offer: ${customOffer || 'None'}`;
+        const contextBase64 = Buffer.from(productContextData).toString('base64');
 
-        // --- معالجة الصور (كما في كودك السابق) ---
-        const replaceImages = (content) => {
-            let res = content.split(MAIN_IMG_PLACEHOLDER).join(productImageArray[0] || '');
-            res = res.split(LOGO_PLACEHOLDER).join(brandLogo || '');
-            // ... باقي استبدال الصور
-            return res;
-        };
-        aiResponse.html = replaceImages(aiResponse.html);
-
-        // ***************************************************************
-        //  الجزء الأمني الجديد: حقن الشات بوت + التوقيع الرقمي
-        // ***************************************************************
-
-        // 1. تحضير سياق المنتج
-        const productContextData = `اسم المنتج: ${productName}. السعر: ${productPrice}. المميزات: ${productFeatures}. العرض: ${offerText}. الشحن: ${shippingText}.`;
-
-        // 2. إنشاء التوقيع (Signature) باستخدام مفتاح API كسكرت (أو يمكنك استخدام متغير بيئة خاص APP_SECRET)
-        // هذا التوقيع يضمن عدم تلاعب العميل بالنص
+        // إنشاء التوقيع الرقمي لمنع التلاعب
         const signature = crypto
             .createHmac('sha256', GEMINI_API_KEY)
-            .update(productContextData)
+            .update(contextBase64)
             .digest('hex');
 
-        // 3. كود الشات بوت الذي سيتم حقنه
-        const chatWidget = `
-        <div id="chat-widget" style="position:fixed;bottom:20px;right:20px;z-index:9999;">
-            <div id="chat-window" style="display:none;width:300px;height:400px;background:#fff;border:1px solid #ccc;border-radius:10px;flex-direction:column;box-shadow:0 5px 15px rgba(0,0,0,0.2);">
-                <div style="background:#075e54;color:#fff;padding:10px;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;">
-                    <span>مساعد المبيعات</span><span onclick="toggleChat()" style="cursor:pointer;">✕</span>
+        // كود الشات بوت الذي سيتم حقنه في الصفحة
+        const chatWidgetHTML = `
+        <div id="ai-chat-bot" style="position:fixed; bottom:20px; right:20px; z-index:10000; font-family:Arial,sans-serif;">
+            <button onclick="document.getElementById('ai-chat-window').style.display='flex'" style="width:60px; height:60px; border-radius:50%; background:#25D366; color:white; border:none; cursor:pointer; font-size:24px; box-shadow:0 4px 10px rgba(0,0,0,0.3);">💬</button>
+            <div id="ai-chat-window" style="display:none; position:absolute; bottom:70px; right:0; width:300px; height:400px; background:white; border-radius:10px; flex-direction:column; box-shadow:0 5px 20px rgba(0,0,0,0.2); border:1px solid #ddd; overflow:hidden;">
+                <div style="background:#075e54; color:white; padding:10px; display:flex; justify-content:space-between;">
+                    <span>مساعد ذكي</span>
+                    <button onclick="document.getElementById('ai-chat-window').style.display='none'" style="background:none; border:none; color:white; cursor:pointer;">✕</button>
                 </div>
-                <div id="chat-msgs" style="flex:1;padding:10px;overflow-y:auto;background:#efe7dd;"></div>
-                <div style="padding:10px;border-top:1px solid #ddd;display:flex;">
-                    <input id="chat-input" type="text" style="flex:1;padding:5px;" placeholder="اكتب استفسارك...">
-                    <button onclick="sendMsg()" style="background:#075e54;color:#fff;border:none;padding:5px 10px;margin-right:5px;cursor:pointer;">➤</button>
+                <div id="ai-chat-msgs" style="flex:1; padding:10px; overflow-y:auto; background:#efe7dd; display:flex; flex-direction:column; gap:8px;"></div>
+                <div style="padding:10px; display:flex; gap:5px; background:#f0f0f0;">
+                    <input id="ai-chat-input" type="text" style="flex:1; padding:8px; border-radius:5px; border:1px solid #ccc;" placeholder="اسألني أي شيء...">
+                    <button onclick="sendAiMessage()" style="background:#075e54; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">إرسال</button>
                 </div>
             </div>
-            <button onclick="toggleChat()" style="width:50px;height:50px;border-radius:50%;background:#25D366;border:none;box-shadow:0 2px 10px rgba(0,0,0,0.2);cursor:pointer;font-size:24px;">💬</button>
         </div>
         <script>
-            const pContext = \`${productContextData}\`;
-            const pSignature = "${signature}"; // التوقيع الرقمي المحقون من السيرفر
-            let history = [];
+            const secureContext = "${contextBase64}";
+            const secureSig = "${signature}";
+            let chatHistory = [];
 
-            function toggleChat() { 
-                const w = document.getElementById('chat-window'); 
-                w.style.display = w.style.display === 'none' ? 'flex' : 'none'; 
-            }
-            
-            async function sendMsg() {
-                const inp = document.getElementById('chat-input');
-                const txt = inp.value.trim();
-                if(!txt) return;
-                
-                const box = document.getElementById('chat-msgs');
-                box.innerHTML += \`<div style="background:#dcf8c6;padding:5px;margin:5px;border-radius:5px;align-self:flex-end;">\${txt}</div>\`;
-                inp.value = '';
-                box.scrollTop = box.scrollHeight;
+            async function sendAiMessage() {
+                const input = document.getElementById('ai-chat-input');
+                const msg = input.value.trim();
+                if(!msg) return;
+
+                const box = document.getElementById('ai-chat-msgs');
+                box.innerHTML += '<div style="background:#dcf8c6; padding:8px; align-self:flex-end; border-radius:5px;">' + msg + '</div>';
+                input.value = '';
 
                 try {
-                    const req = await fetch('/api/chat', {
+                    const r = await fetch('/api/chat', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ 
-                            message: txt, 
-                            productContext: pContext, // نرسل النص
-                            signature: pSignature,    // ونرسل التوقيع للتحقق
-                            history: history 
+                            message: msg, 
+                            contextBase64: secureContext, 
+                            signature: secureSig,
+                            history: chatHistory 
                         })
                     });
-                    const res = await req.json();
-                    if(res.reply) {
-                        box.innerHTML += \`<div style="background:#fff;padding:5px;margin:5px;border-radius:5px;align-self:flex-start;">\${res.reply}</div>\`;
-                        history.push({role:'user', text:txt}, {role:'bot', text:res.reply});
-                        box.scrollTop = box.scrollHeight;
+                    const d = await r.json();
+                    if(d.reply) {
+                        box.innerHTML += '<div style="background:white; padding:8px; align-self:flex-start; border-radius:5px;">' + d.reply + '</div>';
+                        chatHistory.push({role:'user', text:msg}, {role:'bot', text:d.reply});
+                    } else {
+                         box.innerHTML += '<div style="color:red; font-size:12px;">حدث خطأ أمني أو فني</div>';
                     }
                 } catch(e) { console.error(e); }
+                box.scrollTop = box.scrollHeight;
             }
-        </script>
-        `;
+        </script>`;
 
-        aiResponse.html += chatWidget;
-
+        aiResponse.html += chatWidgetHTML;
         res.status(200).json(aiResponse);
 
     } catch (error) {
-        console.error("Generate Error:", error);
         res.status(500).json({ error: error.message });
     }
 }
