@@ -42,8 +42,7 @@ export default async function handler(req, res) {
         }
         const totalSlidesCount = Math.max(productImageArray.length, 1);
 
-        // --- تحضير منطق المتغيرات (الألوان والمقاسات) - مضاف من te.js ---
-        // سنقوم ببناء كود HTML الخاص بالأزرار مسبقاً لحقنه في البرومبت لضمان الدقة
+        // --- تحضير منطق المتغيرات (الألوان والمقاسات) ---
         let variantsHTML = "";
 
         // 1. معالجة الألوان
@@ -51,7 +50,6 @@ export default async function handler(req, res) {
             variantsHTML += `<div class="form-group variant-group"><label class="variant-label">اللون المفضل:</label><div class="variants-wrapper colors-wrapper">`;
             
             variants.colors.items.forEach((color) => {
-                // حساب رقم الشريحة المرتبطة (1-based index)
                 let slideTarget = 'null';
                 if (color.imgIndex !== "" && color.imgIndex !== null && color.imgIndex !== undefined) {
                     slideTarget = parseInt(color.imgIndex) + 1;
@@ -84,55 +82,62 @@ export default async function handler(req, res) {
             variantsHTML += `</div><input type="hidden" id="selected-size" name="size" required></div>`;
         }
 
-        // --- CSS المدمج (فيسبوك + السلايدر الجديد + ستايل المتغيرات الجديد) ---
+        // --- CSS المدمج (فيسبوك + السلايدر الجديد + ستايل المتغيرات) ---
         const fbStyles = `
         <style>
-            :root { --bg-color: #ffffff; --comment-bg: #f0f2f5; --text-primary: #050505; --text-secondary: #65676b; --blue-link: #216fdb; --line-color: #eaebef; }
+            @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Poppins:wght@300;400;500;600;700&family=Inter:wght@300;400;500&display=swap');
+
+            :root { 
+                --bg-color: #ffffff; 
+                --comment-bg: #f0f2f5; 
+                --text-primary: #050505; 
+                --text-secondary: #65676b; 
+                --blue-link: #216fdb; 
+                --line-color: #eaebef; 
+                --paper:#f3f1ee;
+                --paper-2:#eceae6;
+            }
             
-            /* --- 1. ستايل السلايدر الجديد (Lazzwood Style) --- */
-            .product-viewer-container { position: relative; width: 100%; max-width: 500px; margin: 0 auto 30px auto; background-color: #f9f9f9; overflow: hidden; border-radius: 8px; }
-            .slider-wrapper { position: relative; width: 100%; min-height: 400px; display: flex; align-items: center; justify-content: center; overflow: hidden; background-color: #f4f4f4; }
+            /* --- 1. ستايل السلايدر المتوافق مع واجهة Nike --- */
+            .product-viewer-container { position: relative; width: 100%; max-width: 550px; margin: 0 auto; background: transparent; overflow: hidden; border-radius: 16px; }
+            .slider-wrapper { position: relative; width: 100%; min-height: 380px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: rgba(255,255,255,0.05); border-radius: 16px; backdrop-filter: blur(5px); }
             .slider-img { display: none; width: 100%; height: auto; object-fit: contain; transition: opacity 0.3s ease; cursor: zoom-in; }
             .slider-img.active { display: block; animation: fadeIn 0.4s; }
             @keyframes fadeIn { from { opacity: 0.5; } to { opacity: 1; } }
-            .zoom-btn { position: absolute; top: 20px; left: 20px; width: 40px; height: 40px; background: white; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; border: none; color: #333; }
-            .slider-controls { display: flex; align-items: center; justify-content: center; padding: 15px 0; gap: 20px; background: transparent; font-family: 'Times New Roman', serif; }
-            .nav-btn { background: none; border: none; cursor: pointer; font-size: 22px; color: #666; padding: 0 10px; transition: color 0.2s; }
-            .nav-btn:hover { color: #000; }
-            .slide-counter { font-size: 16px; font-style: italic; color: #333; letter-spacing: 2px; }
-            .lightbox-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.98); z-index: 9999; justify-content: center; align-items: center; }
+            .zoom-btn { position: absolute; top: 15px; left: 15px; width: 38px; height: 38px; background: rgba(255,255,255,0.85); border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; border: none; color: #111; }
+            .slider-controls { display: flex; align-items: center; justify-content: center; padding: 12px 0; gap: 20px; background: transparent; font-family: 'Poppins', sans-serif; }
+            .nav-btn { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 16px; color: inherit; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+            .nav-btn:hover { background: rgba(255,255,255,0.4); }
+            .slide-counter { font-size: 14px; font-weight: 500; opacity: 0.85; letter-spacing: 1px; }
+            .lightbox-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); z-index: 9999; justify-content: center; align-items: center; }
             .lightbox-modal.open { display: flex; }
             .lightbox-img { max-width: 90%; max-height: 90%; object-fit: contain; }
-            .close-lightbox { position: absolute; top: 20px; right: 20px; font-size: 35px; cursor: pointer; color: #333; }
+            .close-lightbox { position: absolute; top: 20px; right: 20px; font-size: 35px; cursor: pointer; color: #fff; }
 
-            /* --- 2. ستايل خيارات المنتج (الألوان والمقاسات) والكمية - مضاف من te.js --- */
+            /* --- 2. ستايل خيارات المنتج والكمية --- */
             .variant-group { margin-bottom: 15px; }
             .variant-label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 14px; }
             .variants-wrapper { display: flex; gap: 10px; flex-wrap: wrap; }
             .variant-option { cursor: pointer; border: 2px solid #ddd; transition: all 0.2s; }
-            
-            /* ستايل الألوان */
             .color-option { width: 35px; height: 35px; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
             .color-option:hover { transform: scale(1.1); }
             .color-option.selected { border-color: var(--text-primary); transform: scale(1.15); box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--text-primary); }
-            
-            /* ستايل المقاسات */
-            .size-option { padding: 8px 15px; border-radius: 4px; background: #fff; font-size: 14px; font-weight: 600; min-width: 40px; text-align: center; }
+            .size-option { padding: 8px 15px; border-radius: 999px; background: #fff; font-size: 14px; font-weight: 600; min-width: 40px; text-align: center; }
             .size-option:hover { border-color: #999; }
             .size-option.selected { background-color: var(--text-primary); color: #fff; border-color: var(--text-primary); }
 
             /* ستايل الكمية والسعر */
             .qty-price-wrapper { display: flex; align-items: center; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd; }
-            .qty-control { display: flex; align-items: center; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
-            .qty-btn { width: 35px; height: 35px; background: #f4f4f4; border: none; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-            .qty-btn:hover { background: #e0e0e0; }
-            .qty-input { width: 40px; height: 35px; border: none; text-align: center; font-weight: bold; outline: none; }
+            .qty-control { display: flex; align-items: center; border: 1px solid #ddd; border-radius: 999px; overflow: hidden; background: #fff; }
+            .qty-btn { width: 35px; height: 35px; background: transparent; border: none; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+            .qty-btn:hover { background: #f0f0f0; }
+            .qty-input { width: 40px; height: 35px; border: none; text-align: center; font-weight: bold; outline: none; background: transparent; }
             .total-price-box { text-align: left; }
             .total-label { font-size: 12px; color: #666; display: block; }
-            .total-value { font-size: 18px; font-weight: bold; color: #d32f2f; }
+            .total-value { font-size: 20px; font-weight: 700; color: #111; }
 
             /* --- 3. ستايل تعليقات الفيسبوك الأصلي --- */
-            .fb-reviews-section { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; direction: rtl; padding: 20px; background: #fff; margin-top: 30px; border-top: 1px solid #ddd; }
+            .fb-reviews-section { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; direction: rtl; padding: 25px 20px; background: #fff; margin-top: 30px; border-top: 1px solid #ddd; }
             .comment-thread { max-width: 600px; margin: 0 auto; position: relative; }
             .thread-line-container { position: absolute; right: 25px; top: 50px; bottom: 30px; width: 2px; background-color: var(--line-color); z-index: 0; }
             .comment-row { display: flex; align-items: flex-start; margin-bottom: 15px; position: relative; z-index: 1; }
@@ -151,7 +156,6 @@ export default async function handler(req, res) {
             .view-replies { display: flex; align-items: center; font-weight: 600; font-size: 14px; color: var(--text-primary); margin: 10px 0; padding-right: 50px; position: relative; cursor: pointer; }
             .view-replies::before { content: ''; position: absolute; right: 25px; top: 50%; width: 20px; height: 2px; background-color: var(--line-color); border-bottom-left-radius: 10px; }
             
-            /* أيقونة القلب فقط */
             .icon-love { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%23f02849"/><path d="M16 26c-0.6 0-1.2-0.2-1.6-0.6 -5.2-4.6-9.4-8.4-9.4-13.4 0-3 2.4-5.4 5.4-5.4 2.1 0 3.9 1.1 4.9 2.9l0.7 1.2 0.7-1.2c1-1.8 2.8-2.9 4.9-2.9 3 0 5.4 2.4 5.4 5.4 0 5-4.2 8.8-9.4 13.4 -0.4 0.4-1 0.6-1.6 0.6z" fill="white"/></svg>') no-repeat center/cover; }
         </style>
         `;
@@ -165,12 +169,25 @@ Context/Features: ${productFeatures}.
 Price: ${productPrice}. ${shippingText}. ${offerText}.
 User Design Request: ${designDescription}.
 
+## 🎨 **نمط التصميم المطلوب (NIKE LANDING PAGE TEMPLATE STYLE):**
+يجب إنشاء واجهة صفحة الهبوط واستخدام لغة تصميم مطابقة لصفحات هبوط NIKE تماماً:
+1. **تصميم الهيرو (Hero Section):**
+   - خلفية ذات تدرج لوني داكن وأنيق يتناسب مع لون المنتج (مثل التدرج الداكن العنابي، الأورانج، الوردي أو الأسود/الرمادي الداكن: \`linear-gradient(135deg, #161616, #0a0a0a)\` أو حسب لون المنتج).
+   - إضافة العارضة المائية الخلفية (Swoosh/Watermark SVG opacity: 0.06).
+   - استخدام خطوط Nike المميزة: \`font-family: 'Poppins', 'Archivo Black', sans-serif\`.
+   - عنوان عريض جداً وجذاب مع نصوص ثانوية شفافة أنيقة (\`color: rgba(255,255,255,0.75)\`).
+   - أزرار بيضاوية دائرية الشكل (\`btn-pill\`) وتفاصيل تصميم عصرية.
+   - وضع عارض الصور (السلايدر) في منتصف قسم الهيرو بتصميم متناسق مع الحلقات المدارية (\`orbit-ring\`).
+
+2. **أقسام مميزات المنتج (Nike Features & Quality Sections):**
+   - إنشاء أقسام تالية مستوحاة من نايك بخلفيات أنيقة (\`#f3f1ee\`).
+   - استخدام الشارات التوضيحية حول المنتج (\`callout badges\`) مثل: Lightweight, Durable, Shock absorption... إلخ.
+
 ## 🖼️ **تعليمات عرض الصور (السلايدر التفاعلي):**
 لقد تم تزويدك بصور للمنتج (${productImageArray.length} صور).
-**بدلاً من عرض صور ثابتة، يجب عليك بناء "عارض منتج" (Slider) تفاعلي يطابق الكود التالي بدقة:**
+**ضع عارض الصور (Slider) التفاعلي في قسم الهيرو الرئيسي بداخل الهيكل التالي بالضبط:**
 
-### **1. كود HTML للسلايدر (يجب وضعه في مكان الصورة الرئيسية):**
-استخدم هذا الهيكل بالضبط مع تضمين الصور المجهزة:
+### **1. كود HTML للسلايدر:**
 \`\`\`html
 <div class="product-viewer-container">
     <button class="zoom-btn" onclick="openLightbox()" aria-label="Zoom"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg></button>
@@ -194,17 +211,16 @@ User Design Request: ${designDescription}.
 - مثال: <img src="${LOGO_PLACEHOLDER}" alt="شعار العلامة التجارية" class="logo">
 
 ## 🎯 **الهدف:**
-إنشاء صفحة هبوط فريدة ومبدعة تحتوي على السلايدر أعلاه وتحقق أعلى معدلات التحويل.
+إنشاء صفحة هبوط ذات نمط واجهة Nike تحقق أعلى معدلات التحويل.
 
 ## ⚠️ **متطلبات إلزامية:**
 
-### **1. قسم الهيرو:**
+### **1. قسم الهيرو (Nike Styled Hero):**
 - يتضمن الشعار في الهيدر.
-- **مهم جداً:** استبدل صورة المنتج التقليدية بكود "السلايدر التفاعلي" المذكور أعلاه بالكامل.
-- لا تضف معرض صور منفصل في الأسفل، السلايدر يكفي.
+- استبدل صورة المنتج التقليدية بكود "السلايدر التفاعلي" المذكور أعلاه بالكامل داخل التصميم العريض لـ Nike.
 
 ### **2. استمارة الطلب الذكية (مباشرة بعد الهيرو):**
-يجب أن تحتوي على هذا الهيكل الدقيق للحقول باللغة العربية، بما في ذلك خيارات الألوان والمقاسات:
+يجب إبقاء استمارة الطلب كما هي بالضبط وبنفس الهيكل أدناه (يمكنك تنسيق بطاقتها الخارجية لتناسب ستايل الصفحة):
 
 <div class="customer-info-box">
   <h3>استمارة الطلب</h3>
@@ -253,14 +269,13 @@ User Design Request: ${designDescription}.
 </div>
 
 ### **3. سكريبت التفاعل (Logic):**
-يجب عليك إضافة كود JavaScript التالي بالضبط لتفعيل السلايدر، وتبديل الصور عند اختيار اللون، وحساب السعر:
+يجب عليك إضافة كود JavaScript التالي بالضبط بدون أي تعديل:
 \`\`\`html
 <script>
     // --- منطق السلايدر ---
     let currentSlide = 1; const totalSlides = ${totalSlidesCount};
     function changeSlide(d) { currentSlide += d; if (currentSlide > totalSlides) currentSlide = 1; if (currentSlide < 1) currentSlide = totalSlides; updateSlider(); }
     
-    // دالة تحديث السلايدر العامة
     function updateSlider() { 
         document.querySelectorAll('.slider-img').forEach(img => { 
             img.classList.remove('active'); 
@@ -269,7 +284,6 @@ User Design Request: ${designDescription}.
         document.getElementById('slideCounter').innerText = currentSlide + ' / ' + totalSlides; 
     }
     
-    // دالة الانتقال المباشر لشريحة معينة (تستخدم عند اختيار لون)
     function goToSlide(index) {
         if(index && index >= 1 && index <= totalSlides) {
             currentSlide = index;
@@ -282,15 +296,11 @@ User Design Request: ${designDescription}.
 
     // --- منطق خيارات المنتج (الألوان والمقاسات) ---
     function selectColor(element, name, slideIndex) {
-        // إزالة التحديد عن الكل
         document.querySelectorAll('.color-option').forEach(el => el.classList.remove('selected'));
-        // تحديد العنصر الحالي
         element.classList.add('selected');
-        // تحديث الحقل المخفي
         document.getElementById('selected-color').value = name;
         document.getElementById('color-name-display').innerText = name;
         
-        // تغيير صورة المنتج إذا كان هناك صورة مرتبطة بهذا اللون
         if(slideIndex !== null && slideIndex !== 'null') {
             goToSlide(slideIndex);
         }
@@ -315,7 +325,6 @@ User Design Request: ${designDescription}.
 
     function updateTotal() {
         let total = (basePrice * currentQty).toFixed(2);
-        // إزالة الكسور العشرية إذا كانت .00 لجمالية العرض
         if(total.endsWith('.00')) total = parseInt(total);
         
         document.getElementById('total-price-display').innerText = total + ' دينار';
@@ -325,40 +334,14 @@ User Design Request: ${designDescription}.
 \`\`\`
 
 ### **4. قسم آراء العملاء (Facebook Style):**
-يجب أن يبدو القسم كأنه مأخوذ (Screenshot) من نقاش حقيقي على فيسبوك حول المنتج.
+يجب حماية قسم التعليقات تماماً وأن يبدو كأنه Screenshot من فيسبوك:
 1. **التصميم:** استخدم أكواد CSS المرفقة في المتغير \`fbStyles\`.
-2. **المحتوى:** أنشئ 3-5 تعليقات واقعية جداً.
-   - امزج بين **الدارجة الجزائرية** (مثل: "الله يبارك"، "سلعة شابة"، "وصلتني في وقتها") و **العربية الفصحى البسيطة**.
-   - التعليقات يجب أن تمدح المنتج وتؤكد المصداقية.
+2. **المحتوى:** أنشئ 3-5 تعليقات بالدارجة الجزائرية والإنطباعات الإيجابية.
 3. **الصور والأسماء:**
-   - **للذكور:** استخدم الاسم العربي المناسب واستخدم الرمز \`[[MALE_IMG]]\` في مصدر الصورة \`src\`.
-   - **للإناث:** استخدم الاسم العربي المناسب واستخدم الرمز \`[[FEMALE_IMG]]\` في مصدر الصورة \`src\`.
+   - **للذكور:** الرمز \`[[MALE_IMG]]\` في مصدر الصورة \`src\`.
+   - **للإناث:** الرمز \`[[FEMALE_IMG]]\` في مصدر الصورة \`src\`.
 4. **التفاعل (القلب فقط ❤️):**
-   - **هام جداً:** استخدم حصراً أيقونة القلب (\`icon-love\`) لجميع التفاعلات.
-   - **لا تستخدم أيقونة اللايك أبداً.**
-   - ضع أرقاماً عشوائية منطقية لعدد ساعات لعدد القلوب بجانب كل تعليق.
-   - أضف "عرض الردود السابقة" بين بعض التعليقات لزيادة الواقعية.
-
-### نموذج HTML لتعليق واحد (استخدم القلب فقط):
-\`\`\`html
-<div class="comment-row">
-    <div class="avatar"><img src="[[FEMALE_IMG]]" alt="User"></div>
-    <div class="comment-content">
-        <div class="bubble">
-            <span class="username">اسم المستخدم</span>
-            <span class="text">نص التعليق هنا...</span>
-            <div class="reactions-container">
-                <div class="react-icon icon-love"></div> <span class="react-count">15</span>
-            </div>
-        </div>
-        <div class="actions">
-            <span class="time">منذ ساعتين</span>
-            <span class="action-link">أعجبني</span>
-            <span class="action-link">رد</span>
-        </div>
-    </div>
-</div>
-\`\`\`
+   - استخدم حصراً أيقونة القلب (\`icon-love\`). لا تستخدم أيقونة اللايك أبداً.
 
 ### **5. تنسيق الإخراج:**
 أعد كائن JSON فقط:
@@ -367,14 +350,6 @@ User Design Request: ${designDescription}.
   "liquid_code": "كود Shopify Liquid",
   "schema": { "name": "Landing Page", "settings": [] }
 }
-
-## 🚀 **حرية إبداعية كاملة لباقي الأقسام:**
-- صمم باقي الصفحة بحرية تامة باستخدام CSS حديث وجذاب
-- استخدم تأثيرات hover، transitions، وanimations لجعل الصفحة تفاعلية
-- تأكد من أن الصفحة سريعة الاستجابة وتعمل على جميع الأجهزة
-- أضف عد تنازلي أقل من ساعتان أنيق يحفز الزائر على الشراء بلون مناسب لصفحة و للمنتج
-- أضف أقسام إضافية مثل: مميزات المنتج، الأسئلة الشائعة، إلخ
-- **مهم:** قم بتضمين كود CSS (\`fbStyles\`) الذي سأزودك به في بداية الـ HTML الناتج.
 
 قم بدمج هذا الـ CSS في بداية الـ HTML الناتج:
 ${fbStyles}
@@ -406,20 +381,17 @@ ${fbStyles}
         // عملية الحقن: استبدال الرموز (صور المنتج + صور الأشخاص)
         // ***************************************************************
         
-        // صور افتراضية
         const defaultImg = "https://via.placeholder.com/600x600?text=Product+Image";
         const defaultLogo = "https://via.placeholder.com/150x50?text=Logo";
         const finalProductImages = productImageArray.length > 0 ? productImageArray : [defaultImg];
         const finalBrandLogo = brandLogo || defaultLogo;
 
-        // دالة الصور العشوائية (أشخاص حقيقيين)
         const getRandomAvatar = (gender) => {
             const randomId = Math.floor(Math.random() * 50); 
             const genderPath = gender === 'male' ? 'men' : 'women';
             return `https://randomuser.me/api/portraits/${genderPath}/${randomId}.jpg`;
         };
 
-        // دالة حقن صور الأشخاص
         const injectAvatars = (htmlContent) => {
             if (!htmlContent) return htmlContent;
             let content = htmlContent;
@@ -432,15 +404,11 @@ ${fbStyles}
             return content;
         };
 
-        // دالة للاستبدال الآمن لصور المنتج
         const replaceImages = (content) => {
             if (!content) return content;
             let result = content;
-            // استبدال الصورة الرئيسية
             result = result.split(MAIN_IMG_PLACEHOLDER).join(finalProductImages[0]);
-            // استبدال الشعار
             result = result.split(LOGO_PLACEHOLDER).join(finalBrandLogo);
-            // استبدال الصور الإضافية
             for (let i = 1; i < finalProductImages.length && i <= 6; i++) {
                 const placeholder = `[[PRODUCT_IMAGE_${i + 1}_SRC]]`;
                 result = result.split(placeholder).join(finalProductImages[i]);
@@ -448,7 +416,6 @@ ${fbStyles}
             return result;
         };
 
-        // تطبيق الاستبدال وحقن الأفاتار على HTML و Liquid Code
         aiResponse.html = injectAvatars(replaceImages(aiResponse.html));
         aiResponse.liquid_code = injectAvatars(replaceImages(aiResponse.liquid_code));
 
